@@ -161,6 +161,8 @@ struct PlaybackView: View {
             }
             .keyboardShortcut("l", modifiers: [.command])
             .help("Show / hide the clip list (⌘L)")
+            .buttonStyle(BigButtonStyle())
+            .font(.title3)
 
             Button {
                 exportingPDF = true
@@ -173,6 +175,8 @@ struct PlaybackView: View {
             .sheet(isPresented: $exportingPDF) {
                 ExportPDFSheet(library: library, settings: settings)
             }
+            .buttonStyle(BigButtonStyle())
+            .font(.title3)
 
             if let take = player.take {
                 Text(take.name).font(.headline)
@@ -345,8 +349,8 @@ struct PlaybackView: View {
                 markButtons
                 audioButtons
             }
-            .controlSize(.large)
-            .font(.title3)
+            .buttonStyle(BigButtonStyle())
+            .font(.title2)
             .padding(.top, 4)
             .disabled(player.take == nil)
 
@@ -356,8 +360,8 @@ struct PlaybackView: View {
 
             // Edit slate at the very bottom.
             Button("Edit slate…") { editingSlate = true }
-                .controlSize(.large)
-                .font(.title3)
+                .buttonStyle(BigButtonStyle())
+                .font(.title2)
                 .disabled(player.take == nil)
                 .padding(.top, 6)
         }
@@ -391,7 +395,7 @@ struct PlaybackView: View {
                 .keyboardShortcut(shortcut(.leftArrow))
                 .help("One frame back (←)")
             Button { player.togglePlay() } label: {
-                Image(systemName: player.isPlaying ? "pause.fill" : "play.fill").frame(width: 120)
+                Image(systemName: player.isPlaying ? "pause.fill" : "play.fill").frame(width: 160)
             }
             .keyboardShortcut(shortcut(.space))
             .help("Play / pause (space)")
@@ -407,13 +411,17 @@ struct PlaybackView: View {
             .disabled(adjacentClip(1) == nil)
             .help("Next clip (⌘→)")
 
-            Picker("Speed", selection: $player.rate) {
-                Text("0.5×").tag(Float(0.5))
-                Text("1×").tag(Float(1.0))
-                Text("2×").tag(Float(2.0))
+            HStack(spacing: 8) {
+                Text("Speed").foregroundStyle(.secondary)
+                SegmentGroup {
+                    ForEach([Float(0.5), 1, 2], id: \.self) { rate in
+                        Toggle(rate == 0.5 ? "0.5×" : "\(Int(rate))×", isOn: Binding(
+                            get: { player.rate == rate },
+                            set: { if $0 { player.rate = rate } }))
+                    }
+                }
+                .toggleStyle(SegmentToggleStyle(width: 80, minHeight: 40))
             }
-            .pickerStyle(.segmented)
-            .frame(width: 240)
             .padding(.leading, 36)   // set apart from the transport buttons
         }
     }
@@ -457,7 +465,7 @@ struct PlaybackView: View {
                     .help("Hear camera B")
             }
         }
-        .toggleStyle(SegmentToggleStyle())
+        .toggleStyle(SegmentToggleStyle(minHeight: 40))
     }
 
     private var markButtons: some View {
@@ -480,7 +488,7 @@ struct PlaybackView: View {
                 Toggle("Loop IN/OUT", isOn: $player.loopInOut)
                     .help("Repeat IN → OUT continuously (without OUT: to the end of the clip)")
             }
-            .toggleStyle(SegmentToggleStyle())
+            .toggleStyle(SegmentToggleStyle(minHeight: 40))
         }
     }
 

@@ -87,6 +87,8 @@ struct SegmentToggleStyle: ToggleStyle {
     var width: CGFloat? = nil
     /// Fixed height (e.g. to match a pop-up button next to it); nil = regular height.
     var height: CGFloat? = nil
+    /// Minimum height when `height` is nil.
+    var minHeight: CGFloat = 30
 
     func makeBody(configuration: Configuration) -> some View {
         Button {
@@ -97,7 +99,7 @@ struct SegmentToggleStyle: ToggleStyle {
                 .frame(width: width.map { max(0, $0 - (height == nil ? 32 : 12)) })
                 .padding(.horizontal, height == nil ? 16 : 6)
                 .padding(.vertical, height == nil ? 5 : 0)
-                .frame(minHeight: height ?? 30, maxHeight: height)
+                .frame(minHeight: height ?? minHeight, maxHeight: height)
                 .foregroundStyle(configuration.isOn ? Color.primary : Color.secondary)
                 .background(
                     RoundedRectangle(cornerRadius: 6)
@@ -117,6 +119,31 @@ struct SegmentGroup<Content: View>: View {
         HStack(spacing: 2) { content }
             .padding(2)
             .background(RoundedRectangle(cornerRadius: 8).fill(Color.gray.opacity(0.2)))
+    }
+}
+
+/// Big rounded button in the look of SegmentGroup (system buttons ignore larger fonts on macOS 26).
+struct BigButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        BigButton(configuration: configuration)
+    }
+
+    private struct BigButton: View {
+        let configuration: ButtonStyleConfiguration
+        @Environment(\.isEnabled) private var isEnabled
+
+        var body: some View {
+            configuration.label
+                .lineLimit(1)
+                .padding(.horizontal, 20)
+                .frame(minHeight: 44)
+                .foregroundStyle(isEnabled ? Color.primary : Color.secondary.opacity(0.6))
+                .background(
+                    RoundedRectangle(cornerRadius: 8)
+                        .fill(Color.gray.opacity(configuration.isPressed ? 0.45 : 0.25))
+                )
+                .contentShape(RoundedRectangle(cornerRadius: 8))
+        }
     }
 }
 
