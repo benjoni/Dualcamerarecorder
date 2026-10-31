@@ -11,15 +11,17 @@ import SwiftUI
 struct SlateBoard: View {
     let slate: SlateInfo
     var recording = false
+    /// Bigger board (recording tab).
+    var large = false
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: large ? 8 : 6) {
             HStack(spacing: 0) {
                 ForEach(0..<8, id: \.self) { i in
                     Rectangle().fill(i.isMultiple(of: 2) ? Color.white : Color.black)
                 }
             }
-            .frame(height: 10)
+            .frame(height: large ? 14 : 10)
             .rotationEffect(.degrees(-2))
             HStack {
                 Text(slate.production.isEmpty ? "PRODUCTION" : slate.production.uppercased())
@@ -27,8 +29,8 @@ struct SlateBoard: View {
                 Spacer(minLength: 6)
                 if !slate.shootingDay.isEmpty { Text("DAY \(slate.shootingDay)") }
             }
-            .font(.caption.weight(.bold))
-            HStack(alignment: .top, spacing: 14) {
+            .font(large ? .body.weight(.bold) : .caption.weight(.bold))
+            HStack(alignment: .top, spacing: large ? 20 : 14) {
                 cell("SCENE", slate.scene.isEmpty ? "–" : slate.scene)
                 cell("SHOT", slate.shot.isEmpty ? "–" : slate.shot)
                 cell("TAKE", "\(slate.take)")
@@ -39,11 +41,15 @@ struct SlateBoard: View {
                 if slate.mos { Text("MOS") }
                 if slate.good { Image(systemName: "star.fill").foregroundStyle(.yellow) }
             }
-            .font(.caption.weight(.semibold))
+            .font(large ? .callout.weight(.semibold) : .caption.weight(.semibold))
+            HStack(alignment: .top, spacing: large ? 20 : 14) {
+                person("DIRECTOR", slate.director)
+                person("DOP", slate.cameraOperator)
+            }
         }
         .foregroundStyle(.white)
-        .padding(10)
-        .frame(width: 250, alignment: .leading)
+        .padding(large ? 14 : 10)
+        .frame(width: large ? 340 : 250, alignment: .leading)
         .background(Color(white: 0.08), in: RoundedRectangle(cornerRadius: 8))
         .overlay(RoundedRectangle(cornerRadius: 8).stroke(recording ? Color.red : Color.gray.opacity(0.5),
                                                          lineWidth: recording ? 2 : 1))
@@ -51,10 +57,19 @@ struct SlateBoard: View {
 
     private func cell(_ title: String, _ value: String) -> some View {
         VStack(alignment: .leading, spacing: 0) {
-            Text(title).font(.system(size: 9, weight: .bold)).foregroundStyle(.gray)
-            Text(value).font(.system(size: 30, weight: .bold, design: .rounded))
+            Text(title).font(.system(size: large ? 11 : 9, weight: .bold)).foregroundStyle(.gray)
+            Text(value).font(.system(size: large ? 46 : 30, weight: .bold, design: .rounded))
                 .lineLimit(1).minimumScaleFactor(0.5)
         }
+    }
+
+    private func person(_ title: String, _ name: String) -> some View {
+        VStack(alignment: .leading, spacing: 0) {
+            Text(title).font(.system(size: large ? 11 : 9, weight: .bold)).foregroundStyle(.gray)
+            Text(name.isEmpty ? "–" : name).font(large ? .body.weight(.semibold) : .caption.weight(.semibold))
+                .lineLimit(1).truncationMode(.tail)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 }
 
@@ -222,7 +237,7 @@ struct SlatePanel: View {
     var body: some View {
         // Board at the left edge, fields centered in the window (an invisible board on the right balances it).
         HStack(alignment: .top, spacing: 0) {
-            SlateBoard(slate: displayedSlate, recording: controller.isRecording)
+            SlateBoard(slate: displayedSlate, recording: controller.isRecording, large: true)
             Spacer(minLength: 16)
             VStack(alignment: .leading, spacing: 6) {
                 HStack {
@@ -240,7 +255,7 @@ struct SlatePanel: View {
                     .font(.title2)
             }
             Spacer(minLength: 16)
-            SlateBoard(slate: displayedSlate).hidden()
+            SlateBoard(slate: displayedSlate, large: true).hidden()
         }
     }
 }
