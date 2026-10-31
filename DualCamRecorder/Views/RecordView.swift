@@ -168,32 +168,32 @@ struct RecordView: View {
     }
 
     /// Two-camera projects: switch camera A or B off for a while – the other fills the screen and records alone.
+    /// Big ON / OFF buttons for camera A and B (two-camera projects). Turning one camera off makes the
+    /// other fill the screen and record alone – only until it is turned on again or the project is reopened.
     private var cameraSwitches: some View {
-        HStack(spacing: 12) {
-            Text("Cameras").foregroundStyle(.secondary)
-            SegmentGroup {
-                ForEach(CameraRole.allCases) { role in
-                    Toggle(isOn: Binding(get: { settings.isCameraOn(role) },
-                                         set: { controller.setCamera(role, on: $0) })) {
-                        Label("Camera \(role.rawValue)", systemImage: settings.isCameraOn(role) ? "video.fill" : "video.slash")
-                    }
-                    .help("Camera \(role.rawValue) on / off (⌥\(role == .a ? 1 : 2))")
+        HStack(spacing: 14) {
+            ForEach(CameraRole.allCases) { role in
+                CameraSwitchButton(name: role == .a ? settings.cameraNameA : settings.cameraNameB, role: role,
+                                   isOn: settings.isCameraOn(role)) {
+                    controller.toggleCamera(role)
                 }
-            }
-            .toggleStyle(SegmentToggleStyle(width: 150))
-            .disabled(controller.isRecording)
-            .background {
-                ZStack {
-                    ShortcutButton(key: "1", modifiers: [.option]) { controller.toggleCamera(.a) }
-                    ShortcutButton(key: "2", modifiers: [.option]) { controller.toggleCamera(.b) }
-                }
+                .help("Camera \(role.rawValue) on / off (⌥\(role == .a ? 1 : 2))")
             }
             if settings.activeRoles.count == 1 {
-                Text("Only camera \(settings.activeRoles[0].rawValue) records")
+                Label("Only camera \(settings.activeRoles[0].rawValue) records", systemImage: "exclamationmark.triangle.fill")
+                    .font(.title3.weight(.semibold))
                     .foregroundStyle(.orange)
+            } else {
+                Text("⌥1 / ⌥2").font(.callout).foregroundStyle(.secondary)
             }
         }
-        .font(.title3)
+        .disabled(controller.isRecording)
+        .background {
+            ZStack {
+                ShortcutButton(key: "1", modifiers: [.option]) { controller.toggleCamera(.a) }
+                ShortcutButton(key: "2", modifiers: [.option]) { controller.toggleCamera(.b) }
+            }
+        }
         .frame(maxWidth: .infinity)
     }
 
@@ -327,5 +327,46 @@ struct CameraScreen: View {
             }
             .padding(8)
         }
+    }
+}
+
+/// Large coloured ON / OFF button for one camera (green = on, red outline = off).
+struct CameraSwitchButton: View {
+    let name: String
+    let role: CameraRole
+    let isOn: Bool
+    let action: () -> Void
+    @Environment(\.isEnabled) private var isEnabled
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 10) {
+                Image(systemName: isOn ? "video.fill" : "video.slash.fill")
+                    .font(.system(size: 20, weight: .semibold))
+                Text("Camera \(role.rawValue)" + (name != role.rawValue && !name.isEmpty ? " (\(name))" : ""))
+                    .font(.title3.weight(.semibold))
+                    .lineLimit(1)
+                Spacer(minLength: 6)
+                Text(isOn ? "ON" : "OFF")
+                    .font(.headline.weight(.heavy))
+                    .padding(.horizontal, 8).padding(.vertical, 3)
+                    .background(RoundedRectangle(cornerRadius: 5)
+                        .fill(isOn ? Color.white.opacity(0.25) : Color.red.opacity(0.25)))
+            }
+            .padding(.horizontal, 14)
+            .frame(width: 230, height: 44)
+            .foregroundStyle(isOn ? Color.white : Color.red)
+            .background(
+                RoundedRectangle(cornerRadius: 8)
+                    .fill(isOn ? Color.green.opacity(0.55) : Color.black.opacity(0.35))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 8)
+                    .strokeBorder(isOn ? Color.green : Color.red, lineWidth: 2)
+            )
+            .opacity(isEnabled ? 1 : 0.55)
+            .contentShape(RoundedRectangle(cornerRadius: 8))
+        }
+        .buttonStyle(.plain)
     }
 }
