@@ -134,7 +134,7 @@ Rozhranie aplikácie je **v angličtine** (Record / Playback / Slate …); tento
 - Spoločné **play/pause** (medzerník), **posuvník**, **krokovanie po snímkach** (← / →),
   **rýchlosť 0,5× / 1× / 2×**, výber zvuku A/B, zobrazenie rozdielu pozícií B−A.
 - **IN / OUT:** záber sa po načítaní nastaví na IN; pri zapnutom „Hrať len IN–OUT“ prehrávanie
-  štartuje na IN a zastaví presne na OUT (oba prehrávače). **Loop IN/OUT** prehráva úsek IN → OUT dokola (bez OUT až do konca klipu). IN/OUT sa dá v prehrávaní upraviť
+  štartuje na IN a zastaví presne na OUT (oba prehrávače). **Loop IN/OUT** prehráva úsek IN → OUT dokola (bez OUT až do konca klipu). **Loop clip** prehráva dokola celý klip od začiatku po koniec, IN/OUT ignoruje. IN/OUT sa dá v prehrávaní upraviť
   (I / O na aktuálnej snímke), skočiť na IN/OUT alebo zrušiť – zmeny sa hneď uložia do
   `C###_MARKS.JSON`. Zábery so značkami majú v zozname žltú vlajku.
 - Synchronizácia cez `setRate(_:time:atHostTime:)` so spoločným časom hostiteľských hodín;

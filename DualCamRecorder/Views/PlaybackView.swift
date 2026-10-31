@@ -519,6 +519,8 @@ struct PlaybackView: View {
                     .help("Start at IN and stop at OUT")
                 Toggle("Loop IN/OUT", isOn: $player.loopInOut)
                     .help("Repeat IN → OUT continuously (without OUT: to the end of the clip)")
+                Toggle("Loop clip", isOn: $player.loopClip)
+                    .help("Repeat the whole clip from start to end (IN / OUT ignored)")
             }
             .toggleStyle(SegmentToggleStyle(minHeight: 40))
             .padding(.leading, 36)   // set apart from the IN/OUT buttons

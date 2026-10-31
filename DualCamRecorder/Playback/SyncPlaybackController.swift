@@ -36,10 +36,20 @@ final class SyncPlaybackController: ObservableObject {
     @Published var limitToRange = true
     /// Loop: at OUT (or the end of the clip) jump back to IN (or the start) and keep playing.
     @Published var loopInOut = false {
-        didSet { if isPlaying && oldValue != loopInOut { play() } }
+        didSet {
+            if loopInOut && loopClip { loopClip = false }
+            if isPlaying && oldValue != loopInOut { play() }
+        }
     }
-    /// The IN–OUT range is used when "Play IN–OUT only" or "Loop IN/OUT" is on.
-    private var useRange: Bool { limitToRange || loopInOut }
+    /// Loop the whole clip (start → end), IN / OUT are ignored.
+    @Published var loopClip = false {
+        didSet {
+            if loopClip && loopInOut { loopInOut = false }
+            if isPlaying && oldValue != loopClip { play() }
+        }
+    }
+    /// The IN–OUT range is used when "Play IN–OUT only" or "Loop IN/OUT" is on (not while looping the whole clip).
+    private var useRange: Bool { !loopClip && (limitToRange || loopInOut) }
     @Published private(set) var marksMessage: String?
     /// Slate of the loaded take (nil for takes recorded without one).
     @Published private(set) var slate: SlateInfo?
@@ -143,7 +153,7 @@ final class SyncPlaybackController: ObservableObject {
                                                                  queue: .main) { [weak self] _ in
                 guard let self else { return }
                 self.isPlaying = false
-                if self.loopInOut { self.play() }   // restarts at IN (or the start)
+                if self.loopInOut || self.loopClip { self.play() }   // restarts at IN (or the start)
             }
         }
 
