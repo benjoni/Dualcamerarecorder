@@ -182,15 +182,8 @@ struct CameraPanel: View {
             HStack {
                 Text("Camera \(channel.role.rawValue)")
                     .font(.title3.weight(.bold))
-                Picker("", selection: Binding(
-                    get: { controller.assignedID(channel.role) },
-                    set: { controller.assign($0, to: channel.role) })) {
-                    ForEach(controller.deviceOptions) { option in
-                        Text(option.title).tag(option.id)
-                    }
-                }
-                .labelsHidden()
-                .disabled(controller.isRecording)
+                // Input device is chosen in Project settings.
+                Spacer(minLength: 12)
                 Text("Name").font(.caption).foregroundStyle(.secondary)
                 TextField("A", text: Binding(
                     get: { channel.role == .a ? controller.settings.cameraNameA : controller.settings.cameraNameB },
