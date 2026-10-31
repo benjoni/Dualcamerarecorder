@@ -173,8 +173,10 @@ struct SlatePanel: View {
     }
 
     var body: some View {
-        HStack(alignment: .top, spacing: 16) {
+        // Board at the left edge, fields centered in the window (an invisible board on the right balances it).
+        HStack(alignment: .top, spacing: 0) {
             SlateBoard(slate: displayedSlate, recording: controller.isRecording)
+            Spacer(minLength: 16)
             VStack(alignment: .leading, spacing: 6) {
                 HStack {
                     Text("Slate").font(.title3.weight(.semibold))
@@ -190,8 +192,9 @@ struct SlatePanel: View {
                             large: true)
                     .font(.title2)
             }
+            Spacer(minLength: 16)
+            SlateBoard(slate: displayedSlate).hidden()
         }
-        .frame(maxWidth: .infinity)   // slate block centered
     }
 }
 
