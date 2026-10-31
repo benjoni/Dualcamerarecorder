@@ -358,24 +358,42 @@ struct PlaybackView: View {
             infoBlock
                 .padding(.top, 6)
 
-            // Edit slate at the very bottom.
-            Button("Edit slate…") { editingSlate = true }
-                .buttonStyle(BigButtonStyle())
-                .font(.title2)
-                .disabled(player.take == nil)
-                .padding(.top, 6)
+            // Good take + edit slate at the very bottom.
+            HStack(spacing: 10) {
+                SegmentGroup {
+                    Toggle(isOn: Binding(
+                        get: { player.slate?.good ?? false },
+                        set: { good in
+                            var slate = player.slate ?? SlateInfo()
+                            slate.good = good
+                            saveSlate(slate)
+                        })) {
+                        Label("Good take", systemImage: player.slate?.good == true ? "star.fill" : "star")
+                    }
+                    .help("Good (circled) take")
+                }
+                .toggleStyle(SegmentToggleStyle(width: 180, minHeight: 40))
+                Button("Edit slate…") { editingSlate = true }
+                    .buttonStyle(BigButtonStyle())
+            }
+            .font(.title2)
+            .disabled(player.take == nil)
+            .padding(.top, 6)
         }
         .frame(maxWidth: .infinity)
         .sheet(isPresented: $editingSlate) {
             SlateEditSheet(slate: player.slate ?? SlateInfo(),
                            takeName: player.take?.name ?? "",
-                           onSave: { slate in
-                               player.updateSlate(slate)
-                               if let folder = player.take?.folder {
-                                   let names = settings.cameraNames
-                                   DispatchQueue.global(qos: .utility).async { ClipLog.rebuild(folder: folder, names: names) }
-                               }
-                           })
+                           onSave: { saveSlate($0) })
+        }
+    }
+
+    /// Stores the slate with the clip and rewrites CLIPLOG.CSV.
+    private func saveSlate(_ slate: SlateInfo) {
+        player.updateSlate(slate)
+        if let folder = player.take?.folder {
+            let names = settings.cameraNames
+            DispatchQueue.global(qos: .utility).async { ClipLog.rebuild(folder: folder, names: names) }
         }
     }
 
