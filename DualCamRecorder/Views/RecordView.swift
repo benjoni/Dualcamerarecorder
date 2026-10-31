@@ -67,6 +67,8 @@ struct RecordView: View {
             transportBar
             Divider()
             SlatePanel(controller: controller, settings: settings)
+            Divider()
+            filesAndDisk
             if let error = controller.errorMessage {
                 Text(error)
                     .foregroundStyle(.red)
@@ -77,8 +79,7 @@ struct RecordView: View {
         .padding()
     }
 
-    /// All controls centered: REC / timer / IN-OUT on the first row, disk info below.
-    /// REC/STOP, IN and OUT side by side with the same height; timer, file names and IN/OUT times below.
+    /// REC/STOP, IN and OUT side by side with the same height; timer and IN/OUT times below.
     private var transportBar: some View {
         let recording: Bool = {
             if case .recording = controller.state { return true }
@@ -124,12 +125,18 @@ struct RecordView: View {
             Text(DisplayFormat.duration(controller.elapsed))
                 .font(.system(size: 30, weight: .semibold, design: .monospaced))
                 .foregroundStyle(controller.isRecording ? .red : .primary)
-            Text(takeLabel).font(.body).foregroundStyle(.secondary)
-                .multilineTextAlignment(.center)
             Text("IN \(DisplayFormat.mark(controller.marks.inPoint))  ·  OUT \(DisplayFormat.mark(controller.marks.outPoint))")
                 .font(.system(.title3, design: .monospaced))
                 .foregroundStyle(.secondary)
+        }
+        .frame(maxWidth: .infinity)
+    }
 
+    /// Next / recording file names and disk info, at the bottom under the slate.
+    private var filesAndDisk: some View {
+        VStack(spacing: 6) {
+            Text(takeLabel).font(.body).foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
             HStack(spacing: 12) {
                 Image(systemName: "internaldrive")
                 Text("Free: \(DisplayFormat.bytes(controller.freeBytes)) of \(DisplayFormat.bytes(controller.totalBytes))")
