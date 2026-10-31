@@ -24,7 +24,9 @@ struct RecordView: View {
     private var screensOnlyBody: some View {
         HStack(spacing: 8) {
             CameraScreen(channel: controller.channelA, showWaveform: settings.showWaveform)
-            CameraScreen(channel: controller.channelB, showWaveform: settings.showWaveform)
+            if settings.twoCameras {
+                CameraScreen(channel: controller.channelB, showWaveform: settings.showWaveform)
+            }
         }
         .padding(8)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -42,7 +44,9 @@ struct RecordView: View {
         VStack(spacing: 12) {
             HStack(alignment: .top, spacing: 12) {
                 CameraPanel(controller: controller, channel: controller.channelA, showWaveform: settings.showWaveform)
-                CameraPanel(controller: controller, channel: controller.channelB, showWaveform: settings.showWaveform)
+                if settings.twoCameras {
+                    CameraPanel(controller: controller, channel: controller.channelB, showWaveform: settings.showWaveform)
+                }
             }
             Divider()
             transportBar

@@ -12,6 +12,34 @@ import Foundation
 import Combine
 import AppKit
 
+/// Settings stored per project (applied when the project is opened).
+struct ProjectSettings: Codable, Equatable {
+    var cameraCount = 2
+    var proResFlavor = ProResFlavor.proRes422.rawValue
+    var audioChannels = 2
+    var forceEightBit = false
+    var cameraNameA = "A"
+    var cameraNameB = "B"
+    var deviceA = ""
+    var deviceB = ""
+}
+
+extension ProjectSettings {
+    /// Tolerant decoding (missing keys keep their defaults).
+    init(from decoder: Decoder) throws {
+        self.init()
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        cameraCount = try c.decodeIfPresent(Int.self, forKey: .cameraCount) ?? cameraCount
+        proResFlavor = try c.decodeIfPresent(String.self, forKey: .proResFlavor) ?? proResFlavor
+        audioChannels = try c.decodeIfPresent(Int.self, forKey: .audioChannels) ?? audioChannels
+        forceEightBit = try c.decodeIfPresent(Bool.self, forKey: .forceEightBit) ?? forceEightBit
+        cameraNameA = try c.decodeIfPresent(String.self, forKey: .cameraNameA) ?? cameraNameA
+        cameraNameB = try c.decodeIfPresent(String.self, forKey: .cameraNameB) ?? cameraNameB
+        deviceA = try c.decodeIfPresent(String.self, forKey: .deviceA) ?? deviceA
+        deviceB = try c.decodeIfPresent(String.self, forKey: .deviceB) ?? deviceB
+    }
+}
+
 struct Project: Codable, Equatable {
     var name: String
     var director = ""
@@ -21,6 +49,8 @@ struct Project: Codable, Equatable {
     var lastOpenedAt: Date?
     /// Last slate used in this project (shooting day, scene, …) – restored when the project is opened.
     var slate: SlateInfo?
+    /// Cameras, codec, audio … of this project (nil for projects from older versions).
+    var settings: ProjectSettings?
 }
 
 struct ProjectEntry: Identifiable, Equatable {
@@ -185,8 +215,15 @@ final class ProjectStore: ObservableObject {
     }
 
     func saveSlate(_ slate: SlateInfo) {
-        guard var e = current else { return }
+        guard var e = current, e.project.slate != slate else { return }
         e.project.slate = slate
+        try? Self.save(e.project, folder: e.folder)
+        current = e
+    }
+
+    func saveSettings(_ settings: ProjectSettings) {
+        guard var e = current, e.project.settings != settings else { return }
+        e.project.settings = settings
         try? Self.save(e.project, folder: e.folder)
         current = e
     }

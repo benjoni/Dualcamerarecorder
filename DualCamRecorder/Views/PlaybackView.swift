@@ -72,10 +72,12 @@ struct PlaybackView: View {
                 .aspectRatio(16.0 / 9.0, contentMode: .fit)
                 .overlay { if settings.showWaveform { WaveformOverlay(model: player.waveformA) } }
                 .clipShape(RoundedRectangle(cornerRadius: 6))
-            PlayerView(player: player.playerB)
-                .aspectRatio(16.0 / 9.0, contentMode: .fit)
-                .overlay { if settings.showWaveform { WaveformOverlay(model: player.waveformB) } }
-                .clipShape(RoundedRectangle(cornerRadius: 6))
+            if showCameraB {
+                PlayerView(player: player.playerB)
+                    .aspectRatio(16.0 / 9.0, contentMode: .fit)
+                    .overlay { if settings.showWaveform { WaveformOverlay(model: player.waveformB) } }
+                    .clipShape(RoundedRectangle(cornerRadius: 6))
+            }
         }
         .padding(8)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -103,7 +105,9 @@ struct PlaybackView: View {
                 header
                 HStack(spacing: 12) {
                     playerPane(title: "Camera A", file: player.take?.camA, available: player.take?.camA != nil, content: PlayerView(player: player.playerA), waveform: player.waveformA)
-                    playerPane(title: "Camera B", file: player.take?.camB, available: player.take?.camB != nil, content: PlayerView(player: player.playerB), waveform: player.waveformB)
+                    if showCameraB {
+                        playerPane(title: "Camera B", file: player.take?.camB, available: player.take?.camB != nil, content: PlayerView(player: player.playerB), waveform: player.waveformB)
+                    }
                 }
                 transport
                 Spacer(minLength: 0)
@@ -112,6 +116,12 @@ struct PlaybackView: View {
             .frame(minWidth: 700)
         }
         .animation(.easeInOut(duration: 0.2), value: showClipList)
+    }
+
+    /// Camera B is shown when the clip has a B file (or, with no clip loaded, in two-camera projects).
+    private var showCameraB: Bool {
+        if let take = player.take { return take.camB != nil }
+        return settings.twoCameras
     }
 
     /// Newest clip = first in the list (sorted by clip number, descending).
@@ -328,8 +338,10 @@ struct PlaybackView: View {
         SegmentGroup {
             Toggle("Audio A", isOn: $player.audioA)
                 .help("Hear camera A")
-            Toggle("Audio B", isOn: $player.audioB)
-                .help("Hear camera B")
+            if showCameraB {
+                Toggle("Audio B", isOn: $player.audioB)
+                    .help("Hear camera B")
+            }
         }
         .toggleStyle(SegmentToggleStyle())
     }

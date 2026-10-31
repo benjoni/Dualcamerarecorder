@@ -19,6 +19,8 @@ final class AppSettings: ObservableObject {
     /// When true, the Playback tab reads from `playbackFolderPath` (e.g. a different disk) instead of the record folder.
     @Published var separatePlaybackFolder: Bool { didSet { defaults.set(separatePlaybackFolder, forKey: "separatePlaybackFolder") } }
     @Published var playbackFolderPath: String { didSet { defaults.set(playbackFolderPath, forKey: "playbackFolderPath") } }
+    /// 1 = only camera A is shown and recorded, 2 = cameras A and B.
+    @Published var cameraCount: Int { didSet { defaults.set(cameraCount, forKey: "cameraCount") } }
     /// 0 = no audio, 2 / 8 / 16 embedded SDI channels.
     @Published var audioChannels: Int { didSet { defaults.set(audioChannels, forKey: "audioChannels") } }
     @Published var forceEightBit: Bool { didSet { defaults.set(forceEightBit, forKey: "forceEightBit") } }
@@ -46,6 +48,7 @@ final class AppSettings: ObservableObject {
         separatePlaybackFolder = defaults.bool(forKey: "separatePlaybackFolder")
         playbackFolderPath = defaults.string(forKey: "playbackFolderPath") ?? defaultFolder
         audioChannels = defaults.object(forKey: "audioChannels") as? Int ?? 2
+        cameraCount = defaults.object(forKey: "cameraCount") as? Int ?? 2
         forceEightBit = defaults.bool(forKey: "forceEightBit")
         proResFlavor = ProResFlavor(rawValue: defaults.string(forKey: "proResFlavor") ?? "") ?? .proRes422
         deviceA = defaults.string(forKey: "deviceA") ?? ""
@@ -58,6 +61,26 @@ final class AppSettings: ObservableObject {
         } else {
             slate = SlateInfo()
         }
+    }
+
+    var twoCameras: Bool { cameraCount >= 2 }
+
+    /// The per-project part of the settings.
+    var projectSettings: ProjectSettings {
+        ProjectSettings(cameraCount: cameraCount, proResFlavor: proResFlavor.rawValue, audioChannels: audioChannels,
+                        forceEightBit: forceEightBit, cameraNameA: cameraNameA, cameraNameB: cameraNameB,
+                        deviceA: deviceA, deviceB: deviceB)
+    }
+
+    func apply(_ p: ProjectSettings) {
+        cameraCount = p.cameraCount == 1 ? 1 : 2
+        proResFlavor = ProResFlavor(rawValue: p.proResFlavor) ?? .proRes422
+        audioChannels = p.audioChannels
+        forceEightBit = p.forceEightBit
+        cameraNameA = p.cameraNameA
+        cameraNameB = p.cameraNameB
+        deviceA = p.deviceA
+        deviceB = p.deviceB
     }
 
     /// Sanitized, guaranteed-distinct camera names.

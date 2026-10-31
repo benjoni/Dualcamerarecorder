@@ -27,6 +27,14 @@ final class AppModel: ObservableObject {
             .debounce(for: .seconds(1), scheduler: RunLoop.main)
             .sink { [weak self] slate in self?.projects.saveSlate(slate) }
             .store(in: &cancellables)
+        // …and its settings (cameras, codec, audio, names, devices).
+        settings.objectWillChange
+            .debounce(for: .seconds(1), scheduler: RunLoop.main)
+            .sink { [weak self] _ in
+                guard let self else { return }
+                self.projects.saveSettings(self.settings.projectSettings)
+            }
+            .store(in: &cancellables)
     }
 
     /// Records into the project folder and restores the project's slate (production/director/DoP filled in).
@@ -35,6 +43,10 @@ final class AppModel: ObservableObject {
         if projects.current != nil { closeProject() }
         let opened = projects.markOpened(entry)
         settings.recordFolderPath = opened.folder.path
+        // Project settings: cameras, codec, audio … (new / older projects start from the current ones).
+        settings.apply(opened.project.settings ?? settings.projectSettings)
+        projects.saveSettings(settings.projectSettings)
+        recorder.restartSources()
 
         var slate = opened.project.slate ?? SlateInfo()
         slate.production = opened.project.name
@@ -93,6 +105,7 @@ struct ContentView: View {
     @State private var tab = 0
     /// Hide everything except the camera pictures / players (⌘F).
     @State private var screensOnly = false
+    @State private var showProjectSettings = false
 
     var body: some View {
         Group {
@@ -148,6 +161,9 @@ struct ContentView: View {
                 .padding(.top, 4)
             }
         }
+        .sheet(isPresented: $showProjectSettings) {
+            ProjectSettingsView(model: model, settings: settings, recorder: model.recorder)
+        }
         .toolbar {
             ToolbarItem(placement: .navigation) {
                 Button {
@@ -157,6 +173,15 @@ struct ContentView: View {
                 }
                 .disabled(model.recorder.isRecording)
                 .help(model.recorder.isRecording ? "Stop recording first" : "Back to the project list")
+            }
+            ToolbarItem(placement: .primaryAction) {
+                Button {
+                    showProjectSettings = true
+                } label: {
+                    Label("Project settings", systemImage: "gearshape")
+                }
+                .keyboardShortcut(",", modifiers: [.command, .option])
+                .help("Cameras, codec, audio of this project (⌥⌘,)")
             }
             ToolbarItem(placement: .primaryAction) {
                 Toggle(isOn: $settings.showWaveform) {

@@ -150,9 +150,17 @@ final class RecordingController: NSObject, ObservableObject, DLDeviceBrowserDele
         applyAssignment(role: .b)
     }
 
+    /// One or two cameras for the open project (camera B is stopped in one-camera mode).
+    func setCameraCount(_ count: Int) {
+        guard state == .idle else { return }
+        settings.cameraCount = count == 1 ? 1 : 2
+        applyAssignment(role: .b)
+    }
+
     private func applyAssignment(role: CameraRole) {
         let ch = channel(role)
         ch.setSource(nil)
+        if role == .b && !settings.twoCameras { return }
         let id = assignedID(role)
         if id.isEmpty { return }
         if id == AppSettings.simulatedDeviceID {

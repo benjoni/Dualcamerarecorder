@@ -29,6 +29,15 @@ Rozhranie aplikácie je **v angličtine** (Record / Playback / Slate …); tento
   skryje (súbory ostanú); 🔍 ho ukáže vo Finderi.
 - Tlačidlo **Projects** v lište sa vráti na úvod (nie počas nahrávania).
 
+### Project settings (⚙ v lište projektu, ⌥⌘,)
+- **1 camera / 2 cameras** – pri jednej kamere sa zobrazuje a nahráva len kamera A (cez celú
+  šírku), kamera B sa vôbec nespúšťa; Playback ukáže B len pri záberoch, ktoré ju majú.
+- Zariadenie a názov každej kamery, kodek (ProRes 422 / HQ / LT), audio kanály, vynútenie 8-bit.
+- Všetko sa ukladá do `PROJECT.JSON` projektu a obnoví sa pri jeho otvorení; nový projekt
+  prevezme nastavenia z naposledy otvoreného. Počas nahrávania sa meniť nedajú.
+- Globálne nastavenia (⌘,) obsahujú už len umiestnenie projektov, prehrávanie z iného disku
+  a informácie o DeckLink.
+
 ### Záložka NAHRÁVANIE
 - Automatické zistenie DeckLink zariadení (`IDeckLinkDiscovery`, aj hot-plug); priradenie
   *zariadenie → Kamera A / Kamera B* cez výber nad náhľadom (pri prvom spustení 1. → A, 2. → B).
