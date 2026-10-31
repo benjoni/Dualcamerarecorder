@@ -85,6 +85,9 @@ final class SyncPlaybackController: ObservableObject {
 
         let itemA = take?.camA.map { AVPlayerItem(url: $0) }
         let itemB = take?.camB.map { AVPlayerItem(url: $0) }
+        // Keep the audio pitch natural at 0.5× and 2×.
+        itemA?.audioTimePitchAlgorithm = .spectral
+        itemB?.audioTimePitchAlgorithm = .spectral
         playerA.replaceCurrentItem(with: itemA)
         playerB.replaceCurrentItem(with: itemB)
 

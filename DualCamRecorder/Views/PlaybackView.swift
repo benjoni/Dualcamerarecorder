@@ -311,9 +311,10 @@ struct PlaybackView: View {
             Picker("Speed", selection: $player.rate) {
                 Text("0.5×").tag(Float(0.5))
                 Text("1×").tag(Float(1.0))
+                Text("2×").tag(Float(2.0))
             }
             .pickerStyle(.segmented)
-            .frame(width: 170)
+            .frame(width: 240)
         }
     }
 
