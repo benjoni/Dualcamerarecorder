@@ -436,14 +436,14 @@ struct ExportPDFSheet: View {
                     }
                 }
                 Picker("Orientation", selection: $portrait) {
-                    Text("Landscape (6 clips / page)").tag(false)
-                    Text("Portrait (8 clips / page)").tag(true)
+                    Text("Landscape").tag(false)
+                    Text("Portrait").tag(true)
                 }
                 .pickerStyle(.segmented)
                 Toggle("Include pictures (middle of each clip)", isOn: $includePictures)
                 Toggle("Only good takes (★)", isOn: $onlyGood)
                 LabeledContent("Clips") {
-                    Text("\(selectedCount)")
+                    Text("\(selectedCount) clips · \(portrait ? 8 : 6) per page")
                 }
             }
             .formStyle(.grouped)
