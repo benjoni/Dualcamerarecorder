@@ -241,62 +241,7 @@ struct PlaybackView: View {
         .padding(.horizontal, 110)
     }
 
-    /// Slate summary of the loaded take + edit button.
-    private var slateInfo: some View {
-        VStack(spacing: 4) {
-            HStack(alignment: .firstTextBaseline, spacing: 10) {
-                Image(systemName: "film.stack")
-                if let slate = player.slate {
-                    Text(slate.shortLabel).font(.headline).fixedSize()
-                } else {
-                    Text("This clip has no slate data.").foregroundStyle(.secondary)
-                }
-                Button("Edit slate…") { editingSlate = true }
-                    .disabled(player.take == nil)
-            }
-            if let slate = player.slate {
-                Text(slate.longDescription.replacingOccurrences(of: "\n", with: "  ·  "))
-                    .font(.caption).foregroundStyle(.secondary).lineLimit(2)
-                    .multilineTextAlignment(.center)
-            }
-        }
-        .frame(maxWidth: .infinity)
-        .sheet(isPresented: $editingSlate) {
-            SlateEditSheet(slate: player.slate ?? SlateInfo(),
-                           takeName: player.take?.name ?? "",
-                           onSave: { player.updateSlate($0) })
-        }
-    }
-
-    private var markControls: some View {
-        VStack(spacing: 4) {
-            HStack(spacing: 10) {
-                Button("Set IN") { player.setIn() }
-                    .keyboardShortcut("i", modifiers: [])
-                    .help("IN at the current frame (I)")
-                Button("Set OUT") { player.setOut() }
-                    .keyboardShortcut("o", modifiers: [])
-                    .help("OUT at the current frame (O)")
-                Button { player.goToIn() } label: { Label("Go to IN", systemImage: "arrow.left.to.line") }
-                    .disabled(player.marks.inPoint == nil)
-                Button { player.goToOut() } label: { Label("Go to OUT", systemImage: "arrow.right.to.line") }
-                    .disabled(player.marks.outPoint == nil)
-                Button("Clear") { player.clearMarks() }
-                    .disabled(player.marks.isEmpty)
-                Toggle("Play IN–OUT only", isOn: $player.limitToRange)
-            }
-            HStack(spacing: 10) {
-                Text("IN \(player.marks.inPoint.map { player.timecode($0) } ?? "—")  ·  OUT \(player.marks.outPoint.map { player.timecode($0) } ?? "—")")
-                    .font(.system(.callout, design: .monospaced))
-                    .foregroundStyle(.secondary)
-                if let msg = player.marksMessage {
-                    Text(msg).font(.caption).foregroundStyle(.red)
-                }
-            }
-        }
-        .frame(maxWidth: .infinity)
-        .disabled(player.take == nil)
-    }
+    // MARK: - Controls: all buttons stacked, info below
 
     private var transport: some View {
         VStack(spacing: 8) {
@@ -316,46 +261,108 @@ struct PlaybackView: View {
                     .foregroundStyle(.secondary)
             }
             rangeBar
-            markControls
-            slateInfo
-            HStack(spacing: 14) {
-                Button { player.goToStart() } label: { Image(systemName: "backward.end.fill") }
-                    .help("Go to start")
-                Button { player.step(-1) } label: { Image(systemName: "backward.frame.fill") }
-                    .keyboardShortcut(.leftArrow, modifiers: [])
-                    .help("One frame back (←)")
-                Button { player.togglePlay() } label: {
-                    Image(systemName: player.isPlaying ? "pause.fill" : "play.fill").frame(width: 40)
-                }
-                .keyboardShortcut(.space, modifiers: [])
-                .help("Play / pause (space)")
-                Button { player.step(1) } label: { Image(systemName: "forward.frame.fill") }
-                    .keyboardShortcut(.rightArrow, modifiers: [])
-                    .help("One frame forward (→)")
 
-                Picker("Speed", selection: $player.rate) {
-                    Text("0.5×").tag(Float(0.5))
-                    Text("1×").tag(Float(1.0))
-                }
-                .pickerStyle(.segmented)
-                .frame(width: 140)
+            // Buttons, one group under another.
+            VStack(spacing: 8) {
+                transportButtons
+                audioButtons
+                markButtons
             }
-            .frame(maxWidth: .infinity)
+            .padding(.top, 4)
             .disabled(player.take == nil)
 
-            // Audio on its own row.
-            HStack(spacing: 14) {
-                Toggle("Audio A", isOn: $player.audioA)
-                Toggle("Audio B", isOn: $player.audioB)
-
-                if let offset = player.abOffsetMs {
-                    Text(String(format: "Offset B−A: %+.1f ms", offset))
-                        .font(.caption.monospacedDigit())
-                        .foregroundStyle(abs(offset) > 1000 * player.frameDuration.seconds ? .red : .secondary)
-                }
-            }
-            .frame(maxWidth: .infinity)
-            .disabled(player.take == nil)
+            // Info under the buttons.
+            infoBlock
+                .padding(.top, 6)
         }
+        .frame(maxWidth: .infinity)
+        .sheet(isPresented: $editingSlate) {
+            SlateEditSheet(slate: player.slate ?? SlateInfo(),
+                           takeName: player.take?.name ?? "",
+                           onSave: { player.updateSlate($0) })
+        }
+    }
+
+    private var transportButtons: some View {
+        HStack(spacing: 14) {
+            Button { player.goToStart() } label: { Image(systemName: "backward.end.fill") }
+                .help("Go to start")
+            Button { player.step(-1) } label: { Image(systemName: "backward.frame.fill") }
+                .keyboardShortcut(.leftArrow, modifiers: [])
+                .help("One frame back (←)")
+            Button { player.togglePlay() } label: {
+                Image(systemName: player.isPlaying ? "pause.fill" : "play.fill").frame(width: 40)
+            }
+            .keyboardShortcut(.space, modifiers: [])
+            .help("Play / pause (space)")
+            Button { player.step(1) } label: { Image(systemName: "forward.frame.fill") }
+                .keyboardShortcut(.rightArrow, modifiers: [])
+                .help("One frame forward (→)")
+
+            Picker("Speed", selection: $player.rate) {
+                Text("0.5×").tag(Float(0.5))
+                Text("1×").tag(Float(1.0))
+            }
+            .pickerStyle(.segmented)
+            .frame(width: 140)
+        }
+    }
+
+    private var audioButtons: some View {
+        HStack(spacing: 14) {
+            Toggle("Audio A", isOn: $player.audioA)
+            Toggle("Audio B", isOn: $player.audioB)
+        }
+    }
+
+    private var markButtons: some View {
+        HStack(spacing: 10) {
+            Button("Set IN") { player.setIn() }
+                .keyboardShortcut("i", modifiers: [])
+                .help("IN at the current frame (I)")
+            Button("Set OUT") { player.setOut() }
+                .keyboardShortcut("o", modifiers: [])
+                .help("OUT at the current frame (O)")
+            Button { player.goToIn() } label: { Label("Go to IN", systemImage: "arrow.left.to.line") }
+                .disabled(player.marks.inPoint == nil)
+            Button { player.goToOut() } label: { Label("Go to OUT", systemImage: "arrow.right.to.line") }
+                .disabled(player.marks.outPoint == nil)
+            Button("Clear") { player.clearMarks() }
+                .disabled(player.marks.isEmpty)
+            Toggle("Play IN–OUT only", isOn: $player.limitToRange)
+            Divider().frame(height: 18)
+            Button("Edit slate…") { editingSlate = true }
+        }
+    }
+
+    /// IN/OUT times, slate summary and the A/B offset.
+    private var infoBlock: some View {
+        VStack(spacing: 4) {
+            HStack(spacing: 10) {
+                Text("IN \(player.marks.inPoint.map { player.timecode($0) } ?? "—")  ·  OUT \(player.marks.outPoint.map { player.timecode($0) } ?? "—")")
+                    .font(.system(.callout, design: .monospaced))
+                if let msg = player.marksMessage {
+                    Text(msg).font(.caption).foregroundStyle(.red)
+                }
+            }
+            if let slate = player.slate {
+                HStack(spacing: 6) {
+                    Image(systemName: "film.stack")
+                    Text(slate.shortLabel).font(.headline)
+                }
+                Text(slate.longDescription.replacingOccurrences(of: "\n", with: "  ·  "))
+                    .font(.caption).lineLimit(2)
+                    .multilineTextAlignment(.center)
+            } else if player.take != nil {
+                Text("This clip has no slate data.")
+            }
+            if let offset = player.abOffsetMs {
+                Text(String(format: "Offset B−A: %+.1f ms", offset))
+                    .font(.caption.monospacedDigit())
+                    .foregroundStyle(abs(offset) > 1000 * player.frameDuration.seconds ? Color.red : Color.secondary)
+            }
+        }
+        .foregroundStyle(.secondary)
+        .frame(maxWidth: .infinity)
     }
 }
