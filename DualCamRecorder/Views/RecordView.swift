@@ -205,6 +205,9 @@ struct CameraPanel: View {
     @ObservedObject var channel: CameraChannel
     @ObservedObject var settings: AppSettings
     var showWaveform = false
+    /// Width of the picture: title row and stats line up with it, everything centered
+    /// (with one camera the picture is limited by the window height and does not fill the width).
+    @State private var pictureWidth: CGFloat?
 
     /// "Camera A" title. With two cameras it is an ON / OFF button; a camera that is off has no panel,
     /// so its OFF button is shown next to the title of the camera that is still on.
@@ -227,7 +230,7 @@ struct CameraPanel: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .center, spacing: 8) {
             HStack {
                 cameraTitles
                 // Input device is chosen in Project settings.
@@ -253,22 +256,27 @@ struct CameraPanel: View {
                     .labelsHidden()
                     .disabled(controller.isRecording)
             }
+            .frame(maxWidth: pictureWidth ?? .infinity)
 
             CameraScreen(channel: channel, showWaveform: showWaveform)
+                .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { pictureWidth = $0 }
 
-            Text(channel.format?.displayString ?? "Format: —")
-                .font(.system(.body, design: .monospaced))
-            AudioMeter(db: channel.audioLevelDB)
-            HStack(spacing: 16) {
-                stat("Captured", channel.stats.framesCaptured)
-                stat("Written", channel.stats.framesWritten)
-                stat("Dropped (input)", channel.stats.inputDropped, alert: channel.stats.inputDropped > 0)
-                stat("Dropped (write)", channel.stats.writerDropped, alert: channel.stats.writerDropped > 0)
+            VStack(alignment: .leading, spacing: 8) {
+                Text(channel.format?.displayString ?? "Format: —")
+                    .font(.system(.body, design: .monospaced))
+                AudioMeter(db: channel.audioLevelDB)
+                HStack(spacing: 16) {
+                    stat("Captured", channel.stats.framesCaptured)
+                    stat("Written", channel.stats.framesWritten)
+                    stat("Dropped (input)", channel.stats.inputDropped, alert: channel.stats.inputDropped > 0)
+                    stat("Dropped (write)", channel.stats.writerDropped, alert: channel.stats.writerDropped > 0)
+                }
+                .font(.callout)
+                if let error = channel.lastError {
+                    Text(error).font(.callout).foregroundStyle(.red)
+                }
             }
-            .font(.callout)
-            if let error = channel.lastError {
-                Text(error).font(.callout).foregroundStyle(.red)
-            }
+            .frame(maxWidth: pictureWidth ?? .infinity, alignment: .leading)
         }
         .frame(maxWidth: .infinity)
     }
