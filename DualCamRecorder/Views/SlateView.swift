@@ -78,45 +78,28 @@ struct SlateFields: View {
                 field("Shooting day", text: $slate.shootingDay).frame(maxWidth: 140)
             }
             .disabled(locked)
-            GridRow {
-                field("Scene", text: Binding(get: { slate.scene },
-                                             set: { v in if let setScene { setScene(v) } else { slate.scene = v } }))
-                    .frame(maxWidth: large ? 75 : 110)
-                    .gridCellAnchor(large ? .top : .topLeading)
-                field("Shot", text: Binding(get: { slate.shot },
-                                             set: { v in if let setShot { setShot(v) } else { slate.shot = v } }))
-                    .frame(maxWidth: large ? 75 : 110)
-                    .gridCellAnchor(large ? .top : .topLeading)
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Take").font(large ? .body : .callout).foregroundStyle(.secondary)
-                    HStack(spacing: 4) {
-                        styled(TextField("", value: $slate.take, format: .number))
-                            .frame(width: large ? 80 : 56)
-                        Stepper("", value: $slate.take, in: 1...999).labelsHidden()
+            if large {
+                // Scene · shot · take · EXT / DAY / MOS as one group, centered under the fields.
+                GridRow {
+                    HStack(alignment: .top, spacing: 16) {
+                        sceneField
+                        shotField
+                        takeField
+                        extrasGroup
                     }
+                    .gridCellColumns(4)
+                    .gridCellAnchor(.top)
                 }
-                .gridCellAnchor(large ? .top : .topLeading)
-                HStack(spacing: 10) {
-                    Picker("", selection: $slate.location) {
-                        ForEach(SlateInfo.Location.allCases) { Text($0.title).tag($0) }
-                    }
-                    .labelsHidden().frame(width: large ? 110 : 90)
-                    Picker("", selection: $slate.timeOfDay) {
-                        ForEach(SlateInfo.TimeOfDay.allCases) { Text($0.title).tag($0) }
-                    }
-                    .labelsHidden().frame(width: large ? 110 : 90)
-                    SegmentGroup {
-                        Toggle(isOn: $slate.mos) {
-                            Label("MOS", systemImage: "speaker.slash")
-                        }
-                        .help("Without sound")
-                    }
-                    .toggleStyle(SegmentToggleStyle(width: large ? 106 : 86, height: large ? 32 : 24))   // + 2 pt group padding = like EXT / DAY
+                .disabled(locked)
+            } else {
+                GridRow {
+                    sceneField
+                    shotField
+                    takeField
+                    extrasGroup
                 }
-                .controlSize(large ? .extraLarge : .regular)
-                .padding(.top, large ? 22 : 14)
+                .disabled(locked)
             }
-            .disabled(locked)
             GridRow {
                 field("Note", text: $slate.note)
                     .frame(maxWidth: large ? 560 : .infinity)   // 3 × 180 + spacing
@@ -131,6 +114,52 @@ struct SlateFields: View {
                 .padding(.top, large ? 22 : 14)
             }
         }
+    }
+
+    private var sceneField: some View {
+        field("Scene", text: Binding(get: { slate.scene },
+                                     set: { v in if let setScene { setScene(v) } else { slate.scene = v } }))
+            .frame(maxWidth: large ? 75 : 110)
+    }
+
+    private var shotField: some View {
+        field("Shot", text: Binding(get: { slate.shot },
+                                    set: { v in if let setShot { setShot(v) } else { slate.shot = v } }))
+            .frame(maxWidth: large ? 75 : 110)
+    }
+
+    private var takeField: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text("Take").font(large ? .body : .callout).foregroundStyle(.secondary)
+            HStack(spacing: 4) {
+                styled(TextField("", value: $slate.take, format: .number))
+                    .frame(width: large ? 80 : 56)
+                Stepper("", value: $slate.take, in: 1...999).labelsHidden()
+            }
+        }
+    }
+
+    /// EXT / DAY / MOS.
+    private var extrasGroup: some View {
+        HStack(spacing: 10) {
+            Picker("", selection: $slate.location) {
+                ForEach(SlateInfo.Location.allCases) { Text($0.title).tag($0) }
+            }
+            .labelsHidden().frame(width: large ? 110 : 90)
+            Picker("", selection: $slate.timeOfDay) {
+                ForEach(SlateInfo.TimeOfDay.allCases) { Text($0.title).tag($0) }
+            }
+            .labelsHidden().frame(width: large ? 110 : 90)
+            SegmentGroup {
+                Toggle(isOn: $slate.mos) {
+                    Label("MOS", systemImage: "speaker.slash")
+                }
+                .help("Without sound")
+            }
+            .toggleStyle(SegmentToggleStyle(width: large ? 106 : 86, height: large ? 32 : 24))   // + 2 pt group padding = like EXT / DAY
+        }
+        .controlSize(large ? .extraLarge : .regular)
+        .padding(.top, large ? 22 : 14)
     }
 
     private func field(_ title: String, text: Binding<String>) -> some View {
