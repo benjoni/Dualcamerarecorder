@@ -41,8 +41,8 @@ final class SyncPlaybackController: ObservableObject {
             if isPlaying && oldValue != loopInOut { play() }
         }
     }
-    /// Loop the whole clip (start → end), IN / OUT are ignored.
-    @Published var loopClip = false {
+    /// Loop the whole clip (start → end), IN / OUT are ignored. On by default.
+    @Published var loopClip = true {
         didSet {
             if loopClip && loopInOut { loopInOut = false }
             if isPlaying && oldValue != loopClip { play() }
