@@ -72,19 +72,19 @@ struct SlateFields: View {
     var body: some View {
         Grid(alignment: .leading, horizontalSpacing: 10, verticalSpacing: 8) {
             GridRow {
-                field("Production", text: $slate.production)
-                field("Director", text: $slate.director)
-                field("DoP", text: $slate.cameraOperator)
-                field("Shooting day", text: $slate.shootingDay).frame(maxWidth: large ? 180 : 140)
+                field("Production", text: $slate.production).frame(maxWidth: large ? 180 : .infinity)
+                field("Director", text: $slate.director).frame(maxWidth: large ? 180 : .infinity)
+                field("DoP", text: $slate.cameraOperator).frame(maxWidth: large ? 180 : .infinity)
+                field("Shooting day", text: $slate.shootingDay).frame(maxWidth: 140)
             }
             .disabled(locked)
             GridRow {
                 field("Scene", text: Binding(get: { slate.scene },
                                              set: { v in if let setScene { setScene(v) } else { slate.scene = v } }))
-                    .frame(maxWidth: large ? 150 : 110)
+                    .frame(maxWidth: large ? 75 : 110)
                 field("Shot", text: Binding(get: { slate.shot },
                                              set: { v in if let setShot { setShot(v) } else { slate.shot = v } }))
-                    .frame(maxWidth: large ? 150 : 110)
+                    .frame(maxWidth: large ? 75 : 110)
                 VStack(alignment: .leading, spacing: 2) {
                     Text("Take").font(large ? .body : .callout).foregroundStyle(.secondary)
                     HStack(spacing: 4) {
@@ -116,6 +116,7 @@ struct SlateFields: View {
             .disabled(locked)
             GridRow {
                 field("Note", text: $slate.note)
+                    .frame(maxWidth: large ? 560 : .infinity)   // 3 × 180 + spacing
                     .gridCellColumns(3)
                 SegmentGroup {
                     Toggle(isOn: $slate.good) {
@@ -190,6 +191,7 @@ struct SlatePanel: View {
                     .font(.title2)
             }
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 }
 
