@@ -13,12 +13,21 @@ struct PlaybackView: View {
     @State private var scrubValue: Double = 0
     @State private var isScrubbing = false
     @State private var editingSlate = false
+    /// Clip list is hidden by default – opened with the "Clips" button (⌘L) and hidden again by the user.
+    @State private var showClipList = false
+    /// Set when the tab appears: select the most recent clip as soon as the list is (re)loaded.
+    @State private var selectLatestPending = false
 
     var body: some View {
-        HSplitView {
-            takeList
-                .frame(minWidth: 300, idealWidth: 340, maxWidth: 440)
+        HStack(spacing: 0) {
+            if showClipList {
+                takeList
+                    .frame(width: 340)
+                    .transition(.move(edge: .leading))
+                Divider()
+            }
             VStack(spacing: 12) {
+                header
                 HStack(spacing: 12) {
                     playerPane(title: "Camera A", file: player.take?.camA, available: player.take?.camA != nil, content: PlayerView(player: player.playerA))
                     playerPane(title: "Camera B", file: player.take?.camB, available: player.take?.camB != nil, content: PlayerView(player: player.playerB))
@@ -29,8 +38,26 @@ struct PlaybackView: View {
             .padding()
             .frame(minWidth: 700)
         }
-        .onAppear { library.setFolder(settings.playbackFolderURL) }
-        .onChange(of: settings.playbackFolderURL) { _, url in library.setFolder(url) }
+        .animation(.easeInOut(duration: 0.2), value: showClipList)
+        .onAppear {
+            // Switching to Playback always cues the latest recorded clip.
+            selectLatestPending = true
+            library.setFolder(settings.playbackFolderURL)
+            selectLatest()
+            // Stop waiting for a re-scan after a moment, so later folder changes do not jump the selection.
+            DispatchQueue.main.asyncAfter(deadline: .now() + 2) { selectLatestPending = false }
+        }
+        .onDisappear { selectLatestPending = false }
+        .onChange(of: settings.playbackFolderURL) { _, url in
+            selectLatestPending = true
+            library.setFolder(url)
+        }
+        .onChange(of: library.takes) { _, _ in
+            if selectLatestPending {
+                selectLatest()
+                selectLatestPending = false
+            }
+        }
         .onChange(of: selection) { _, id in
             player.load(library.takes.first { $0.id == id })
         }
@@ -38,6 +65,43 @@ struct PlaybackView: View {
             if !isScrubbing { scrubValue = t }
         }
         .onReceive(NotificationCenter.default.publisher(for: .takeFinished)) { _ in library.refresh() }
+    }
+
+    /// Newest clip = first in the list (sorted by clip number, descending).
+    private func selectLatest() {
+        guard let latest = library.takes.first else { return }
+        if selection != latest.id {
+            selection = latest.id
+        } else if player.take?.id != latest.id {
+            player.load(latest)
+        }
+    }
+
+    /// Clip list toggle + what is loaded.
+    private var header: some View {
+        HStack(spacing: 12) {
+            Button {
+                showClipList.toggle()
+            } label: {
+                Label(showClipList ? "Hide clips" : "Clips", systemImage: "sidebar.left")
+            }
+            .keyboardShortcut("l", modifiers: [.command])
+            .help("Show / hide the clip list (⌘L)")
+
+            if let take = player.take {
+                Text(take.name).font(.headline)
+                if let slate = take.slate {
+                    Text(slate.shortLabel).foregroundStyle(.secondary)
+                }
+                if take.id == library.takes.first?.id {
+                    Badge(text: "LATEST", color: .blue)
+                }
+            } else {
+                Text(library.takes.isEmpty ? "No clips in this folder yet." : "No clip selected.")
+                    .foregroundStyle(.secondary)
+            }
+            Spacer()
+        }
     }
 
     private var takeList: some View {

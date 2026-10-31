@@ -55,6 +55,9 @@ Rozhranie aplikácie je **v angličtine** (Record / Playback / Slate …); tento
 ### Záložka PREHRÁVANIE
 - Pri zábere v zozname je aj „Obraz · Záber · Pokus“ a ★ pri dobrom pokuse; pod prehrávačmi
   je súhrn klapky a tlačidlo **Klapka…** na dodatočnú úpravu (uloží sa do `C###_SLATE.JSON`).
+- **Zoznam klipov je predvolene skrytý** – otvorí/skryje ho tlačidlo **Clips** (⌘L), takže
+  prehrávače majú celú šírku okna. Pri prepnutí na Playback sa **automaticky načíta posledný
+  nahraný klip** (označený LATEST); iný klip vyberieš v zozname a zoznam potom skryješ.
 - Zoznam záberov v priečinku (sleduje zmeny v priečinku; práve nahrávaný záber je skrytý),
   pri každom zábere **náhľadový obrázok zo stredu záznamu** (z CamA, ak chýba tak z CamB).
 - Po výbere sa načíta CamA a CamB vedľa seba v dvoch `AVPlayer`-och.
