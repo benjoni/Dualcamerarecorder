@@ -195,8 +195,9 @@ private struct ReportPage: View {
             if !portrait {
                 HStack(spacing: 10) {
                     if pictures {
-                        Text("Camera \(names.a)").frame(width: 104, alignment: .leading)
-                        if showB { Text("Camera \(names.b)").frame(width: 104, alignment: .leading) }
+                        // Picture columns have no title – the file lines name the camera.
+                        Color.clear.frame(width: 104, height: 1)
+                        if showB { Color.clear.frame(width: 104, height: 1) }
                     }
                     Text("Clip").frame(width: 46, alignment: .leading)
                     Text("Scene / Shot / Take").frame(width: 100, alignment: .leading)
