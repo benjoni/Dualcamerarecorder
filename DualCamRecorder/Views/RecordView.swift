@@ -177,6 +177,13 @@ struct CameraPanel: View {
                 PreviewView(renderer: channel.preview)
                     .aspectRatio(16.0 / 9.0, contentMode: .fit)
                     .clipShape(RoundedRectangle(cornerRadius: 6))
+                    // Red frame around the picture while this camera is recording.
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 6)
+                            .strokeBorder(Color.red, lineWidth: 4)
+                            .opacity(channel.isRecording ? 1 : 0)
+                            .animation(.easeInOut(duration: 0.15), value: channel.isRecording)
+                    )
                 HStack(spacing: 6) {
                     if channel.isRecording { Badge(text: "● REC", color: .red) }
                     if !channel.hasSource {
