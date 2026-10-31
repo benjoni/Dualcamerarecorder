@@ -80,3 +80,35 @@ struct ShortcutButton: View {
             .accessibilityHidden(true)
     }
 }
+
+/// Toggle drawn like a segment of a segmented control: light gray when on, dark when off.
+struct SegmentToggleStyle: ToggleStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        Button {
+            configuration.isOn.toggle()
+        } label: {
+            configuration.label
+                .padding(.horizontal, 16)
+                .padding(.vertical, 5)
+                .frame(minHeight: 30)
+                .foregroundStyle(configuration.isOn ? Color.primary : Color.secondary)
+                .background(
+                    RoundedRectangle(cornerRadius: 6)
+                        .fill(configuration.isOn ? Color.gray.opacity(0.55) : Color.clear)
+                )
+                .contentShape(RoundedRectangle(cornerRadius: 6))
+        }
+        .buttonStyle(.plain)
+    }
+}
+
+/// Container that groups SegmentToggleStyle toggles so they look like one segmented control.
+struct SegmentGroup<Content: View>: View {
+    @ViewBuilder let content: Content
+
+    var body: some View {
+        HStack(spacing: 2) { content }
+            .padding(2)
+            .background(RoundedRectangle(cornerRadius: 8).fill(Color.gray.opacity(0.2)))
+    }
+}

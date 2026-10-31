@@ -338,9 +338,13 @@ struct PlaybackView: View {
                 .disabled(player.marks.outPoint == nil)
             Button("Clear") { player.clearMarks() }
                 .disabled(player.marks.isEmpty)
-            Toggle("Play IN–OUT only", isOn: $player.limitToRange)
-            Toggle("Loop IN/OUT", isOn: $player.loopInOut)
-                .help("Repeat IN → OUT continuously (without OUT: to the end of the clip)")
+            SegmentGroup {
+                Toggle("Play IN–OUT only", isOn: $player.limitToRange)
+                    .help("Start at IN and stop at OUT")
+                Toggle("Loop IN/OUT", isOn: $player.loopInOut)
+                    .help("Repeat IN → OUT continuously (without OUT: to the end of the clip)")
+            }
+            .toggleStyle(SegmentToggleStyle())
         }
     }
 
