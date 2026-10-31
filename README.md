@@ -109,6 +109,9 @@ Rozhranie aplikácie je **v angličtine** (Record / Playback / Slate …); tento
 - Zoznam klipov je **zoradený podľa shooting day** (najnovší deň hore, prirodzené poradie
   „9 < 10“, „D02 < D03“), každý deň má vlastný nadpis; v rámci dňa najnovší klip hore.
   Klipy bez shooting day sú na konci.
+- **Hľadanie** v zozname klipov: číslo klipu, súbor, scéna, záber, pokus (`T04`), shooting day,
+  Cam clip, poznámka, INT/EXT, DAY/NIGHT a slová `good` / `mos`; viac slov = všetky musia sedieť
+  (napr. `12 3B good`). Počas písania sú jednoklávesové skratky (medzerník, I, O, šípky) vypnuté.
 - **Prev / Next** (⌘← / ⌘→) prepne na predchádzajúci / nasledujúci klip (podľa čísla klipu),
   funguje aj v Screens only.
 - **Zoznam klipov je predvolene skrytý** – otvorí/skryje ho tlačidlo **Clips** (⌘L), takže

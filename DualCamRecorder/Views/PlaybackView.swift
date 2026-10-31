@@ -14,6 +14,10 @@ struct PlaybackView: View {
     @State private var isScrubbing = false
     @State private var editingSlate = false
     @State private var exportingPDF = false
+    /// Clip list search (scene, shot, take, file, cam clip, note, "good", "mos" …).
+    @State private var searchText = ""
+    /// While typing in the search field, single-key shortcuts (space, I, O, arrows) are switched off.
+    @FocusState private var searchFocused: Bool
     /// Clip list is hidden by default – opened with the "Clips" button (⌘L) and hidden again by the user.
     @State private var showClipList = false
     /// Set when the tab appears: select the most recent clip as soon as the list is (re)loaded.
@@ -190,8 +194,34 @@ struct PlaybackView: View {
                 .font(.caption2).foregroundStyle(.secondary)
                 .lineLimit(1).truncationMode(.middle)
                 .padding(.horizontal, 8)
+
+            HStack(spacing: 6) {
+                Image(systemName: "magnifyingglass").foregroundStyle(.secondary)
+                TextField("Search scene, shot, take, file, note, good…", text: $searchText)
+                    .textFieldStyle(.plain)
+                    .focused($searchFocused)
+                    .onSubmit { searchFocused = false }
+                    .onExitCommand { searchFocused = false }
+                if !searchText.isEmpty {
+                    Button { searchText = "" } label: { Image(systemName: "xmark.circle.fill") }
+                        .buttonStyle(.borderless)
+                        .foregroundStyle(.secondary)
+                        .help("Clear search")
+                }
+            }
+            .padding(.horizontal, 8)
+            .padding(.vertical, 6)
+            .background(RoundedRectangle(cornerRadius: 7).fill(Color.gray.opacity(0.15)))
+            .padding(.horizontal, 8)
+            .padding(.top, 8)
+            if !searchText.isEmpty {
+                Text("\(visibleTakes.count) of \(library.takes.count) clips")
+                    .font(.caption).foregroundStyle(.secondary)
+                    .padding(.horizontal, 10).padding(.top, 4)
+            }
+
             List(selection: $selection) {
-                ForEach(library.groupedByShootingDay) { group in
+                ForEach(TakeLibrary.group(visibleTakes)) { group in
                     Section(group.title) {
                         ForEach(group.takes) { take in
                             HStack(spacing: 8) {
@@ -341,29 +371,29 @@ struct PlaybackView: View {
             Button { selectAdjacentClip(-1) } label: {
                 Label("Prev", systemImage: "backward.end.alt.fill")
             }
-            .keyboardShortcut(.leftArrow, modifiers: [.command])
+            .keyboardShortcut(shortcut(.leftArrow, [.command]))
             .disabled(adjacentClip(-1) == nil)
             .help("Previous clip (⌘←)")
 
             Button { player.goToStart() } label: { Image(systemName: "backward.end.fill") }
                 .help("Go to start")
             Button { player.step(-1) } label: { Image(systemName: "backward.frame.fill") }
-                .keyboardShortcut(.leftArrow, modifiers: [])
+                .keyboardShortcut(shortcut(.leftArrow))
                 .help("One frame back (←)")
             Button { player.togglePlay() } label: {
                 Image(systemName: player.isPlaying ? "pause.fill" : "play.fill").frame(width: 120)
             }
-            .keyboardShortcut(.space, modifiers: [])
+            .keyboardShortcut(shortcut(.space))
             .help("Play / pause (space)")
             Button { player.step(1) } label: { Image(systemName: "forward.frame.fill") }
-                .keyboardShortcut(.rightArrow, modifiers: [])
+                .keyboardShortcut(shortcut(.rightArrow))
                 .help("One frame forward (→)")
 
             Button { selectAdjacentClip(1) } label: {
                 Label("Next", systemImage: "forward.end.alt.fill")
                     .labelStyle(TrailingIconLabelStyle())
             }
-            .keyboardShortcut(.rightArrow, modifiers: [.command])
+            .keyboardShortcut(shortcut(.rightArrow, [.command]))
             .disabled(adjacentClip(1) == nil)
             .help("Next clip (⌘→)")
 
@@ -378,10 +408,21 @@ struct PlaybackView: View {
         }
     }
 
+    /// Keyboard shortcut that is off while the search field has the cursor.
+    private func shortcut(_ key: KeyEquivalent, _ modifiers: EventModifiers = []) -> KeyboardShortcut? {
+        searchFocused ? nil : KeyboardShortcut(key, modifiers: modifiers)
+    }
+
+    /// Clips shown in the list (all, or those matching the search).
+    private var visibleTakes: [Take] {
+        searchText.trimmingCharacters(in: .whitespaces).isEmpty ? library.takes : library.takes.filter { $0.matches(searchText) }
+    }
+
     // MARK: - Previous / next clip (by clip number, i.e. recording order)
 
     private func adjacentClip(_ delta: Int) -> Take? {
-        let ordered = library.takes.sorted { $0.number < $1.number }
+        // While searching, Prev / Next step through the found clips only.
+        let ordered = visibleTakes.sorted { $0.number < $1.number }
         guard let currentID = selection ?? player.take?.id,
               let index = ordered.firstIndex(where: { $0.id == currentID }) else {
             return delta > 0 ? ordered.first : ordered.last
@@ -410,10 +451,10 @@ struct PlaybackView: View {
     private var markButtons: some View {
         HStack(spacing: 10) {
             Button("Set IN") { player.setIn() }
-                .keyboardShortcut("i", modifiers: [])
+                .keyboardShortcut(shortcut("i"))
                 .help("IN at the current frame (I)")
             Button("Set OUT") { player.setOut() }
-                .keyboardShortcut("o", modifiers: [])
+                .keyboardShortcut(shortcut("o"))
                 .help("OUT at the current frame (O)")
             Button { player.goToIn() } label: { Label("Go to IN", systemImage: "arrow.left.to.line") }
                 .disabled(player.marks.inPoint == nil)

@@ -31,6 +31,30 @@ struct TakeDayGroup: Identifiable {
     var title: String { day.isEmpty ? "No shooting day" : "Shooting day \(day)" }
 }
 
+extension Take {
+    /// Text searched by the clip list search field (lower case, no diacritics).
+    var searchText: String {
+        var parts = [String(format: "%03d", number), name, camA?.lastPathComponent ?? "", camB?.lastPathComponent ?? ""]
+        if let s = slate {
+            parts += [s.scene, s.shot, "s\(s.scene)", "sh\(s.shot)", "t\(s.take)", String(format: "t%02d", s.take),
+                      "take \(s.take)", "day \(s.shootingDay)", "d\(s.shootingDay)", s.shootingDay,
+                      s.cameraClipA, s.cameraClipB, s.note, s.location.rawValue, s.timeOfDay.rawValue]
+            if s.good { parts.append("good ★") }
+            if s.mos { parts.append("mos") }
+        }
+        return parts.joined(separator: " ").folding(options: [.caseInsensitive, .diacriticInsensitive], locale: nil)
+    }
+
+    /// Every word of the query must appear somewhere in the clip's text.
+    func matches(_ query: String) -> Bool {
+        let words = query.folding(options: [.caseInsensitive, .diacriticInsensitive], locale: nil)
+            .split(whereSeparator: { $0.isWhitespace })
+        guard !words.isEmpty else { return true }
+        let text = searchText
+        return words.allSatisfy { text.contains($0) }
+    }
+}
+
 final class TakeLibrary: ObservableObject {
     @Published private(set) var takes: [Take] = []
     @Published private(set) var folder: URL?
@@ -103,7 +127,10 @@ final class TakeLibrary: ObservableObject {
     }
 
     /// Clips grouped by shooting day, in list order.
-    var groupedByShootingDay: [TakeDayGroup] {
+    var groupedByShootingDay: [TakeDayGroup] { Self.group(takes) }
+
+    /// Groups already sorted clips by shooting day.
+    static func group(_ takes: [Take]) -> [TakeDayGroup] {
         var groups: [TakeDayGroup] = []
         for take in takes {
             if let last = groups.last, last.day == take.shootingDay {
