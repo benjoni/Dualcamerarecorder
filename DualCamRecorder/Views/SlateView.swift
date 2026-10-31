@@ -41,7 +41,7 @@ struct SlateBoard: View {
                 if slate.mos { Text("MOS") }
                 if slate.good { Image(systemName: "star.fill").foregroundStyle(.yellow) }
             }
-            .font(large ? .callout.weight(.semibold) : .caption.weight(.semibold))
+            .font(large ? .title2.weight(.bold) : .caption.weight(.semibold))
             HStack(alignment: .top, spacing: large ? 20 : 14) {
                 person("DIRECTOR", slate.director)
                 person("DOP", slate.cameraOperator)
