@@ -38,7 +38,7 @@ enum ClipLog {
             let row: [String] = [
                 String(format: "%03d", entry.take),
                 entry.role.rawValue,
-                names.name(entry.role),
+                TakeNaming.cameraName(in: entry.file) ?? names.name(entry.role),   // name the file was recorded with
                 entry.file,
                 cameraClip,
                 s?.shootingDay ?? "",

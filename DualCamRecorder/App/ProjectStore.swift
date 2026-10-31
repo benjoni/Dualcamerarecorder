@@ -20,6 +20,9 @@ struct ProjectSettings: Codable, Equatable {
     var forceEightBit = false
     var cameraNameA = "A"
     var cameraNameB = "B"
+    /// Names the cameras had before (files recorded with them are still recognised).
+    var earlierCameraNamesA: [String] = []
+    var earlierCameraNamesB: [String] = []
     var deviceA = ""
     var deviceB = ""
     /// Second copy of all clips on another disk: <backupRootPath>/<project folder name>.
@@ -38,6 +41,8 @@ extension ProjectSettings {
         forceEightBit = try c.decodeIfPresent(Bool.self, forKey: .forceEightBit) ?? forceEightBit
         cameraNameA = try c.decodeIfPresent(String.self, forKey: .cameraNameA) ?? cameraNameA
         cameraNameB = try c.decodeIfPresent(String.self, forKey: .cameraNameB) ?? cameraNameB
+        earlierCameraNamesA = try c.decodeIfPresent([String].self, forKey: .earlierCameraNamesA) ?? earlierCameraNamesA
+        earlierCameraNamesB = try c.decodeIfPresent([String].self, forKey: .earlierCameraNamesB) ?? earlierCameraNamesB
         deviceA = try c.decodeIfPresent(String.self, forKey: .deviceA) ?? deviceA
         deviceB = try c.decodeIfPresent(String.self, forKey: .deviceB) ?? deviceB
         backupEnabled = try c.decodeIfPresent(Bool.self, forKey: .backupEnabled) ?? backupEnabled

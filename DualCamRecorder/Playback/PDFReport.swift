@@ -20,6 +20,8 @@ struct ReportOptions {
     var onlyGoodTakes = false
     /// A4 portrait instead of landscape.
     var portrait = false
+    /// Camera names for column titles and file lines.
+    var cameraNames = CameraNames()
 
     var pageSize: CGSize { portrait ? CGSize(width: 595, height: 842) : CGSize(width: 842, height: 595) }
     /// Clips per page (portrait rows are taller but there is more height).
@@ -116,6 +118,7 @@ enum PDFReport {
                                   pictures: options.includePictures,
                                   portrait: options.portrait,
                                   showB: showB,
+                                  names: options.cameraNames,
                                   pageNumber: index + 1,
                                   pageCount: pages.count,
                                   dayPage: page.dayPage,
@@ -154,6 +157,7 @@ private struct ReportPage: View {
     let pictures: Bool
     let portrait: Bool
     let showB: Bool
+    var names = CameraNames()
     let pageNumber: Int
     let pageCount: Int
     let dayPage: Int
@@ -191,8 +195,8 @@ private struct ReportPage: View {
             if !portrait {
                 HStack(spacing: 10) {
                     if pictures {
-                        Text("Camera A").frame(width: 104, alignment: .leading)
-                        if showB { Text("Camera B").frame(width: 104, alignment: .leading) }
+                        Text("Camera \(names.a)").frame(width: 104, alignment: .leading)
+                        if showB { Text("Camera \(names.b)").frame(width: 104, alignment: .leading) }
                     }
                     Text("Clip").frame(width: 46, alignment: .leading)
                     Text("Scene / Shot / Take").frame(width: 100, alignment: .leading)
@@ -208,9 +212,9 @@ private struct ReportPage: View {
 
             ForEach(clips) { clip in
                 if portrait {
-                    ReportRowPortrait(clip: clip, pictures: pictures, showB: showB)
+                    ReportRowPortrait(clip: clip, pictures: pictures, showB: showB, names: names)
                 } else {
-                    ReportRow(clip: clip, pictures: pictures, showB: showB)
+                    ReportRow(clip: clip, pictures: pictures, showB: showB, names: names)
                 }
                 Rectangle().fill(Color(white: 0.85)).frame(height: 0.5)
             }
@@ -235,6 +239,7 @@ private struct ReportRow: View {
     let clip: ReportClip
     let pictures: Bool
     let showB: Bool
+    var names = CameraNames()
 
     var body: some View {
         let s = clip.slate
@@ -260,9 +265,9 @@ private struct ReportRow: View {
             .frame(width: 100, alignment: .leading)
 
             VStack(alignment: .leading, spacing: 2) {
-                fileLine("A", clip.take.camA?.lastPathComponent, s?.cameraClipA)
+                fileLine(label(clip.take.camA, names.a), clip.take.camA?.lastPathComponent, s?.cameraClipA)
                 if showB {
-                    fileLine("B", clip.take.camB?.lastPathComponent, s?.cameraClipB)
+                    fileLine(label(clip.take.camB, names.b), clip.take.camB?.lastPathComponent, s?.cameraClipB)
                 }
             }
             .frame(width: 170, alignment: .leading)
@@ -331,6 +336,7 @@ private struct ReportRowPortrait: View {
     let clip: ReportClip
     let pictures: Bool
     let showB: Bool
+    var names = CameraNames()
 
     var body: some View {
         let s = clip.slate
@@ -356,9 +362,9 @@ private struct ReportRowPortrait: View {
                 if let marks = inOut {
                     Text(marks).font(.system(size: 8, design: .monospaced))
                 }
-                line("A", clip.take.camA?.lastPathComponent, s?.cameraClipA)
+                line(label(clip.take.camA, names.a), clip.take.camA?.lastPathComponent, s?.cameraClipA)
                 if showB {
-                    line("B", clip.take.camB?.lastPathComponent, s?.cameraClipB)
+                    line(label(clip.take.camB, names.b), clip.take.camB?.lastPathComponent, s?.cameraClipB)
                 }
                 if let note = s?.note, !note.isEmpty {
                     Text(note).font(.system(size: 8.5)).lineLimit(2)
@@ -490,7 +496,7 @@ struct ExportPDFSheet: View {
         guard panel.runModal() == .OK, let url = panel.url else { return }
 
         let options = ReportOptions(shootingDay: day == "*" ? nil : day, includePictures: includePictures,
-                                    onlyGoodTakes: onlyGood, portrait: portrait)
+                                    onlyGoodTakes: onlyGood, portrait: portrait, cameraNames: settings.cameraNames)
         let takes = library.takes
         working = true
         error = nil
@@ -507,4 +513,9 @@ struct ExportPDFSheet: View {
             }
         }
     }
+}
+
+/// Camera name a file was recorded with (B007_… stays "B" after renaming camera B to C).
+private func label(_ file: URL?, _ current: String) -> String {
+    file.flatMap { TakeNaming.cameraName(in: $0.lastPathComponent) } ?? current
 }

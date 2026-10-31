@@ -221,11 +221,11 @@ struct CameraPanel: View {
                 CameraTitleButton(controller: controller, settings: settings, role: role)
                 if other == .b && !settings.isCameraOn(.b) { CameraTitleButton(controller: controller, settings: settings, role: .b) }
                 if !settings.isCameraOn(other) {
-                    Text("Only \(role.rawValue) records").font(.callout).foregroundStyle(.orange)
+                    Text("Only \(settings.cameraNames.name(role)) records").font(.callout).foregroundStyle(.orange)
                 }
             }
         } else {
-            Text("Camera \(role.rawValue)").font(.title3.weight(.bold))
+            Text("Camera \(settings.cameraNames.name(role))").font(.title3.weight(.bold))
         }
     }
 
@@ -349,7 +349,7 @@ struct CameraTitleButton: View {
         let on = settings.isCameraOn(role)
         Button { controller.toggleCamera(role) } label: {
             HStack(spacing: 6) {
-                Text("Camera \(role.rawValue)")
+                Text("Camera \(settings.cameraNames.name(role))")
                     .font(.title3.weight(.bold))
                     .foregroundStyle(on ? Color.primary : Color.secondary)
                 Text(on ? "ON" : "OFF")
@@ -364,6 +364,6 @@ struct CameraTitleButton: View {
         }
         .buttonStyle(.plain)
         .disabled(controller.isRecording)
-        .help("Camera \(role.rawValue) on / off (⌥\(role == .a ? 1 : 2)) – the other camera fills the screen and records alone")
+        .help("Camera \(settings.cameraNames.name(role)) on / off (⌥\(role == .a ? 1 : 2)) – the other camera fills the screen and records alone")
     }
 }

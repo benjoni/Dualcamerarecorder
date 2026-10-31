@@ -28,6 +28,9 @@ final class AppSettings: ObservableObject {
     /// Camera names at the start of the file names (A007_… / B007_…).
     @Published var cameraNameA: String { didSet { defaults.set(cameraNameA, forKey: "cameraNameA") } }
     @Published var cameraNameB: String { didSet { defaults.set(cameraNameB, forKey: "cameraNameB") } }
+    /// Camera names used for earlier recordings of the open project (kept in PROJECT.JSON).
+    @Published var earlierCameraNamesA: [String] = []
+    @Published var earlierCameraNamesB: [String] = []
     /// Backup copy of the project's clips on a second disk (per project).
     @Published var backupEnabled: Bool { didSet { defaults.set(backupEnabled, forKey: "backupEnabled") } }
     @Published var backupRootPath: String { didSet { defaults.set(backupRootPath, forKey: "backupRootPath") } }
@@ -84,6 +87,7 @@ final class AppSettings: ObservableObject {
     var projectSettings: ProjectSettings {
         ProjectSettings(cameraCount: cameraCount, proResFlavor: proResFlavor.rawValue, audioChannels: audioChannels,
                         forceEightBit: forceEightBit, cameraNameA: cameraNameA, cameraNameB: cameraNameB,
+                        earlierCameraNamesA: earlierCameraNamesA, earlierCameraNamesB: earlierCameraNamesB,
                         deviceA: deviceA, deviceB: deviceB,
                         backupEnabled: backupEnabled, backupRootPath: backupRootPath)
     }
@@ -95,6 +99,8 @@ final class AppSettings: ObservableObject {
         forceEightBit = p.forceEightBit
         cameraNameA = p.cameraNameA
         cameraNameB = p.cameraNameB
+        earlierCameraNamesA = p.earlierCameraNamesA
+        earlierCameraNamesB = p.earlierCameraNamesB
         deviceA = p.deviceA
         deviceB = p.deviceB
         backupEnabled = p.backupEnabled
@@ -102,7 +108,15 @@ final class AppSettings: ObservableObject {
     }
 
     /// Sanitized, guaranteed-distinct camera names.
-    var cameraNames: CameraNames { CameraNames(a: cameraNameA, b: cameraNameB) }
+    var cameraNames: CameraNames {
+        CameraNames(a: cameraNameA, b: cameraNameB, earlierA: earlierCameraNamesA, earlierB: earlierCameraNamesB)
+    }
+
+    /// Remembers the names a recording was made with, so its files are still found after a rename.
+    func rememberCameraNames(_ names: CameraNames) {
+        if !earlierCameraNamesA.contains(names.a) { earlierCameraNamesA.append(names.a) }
+        if !earlierCameraNamesB.contains(names.b) { earlierCameraNamesB.append(names.b) }
+    }
 
     var recordFolderURL: URL { URL(fileURLWithPath: recordFolderPath, isDirectory: true) }
 

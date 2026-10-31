@@ -114,10 +114,10 @@ struct PlaybackView: View {
                 header
                 HStack(spacing: 12) {
                     if showCameraA {
-                        playerPane(title: "Camera A", role: .a, file: player.take?.camA, available: player.take?.camA != nil, content: PlayerView(player: player.playerA), waveform: player.waveformA)
+                        playerPane(title: "Camera \(settings.cameraNames.a)", role: .a, file: player.take?.camA, available: player.take?.camA != nil, content: PlayerView(player: player.playerA), waveform: player.waveformA)
                     }
                     if showCameraB {
-                        playerPane(title: "Camera B", role: .b, file: player.take?.camB, available: player.take?.camB != nil, content: PlayerView(player: player.playerB), waveform: player.waveformB)
+                        playerPane(title: "Camera \(settings.cameraNames.b)", role: .b, file: player.take?.camB, available: player.take?.camB != nil, content: PlayerView(player: player.playerB), waveform: player.waveformB)
                     }
                 }
                 transport
@@ -254,8 +254,8 @@ struct PlaybackView: View {
                                         Text(slate.sceneShotTake).foregroundStyle(.primary)
                                     }
                                     HStack(spacing: 6) {
-                                        Text(take.camA != nil ? "A" : "–").foregroundStyle(take.camA != nil ? Color.green : Color.secondary)
-                                        Text(take.camB != nil ? "B" : "–").foregroundStyle(take.camB != nil ? Color.green : Color.secondary)
+                                        Text(take.camA != nil ? settings.cameraNames.a : "–").foregroundStyle(take.camA != nil ? Color.green : Color.secondary)
+                                        Text(take.camB != nil ? settings.cameraNames.b : "–").foregroundStyle(take.camB != nil ? Color.green : Color.secondary)
                                         Text(DisplayFormat.bytes(take.sizeBytes))
                                     }
                                     HStack(spacing: 4) {

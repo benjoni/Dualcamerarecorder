@@ -17,8 +17,12 @@ import Foundation
 struct CameraNames: Equatable {
     var a: String
     var b: String
+    /// Names used earlier in the project (plus the default A / B), so files recorded before
+    /// a camera was renamed (B007_… after renaming B → C) are still found.
+    var earlierA: [String] = []
+    var earlierB: [String] = []
 
-    init(a: String = "A", b: String = "B") {
+    init(a: String = "A", b: String = "B", earlierA: [String] = [], earlierB: [String] = []) {
         var na = TakeNaming.sanitize(a)
         var nb = TakeNaming.sanitize(b)
         if na.isEmpty { na = "A" }
@@ -26,6 +30,8 @@ struct CameraNames: Equatable {
         if na == nb { nb += "-B" }   // must differ, otherwise A/B could not be told apart
         self.a = na
         self.b = nb
+        self.earlierA = (earlierA + ["A"]).map(TakeNaming.sanitize).filter { !$0.isEmpty && $0 != na && $0 != nb }
+        self.earlierB = (earlierB + ["B"]).map(TakeNaming.sanitize).filter { !$0.isEmpty && $0 != na && $0 != nb }
     }
 
     func name(_ role: CameraRole) -> String { role == .a ? a : b }
@@ -34,6 +40,8 @@ struct CameraNames: Equatable {
         let p = prefix.uppercased()
         if p == a { return .a }
         if p == b { return .b }
+        if earlierA.contains(p) { return .a }
+        if earlierB.contains(p) { return .b }
         return nil
     }
 }
@@ -131,6 +139,15 @@ enum TakeNaming {
             return (number, role)
         }
         return nil
+    }
+
+    /// Camera name at the start of a current-format file name ("C014_S12_…" → "C").
+    static func cameraName(in fileName: String) -> String? {
+        let range = NSRange(fileName.startIndex..., in: fileName)
+        guard legacyRegex.firstMatch(in: fileName, range: range) == nil,
+              let m = regex.firstMatch(in: fileName, range: range),
+              let prefixRange = Range(m.range(at: 1), in: fileName) else { return nil }
+        return fileName[prefixRange].uppercased()
     }
 
     /// Highest existing clip number + 1 (never reuses a number, even if only one camera's file exists).

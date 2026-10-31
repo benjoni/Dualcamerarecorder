@@ -177,7 +177,7 @@ final class RecordingController: NSObject, ObservableObject, DLDeviceBrowserDele
         let id = assignedID(role)
         if id.isEmpty { return }
         if id == AppSettings.simulatedDeviceID {
-            ch.setSource(SimulatedSource(label: role.rawValue,
+            ch.setSource(SimulatedSource(label: settings.cameraNames.name(role),
                                          phaseOffset: role == .a ? 0 : 0.4,
                                          audioChannels: settings.audioChannels,
                                          hue: role == .a ? 0.6 : 0.08))
@@ -229,6 +229,7 @@ final class RecordingController: NSObject, ObservableObject, DLDeviceBrowserDele
         }
 
         let names = settings.cameraNames
+        settings.rememberCameraNames(names)
         let take = TakeNaming.nextTakeNumber(in: folder, names: names)
         // Common start instant slightly in the future so both channels see it.
         let startHost = HostClock.nowNanos + 200_000_000

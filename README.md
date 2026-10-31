@@ -91,6 +91,9 @@ Rozhranie aplikácie je **v angličtine** (Record / Playback / Slate …); tento
   z klapky: `A007_S12_SH3B_T04.MOV` / `B007_S12_SH3B_T04.MOV`.
   - **A / B** = názov kamery – nastaviteľný pri náhľade alebo v Nastaveniach (napr. `RONIN1` →
     `RONIN1_007_S12_SH3B_T04.MOV`; pri viacpísmenovom názve sa pred číslo pridá `_`).
+    Meno sa ukazuje aj v nadpise kamery (napr. „Camera C“), v Playbacku, v PDF reporte a v `CLIPLOG.CSV`
+    (stĺpec `camera_name`). Staršie súbory nahraté pod predchádzajúcim menom (napr. `B007_…` po premenovaní
+    B → C) appka naďalej nájde – použité mená si pamätá v `PROJECT.JSON`.
   - **007** = priebežné číslo klipu, rovnaké pre A aj B toho istého záberu, nikdy sa nepoužije znova.
   - **S** = scene (obraz), **SH** = shot (záber), **T** = take (pokus, 2 číslice).
   - Obraz/záber sa prevedú na veľké písmená bez diakritiky (iné znaky → `-`), prázdne pole sa vynechá.
