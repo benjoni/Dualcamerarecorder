@@ -65,7 +65,7 @@ struct SlateInfo: Codable, Hashable {
         let flags = [location.rawValue, timeOfDay.rawValue, mos ? "MOS" : ""].filter { !$0.isEmpty }
         if !flags.isEmpty { lines.append(flags.joined(separator: " · ")) }
         if !director.isEmpty { lines.append("Director: \(director)") }
-        if !cameraOperator.isEmpty { lines.append("Camera operator: \(cameraOperator)") }
+        if !cameraOperator.isEmpty { lines.append("DoP: \(cameraOperator)") }
         if good { lines.append("Good take") }
         if !note.isEmpty { lines.append("Note: \(note)") }
         return lines.joined(separator: "\n")

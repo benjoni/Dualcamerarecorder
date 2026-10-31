@@ -68,7 +68,7 @@ struct SlateFields: View {
             GridRow {
                 field("Production", text: $slate.production)
                 field("Director", text: $slate.director)
-                field("Camera operator", text: $slate.cameraOperator)
+                field("DoP", text: $slate.cameraOperator)
                 field("Roll", text: $slate.roll).frame(maxWidth: 110)
             }
             .disabled(locked)
