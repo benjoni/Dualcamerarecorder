@@ -345,7 +345,7 @@ struct PlaybackView: View {
 
             // Buttons, one group under another; audio last.
             VStack(spacing: 10) {
-                transportButtons
+                transportRow
                 markButtons
                 audioButtons
             }
@@ -379,7 +379,7 @@ struct PlaybackView: View {
         }
     }
 
-    /// Prev · start · frame back · play · frame forward · Next, then (a bit apart) the speed.
+    /// Prev · start · frame back · play · frame forward · Next.
     private var transportButtons: some View {
         HStack(spacing: 14) {
             Button { selectAdjacentClip(-1) } label: {
@@ -410,19 +410,31 @@ struct PlaybackView: View {
             .keyboardShortcut(shortcut(.rightArrow, [.command]))
             .disabled(adjacentClip(1) == nil)
             .help("Next clip (⌘→)")
+        }
+    }
 
-            HStack(spacing: 8) {
-                Text("Speed").foregroundStyle(.secondary)
-                SegmentGroup {
-                    ForEach([Float(0.5), 1, 2], id: \.self) { rate in
-                        Toggle(rate == 0.5 ? "0.5×" : "\(Int(rate))×", isOn: Binding(
-                            get: { player.rate == rate },
-                            set: { if $0 { player.rate = rate } }))
-                    }
+    /// Transport buttons centered, speed at the right edge (an invisible copy on the left keeps them centered).
+    private var transportRow: some View {
+        HStack(spacing: 0) {
+            speedControl.hidden()
+            Spacer(minLength: 24)
+            transportButtons
+            Spacer(minLength: 24)
+            speedControl
+        }
+    }
+
+    private var speedControl: some View {
+        HStack(spacing: 8) {
+            Text("Speed").foregroundStyle(.secondary)
+            SegmentGroup {
+                ForEach([Float(0.5), 1, 2], id: \.self) { rate in
+                    Toggle(rate == 0.5 ? "0.5×" : "\(Int(rate))×", isOn: Binding(
+                        get: { player.rate == rate },
+                        set: { if $0 { player.rate = rate } }))
                 }
-                .toggleStyle(SegmentToggleStyle(width: 80, minHeight: 40))
             }
-            .padding(.leading, 36)   // set apart from the transport buttons
+            .toggleStyle(SegmentToggleStyle(width: 80, minHeight: 40))
         }
     }
 
