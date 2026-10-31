@@ -3,7 +3,7 @@
 //  DualCamRecorder
 //
 //  Slate (clapperboard) data: production, scene, shot, take, … Stored per take as
-//  TAKE_###_SLATE.JSON next to the movies and embedded as QuickTime metadata in both .mov files.
+//  C###_SLATE.JSON next to the movies and embedded as QuickTime metadata in both .mov files.
 //
 
 import Foundation
@@ -90,9 +90,7 @@ enum TakeSlateStore {
     }
 
     static func load(folder: URL, take: Int) -> SlateInfo? {
-        let legacy = folder.appendingPathComponent(TakeNaming.legacySidecarName(take: take, kind: "slate"))
-        guard let data = (try? Data(contentsOf: url(folder: folder, take: take))) ?? (try? Data(contentsOf: legacy))
-        else { return nil }
+        guard let data = TakeNaming.readSidecar(folder: folder, take: take, kind: "slate") else { return nil }
         let decoder = JSONDecoder()
         decoder.dateDecodingStrategy = .iso8601
         return try? decoder.decode(SlateInfo.self, from: data)
@@ -103,8 +101,7 @@ enum TakeSlateStore {
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
         encoder.dateEncodingStrategy = .iso8601
         let data = try encoder.encode(slate)
-        try? FileManager.default.removeItem(at: folder.appendingPathComponent(
-            TakeNaming.legacySidecarName(take: take, kind: "slate")))
+        TakeNaming.removeLegacySidecars(folder: folder, take: take, kind: "slate")
         try data.write(to: url(folder: folder, take: take), options: .atomic)
     }
 }

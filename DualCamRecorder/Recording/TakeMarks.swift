@@ -2,7 +2,7 @@
 //  TakeMarks.swift
 //  DualCamRecorder
 //
-//  IN / OUT points of a take, stored next to the movies as TAKE_001_MARKS.JSON.
+//  IN / OUT points of a take, stored next to the movies as C001_MARKS.JSON.
 //  Times are seconds from the start of the take (= first frame of both CamA and CamB files).
 //
 
@@ -35,18 +35,15 @@ enum TakeMarksStore {
     }
 
     static func load(folder: URL, take: Int) -> TakeMarks? {
-        let legacy = folder.appendingPathComponent(TakeNaming.legacySidecarName(take: take, kind: "marks"))
-        guard let data = (try? Data(contentsOf: url(folder: folder, take: take))) ?? (try? Data(contentsOf: legacy))
-        else { return nil }
+        guard let data = TakeNaming.readSidecar(folder: folder, take: take, kind: "marks") else { return nil }
         return try? JSONDecoder().decode(TakeMarks.self, from: data)
     }
 
     /// Writes the marks (or removes the file when empty).
     static func save(_ marks: TakeMarks, folder: URL, take: Int) throws {
         let target = url(folder: folder, take: take)
-        // Remove the old lower-case sidecar first (on a case-insensitive disk it is the same file).
-        try? FileManager.default.removeItem(at: folder.appendingPathComponent(
-            TakeNaming.legacySidecarName(take: take, kind: "marks")))
+        // Remove older sidecars first (on a case-insensitive disk some are the same file).
+        TakeNaming.removeLegacySidecars(folder: folder, take: take, kind: "marks")
         if marks.isEmpty {
             try? FileManager.default.removeItem(at: target)
             return

@@ -2,45 +2,62 @@
 //  TakeNaming.swift
 //  DualCamRecorder
 //
-//  File names – all upper case:
-//      TAKE_007_OBRAZ_12_ZABER_3B_CAMA.MOV
-//      TAKE_007_OBRAZ_12_ZABER_3B_CAMB.MOV
-//      TAKE_007_MARKS.JSON, TAKE_007_SLATE.JSON   (sidecars keyed by the take number only)
-//  OBRAZ / ZABER parts are left out when the slate field is empty.
-//  The running TAKE number stays the unique key (auto-numbering, pairing A/B, sidecars).
-//  Older names (Take_001_CamA.mov, Take_001_marks.json) are still recognised.
+//  File names – all upper case, English initials:
+//      C007_S12_SH3B_T04_CAMA.MOV     C = clip (running number), S = scene, SH = shot, T = take
+//      C007_S12_SH3B_T04_CAMB.MOV
+//      C007_MARKS.JSON, C007_SLATE.JSON   (sidecars keyed by the clip number only)
+//  S / SH parts are left out when the slate field is empty; T is always present (2 digits).
+//  The running clip number is the unique key (auto-numbering, pairing A/B, sidecars).
+//  Older names (TAKE_007_…_CAMA.MOV, Take_001_CamA.mov and their sidecars) are still recognised.
 //
 
 import Foundation
 
 enum TakeNaming {
-    /// TAKE_<n>[_anything]_CAM<A|B>.MOV – case-insensitive, also matches the old Take_001_CamA.mov.
-    private static let regex = try! NSRegularExpression(pattern: "^TAKE_(\\d{3,})(?:_.*)?_CAM([AB])\\.MOV$",
+    /// C<n>[_anything]_CAM<A|B>.MOV – case-insensitive; also matches TAKE_007_…_CAMA.MOV and Take_001_CamA.mov.
+    private static let regex = try! NSRegularExpression(pattern: "^(?:C|TAKE_)(\\d{3,})(?:_.*)?_CAM([AB])\\.MOV$",
                                                         options: [.caseInsensitive])
 
     static func fileName(take: Int, role: CameraRole, slate: SlateInfo? = nil) -> String {
-        var parts = [String(format: "TAKE_%03d", take)]
+        var parts = [String(format: "C%03d", take)]
         if let slate {
             let scene = sanitize(slate.scene)
             let shot = sanitize(slate.shot)
-            if !scene.isEmpty { parts.append("OBRAZ_" + scene) }
-            if !shot.isEmpty { parts.append("ZABER_" + shot) }
+            if !scene.isEmpty { parts.append("S" + scene) }
+            if !shot.isEmpty { parts.append("SH" + shot) }
+            parts.append(String(format: "T%02d", slate.take))
         }
         parts.append("CAM" + role.rawValue)
         return parts.joined(separator: "_") + ".MOV"
     }
 
     static func displayName(take: Int) -> String {
-        String(format: "TAKE_%03d", take)
+        String(format: "C%03d", take)
     }
 
     static func sidecarName(take: Int, kind: String) -> String {
-        String(format: "TAKE_%03d_%@.JSON", take, kind.uppercased())
+        String(format: "C%03d_%@.JSON", take, kind.uppercased())
     }
 
-    /// Older sidecar name (before upper-case naming).
-    static func legacySidecarName(take: Int, kind: String) -> String {
-        String(format: "Take_%03d_%@.json", take, kind.lowercased())
+    /// Older sidecar names (earlier versions of the app), newest first.
+    static func legacySidecarNames(take: Int, kind: String) -> [String] {
+        [String(format: "TAKE_%03d_%@.JSON", take, kind.uppercased()),
+         String(format: "Take_%03d_%@.json", take, kind.lowercased())]
+    }
+
+    /// Reads the current sidecar, falling back to older names.
+    static func readSidecar(folder: URL, take: Int, kind: String) -> Data? {
+        for name in [sidecarName(take: take, kind: kind)] + legacySidecarNames(take: take, kind: kind) {
+            if let data = try? Data(contentsOf: folder.appendingPathComponent(name)) { return data }
+        }
+        return nil
+    }
+
+    /// Removes older sidecars before writing the current one (on a case-insensitive disk some are the same file).
+    static func removeLegacySidecars(folder: URL, take: Int, kind: String) {
+        for name in legacySidecarNames(take: take, kind: kind) {
+            try? FileManager.default.removeItem(at: folder.appendingPathComponent(name))
+        }
     }
 
     /// Upper case, no diacritics, only A–Z 0–9 and '-' (e.g. "12a" → "12A", "3/b" → "3-B").
@@ -63,7 +80,7 @@ enum TakeNaming {
         return out
     }
 
-    /// Parses "TAKE_012_OBRAZ_4_ZABER_2_CAMB.MOV" (or "Take_012_CamB.mov") → (12, .b)
+    /// Parses "C012_S4_SH2_T03_CAMB.MOV" (or "TAKE_012_…_CAMB.MOV", "Take_012_CamB.mov") → (12, .b)
     static func parse(_ fileName: String) -> (take: Int, role: CameraRole)? {
         let range = NSRange(fileName.startIndex..., in: fileName)
         guard let m = regex.firstMatch(in: fileName, range: range),

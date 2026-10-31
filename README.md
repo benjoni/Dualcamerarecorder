@@ -23,11 +23,12 @@ Plán a architektúra: [`docs/PLAN.md`](docs/PLAN.md).
 - Jedno tlačidlo **REC / STOP** (⌘R) ovláda obe kamery naraz.
 - Každá kamera do vlastného súboru **ProRes 422** (voliteľne 422 HQ / LT) cez `AVAssetWriter`,
   so **SDI embedded audiom** (48 kHz, 2/8/16 kanálov, uložené ako 24-bit LPCM).
-- Názvy súborov veľkými písmenami s obrazom a záberom z klapky:
-  `TAKE_007_OBRAZ_12_ZABER_3B_CAMA.MOV` / `…_CAMB.MOV`. `TAKE_###` je priebežné automatické
-  číslo (nikdy sa nepoužije znova); obraz/záber sa prevedú na veľké písmená bez diakritiky
-  (iné znaky → `-`), prázdne pole sa v názve vynechá. Pri REC je vidno presný názov ďalšieho súboru.
-  Staršie názvy `Take_001_CamA.mov` aplikácia stále načíta.
+- Názvy súborov veľkými písmenami s anglickými skratkami z klapky:
+  `C007_S12_SH3B_T04_CAMA.MOV` / `…_CAMB.MOV` – **C** = priebežné číslo klipu (automatické,
+  nikdy sa nepoužije znova), **S** = scene (obraz), **SH** = shot (záber), **T** = take (pokus,
+  2 číslice). Obraz/záber sa prevedú na veľké písmená bez diakritiky (iné znaky → `-`),
+  prázdne pole sa v názve vynechá. Pri REC je vidno presný názov ďalšieho súboru.
+  Staršie názvy (`TAKE_007_…_CAMA.MOV`, `Take_001_CamA.mov`) aplikácia stále načíta.
 - **Synchronizovaný štart/stop** podľa hardvérových časových značiek (viď nižšie); po zábere sa
   zobrazí nameraný posun štartu B−A v ms.
 - Počítadlá: zachytené / zapísané / **vynechané snímky (vstup)** / **vynechané (zápis)**,
@@ -36,17 +37,17 @@ Plán a architektúra: [`docs/PLAN.md`](docs/PLAN.md).
 - **Klapka** pod nahrávaním: projekt, réžia, kamera, rola, **obraz**, **záber**, **pokus**,
   INT/EXT, DEŇ/NOC/ŠERO, MOS, poznámka a „dobrý pokus“ (★). Pokus sa po každom zábere sám zvýši
   o 1, zmena obrazu alebo záberu ho nastaví na 1. Počas nahrávania sú obraz/záber/pokus zamknuté,
-  poznámku a ★ možno meniť. Údaje sa uložia do `TAKE_001_SLATE.JSON` a zapíšu sa aj ako
+  poznámku a ★ možno meniť. Údaje sa uložia do `C001_SLATE.JSON` a zapíšu sa aj ako
   QuickTime metadáta do oboch `.mov` (názov, popis, komentár, réžia, kamera A/B, dátum) –
   vidno ich napr. vo Finderi (Informácie) alebo v DaVinci Resolve.
   Posledná klapka sa pamätá aj po reštarte aplikácie.
 - **IN / OUT počas nahrávania** – tlačidlá IN / OUT (**⌘I** / **⌘O**) pri REC označia
-  aktuálny čas záberu. Značky sa po STOP uložia do `TAKE_001_MARKS.JSON` vedľa videí
+  aktuálny čas záberu. Značky sa po STOP uložia do `C001_MARKS.JSON` vedľa videí
   (čas v sekundách od začiatku záberu, platí pre CamA aj CamB) a použije ich prehrávanie.
 
 ### Záložka PREHRÁVANIE
 - Pri zábere v zozname je aj „Obraz · Záber · Pokus“ a ★ pri dobrom pokuse; pod prehrávačmi
-  je súhrn klapky a tlačidlo **Klapka…** na dodatočnú úpravu (uloží sa do `TAKE_###_SLATE.JSON`).
+  je súhrn klapky a tlačidlo **Klapka…** na dodatočnú úpravu (uloží sa do `C###_SLATE.JSON`).
 - Zoznam záberov v priečinku (sleduje zmeny v priečinku; práve nahrávaný záber je skrytý),
   pri každom zábere **náhľadový obrázok zo stredu záznamu** (z CamA, ak chýba tak z CamB).
 - Po výbere sa načíta CamA a CamB vedľa seba v dvoch `AVPlayer`-och.
@@ -55,7 +56,7 @@ Plán a architektúra: [`docs/PLAN.md`](docs/PLAN.md).
 - **IN / OUT:** záber sa po načítaní nastaví na IN; pri zapnutom „Hrať len IN–OUT“ prehrávanie
   štartuje na IN a zastaví presne na OUT (oba prehrávače). IN/OUT sa dá v prehrávaní upraviť
   (I / O na aktuálnej snímke), skočiť na IN/OUT alebo zrušiť – zmeny sa hneď uložia do
-  `TAKE_###_MARKS.JSON`. Zábery so značkami majú v zozname žltú vlajku.
+  `C###_MARKS.JSON`. Zábery so značkami majú v zozname žltú vlajku.
 - Synchronizácia cez `setRate(_:time:atHostTime:)` so spoločným časom hostiteľských hodín;
   seek a krokovanie sú presné na snímku (nulová tolerancia) na oboch prehrávačoch.
 
@@ -144,7 +145,7 @@ DualCamRecorder/
   Capture/    VideoSource protokol, DeckLinkSource, SimulatedSource, HostClock
   Recording/  CameraChannel (sync štart/stop, štatistiky), MovieWriter (ProRes+LPCM),
               RecordingController (zariadenia, REC/STOP, IN/OUT, disk), TakeNaming,
-              TakeMarks (IN/OUT, TAKE_###_MARKS.JSON), SlateInfo (klapka, TAKE_###_SLATE.JSON)
+              TakeMarks (IN/OUT, C###_MARKS.JSON), SlateInfo (klapka, C###_SLATE.JSON)
   Preview/    PreviewRenderer (VTPixelTransfer → AVSampleBufferDisplayLayer), PreviewView
   Playback/   TakeLibrary, ThumbnailCache (náhľady zo stredu záberu),
               SyncPlaybackController (2× AVPlayer), PlayerView
@@ -192,8 +193,7 @@ tools/gen_xcodeproj.py            generátor project.pbxproj + zdieľanej schém
   z `/Library/Frameworks`); je podpísaná ad-hoc („Sign to Run Locally“).
 - Odhad zostávajúceho času vychádza z nominálnych dátových tokov ProRes (Apple white paper).
 - Metadáta v `.mov` sa zapíšu pri štarte záberu; poznámka a ★ zmenené počas nahrávania alebo
-  neskôr v prehrávaní sa uložia len do `TAKE_###_SLATE.JSON` (súbor videa sa už neprepisuje).
-- Pokus nie je v názve súboru (je v metadátach a v `TAKE_###_SLATE.JSON`).
+  neskôr v prehrávaní sa uložia len do `C###_SLATE.JSON` (súbor videa sa už neprepisuje).
 - IN/OUT počas nahrávania sa berie podľa času stlačenia (hostiteľské hodiny) – presnosť je
   ±1 snímka plus reakčný čas obsluhy; jemne sa dajú doladiť v prehrávaní po snímkach.
 - Synchronizácia dvoch `AVPlayer`-ov je na úrovni zobrazovacieho snímku; pri pauze sa oba
