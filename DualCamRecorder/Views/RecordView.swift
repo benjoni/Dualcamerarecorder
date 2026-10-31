@@ -8,8 +8,36 @@ import SwiftUI
 struct RecordView: View {
     @ObservedObject var controller: RecordingController
     @ObservedObject var settings: AppSettings
+    /// Only the two camera pictures, nothing else (toggled with ⌘F).
+    var screensOnly = false
 
     var body: some View {
+        if screensOnly {
+            screensOnlyBody
+        } else {
+            normalBody
+        }
+    }
+
+    /// Both pictures filling the window; shortcuts (⌘R, ⌘I, ⌘O) keep working.
+    private var screensOnlyBody: some View {
+        HStack(spacing: 8) {
+            CameraScreen(channel: controller.channelA)
+            CameraScreen(channel: controller.channelB)
+        }
+        .padding(8)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(Color.black)
+        .background {
+            ZStack {
+                ShortcutButton(key: "r", modifiers: [.command]) { controller.toggleRecording() }
+                ShortcutButton(key: "i", modifiers: [.command]) { controller.markIn() }
+                ShortcutButton(key: "o", modifiers: [.command]) { controller.markOut() }
+            }
+        }
+    }
+
+    private var normalBody: some View {
         VStack(spacing: 12) {
             HStack(alignment: .top, spacing: 12) {
                 CameraPanel(controller: controller, channel: controller.channelA)
@@ -173,27 +201,7 @@ struct CameraPanel: View {
                     .help("Camera name at the start of the file name, e.g. A → A007_S12_SH3B_T04.MOV")
             }
 
-            ZStack(alignment: .topLeading) {
-                PreviewView(renderer: channel.preview)
-                    .aspectRatio(16.0 / 9.0, contentMode: .fit)
-                    .clipShape(RoundedRectangle(cornerRadius: 6))
-                    // Red frame around the picture while this camera is recording.
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 6)
-                            .strokeBorder(Color.red, lineWidth: 4)
-                            .opacity(channel.isRecording ? 1 : 0)
-                            .animation(.easeInOut(duration: 0.15), value: channel.isRecording)
-                    )
-                HStack(spacing: 6) {
-                    if channel.isRecording { Badge(text: "● REC", color: .red) }
-                    if !channel.hasSource {
-                        Badge(text: "Unassigned", color: .gray)
-                    } else if !channel.hasSignal {
-                        Badge(text: "No signal", color: .orange)
-                    }
-                }
-                .padding(8)
-            }
+            CameraScreen(channel: channel)
 
             Text(channel.format?.displayString ?? "Format: —")
                 .font(.system(.callout, design: .monospaced))
@@ -217,6 +225,35 @@ struct CameraPanel: View {
             Text(title).foregroundStyle(.secondary)
             Text("\(value)").font(.system(.body, design: .monospaced))
                 .foregroundStyle(alert ? .red : .primary)
+        }
+    }
+}
+
+/// Live picture of one camera with REC / signal badges and the red recording frame.
+struct CameraScreen: View {
+    @ObservedObject var channel: CameraChannel
+
+    var body: some View {
+        ZStack(alignment: .topLeading) {
+            PreviewView(renderer: channel.preview)
+                .aspectRatio(16.0 / 9.0, contentMode: .fit)
+                .clipShape(RoundedRectangle(cornerRadius: 6))
+                // Red frame around the picture while this camera is recording.
+                .overlay(
+                    RoundedRectangle(cornerRadius: 6)
+                        .strokeBorder(Color.red, lineWidth: 4)
+                        .opacity(channel.isRecording ? 1 : 0)
+                        .animation(.easeInOut(duration: 0.15), value: channel.isRecording)
+                )
+            HStack(spacing: 6) {
+                if channel.isRecording { Badge(text: "● REC", color: .red) }
+                if !channel.hasSource {
+                    Badge(text: "Unassigned", color: .gray)
+                } else if !channel.hasSignal {
+                    Badge(text: "No signal", color: .orange)
+                }
+            }
+            .padding(8)
         }
     }
 }

@@ -33,7 +33,11 @@ struct PreviewView: NSViewRepresentable {
 final class LayerHostView: NSView {
     var hostedLayer: CALayer? {
         didSet {
-            oldValue?.removeFromSuperlayer()
+            // Only detach the old layer if it is still ours – the shared preview layer may already
+            // have moved to a newer view (e.g. when "screens only" is toggled).
+            if let oldValue, oldValue !== hostedLayer, oldValue.superlayer === layer {
+                oldValue.removeFromSuperlayer()
+            }
             if let hostedLayer {
                 layer?.addSublayer(hostedLayer)
                 needsLayout = true

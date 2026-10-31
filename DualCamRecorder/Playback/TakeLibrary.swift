@@ -29,6 +29,8 @@ final class TakeLibrary: ObservableObject {
 
     /// Take numbers currently being recorded into this folder – hidden until finished.
     var excludedTake: () -> Int? = { nil }
+    /// Set when the user switches to the Playback tab: the view then cues the newest clip.
+    var cueLatestOnShow = true
     /// Current camera names (needed to tell A from B in file names).
     var cameraNames: () -> CameraNames = { CameraNames() }
 

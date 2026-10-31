@@ -70,6 +70,13 @@ Rozhranie aplikácie je **v angličtine** (Record / Playback / Slate …); tento
 - Synchronizácia cez `setRate(_:time:atHostTime:)` so spoločným časom hostiteľských hodín;
   seek a krokovanie sú presné na snímku (nulová tolerancia) na oboch prehrávačoch.
 
+### Režim „Screens only“ (⌘F)
+- Tlačidlo **Screens only** v lište okna (alebo **⌘F**) skryje v Record aj Playback všetko okrem
+  dvoch obrazoviek; **Show controls** / ⌘F ich vráti. Pre úplne čistú plochu použi aj celú
+  obrazovku macOS (⌃⌘F).
+- Skratky fungujú ďalej: Record – ⌘R (REC/STOP), ⌘I / ⌘O (IN/OUT); Playback – medzerník,
+  ← / →, I / O; prepnutie záložiek ⌘1 / ⌘2. Červený rámik a odznaky REC / No signal ostávajú.
+
 ### Nastavenia (⌘,)
 - Priečinok na **zápis** a voliteľne **oddelený disk/priečinok na čítanie** (prehrávanie).
 - Kodek, počet audio kanálov, vynútenie 8-bit zachytávania, informácie o SDK / ovládači / zariadeniach.

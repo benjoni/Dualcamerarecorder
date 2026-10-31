@@ -18,7 +18,78 @@ struct PlaybackView: View {
     /// Set when the tab appears: select the most recent clip as soon as the list is (re)loaded.
     @State private var selectLatestPending = false
 
+    /// Only the two players, nothing else (toggled with ⌘F).
+    var screensOnly = false
+
     var body: some View {
+        Group {
+            if screensOnly {
+                screensOnlyBody
+            } else {
+                normalBody
+            }
+        }
+        .onAppear {
+            library.setFolder(settings.playbackFolderURL)
+            if library.cueLatestOnShow {
+                // Switching to the Playback tab cues the latest recorded clip.
+                library.cueLatestOnShow = false
+                selectLatestPending = true
+                selectLatest()
+                // Stop waiting for a re-scan after a moment, so later folder changes do not jump the selection.
+                DispatchQueue.main.asyncAfter(deadline: .now() + 2) { selectLatestPending = false }
+            } else if selection == nil {
+                // View re-created (e.g. "screens only" toggled) – keep the clip that is loaded.
+                selection = player.take?.id
+            }
+        }
+        .onDisappear { selectLatestPending = false }
+        .onChange(of: settings.playbackFolderURL) { _, url in
+            selectLatestPending = true
+            library.setFolder(url)
+        }
+        .onChange(of: library.takes) { _, _ in
+            if selectLatestPending {
+                selectLatest()
+                selectLatestPending = false
+            }
+        }
+        .onChange(of: selection) { _, id in
+            // Do not reload (and lose the position) when the same clip is re-selected.
+            guard id != player.take?.id else { return }
+            player.load(library.takes.first { $0.id == id })
+        }
+        .onChange(of: player.currentTime) { _, t in
+            if !isScrubbing { scrubValue = t }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .takeFinished)) { _ in library.refresh() }
+    }
+
+    /// Both players filling the window; transport shortcuts keep working.
+    private var screensOnlyBody: some View {
+        HStack(spacing: 8) {
+            PlayerView(player: player.playerA)
+                .aspectRatio(16.0 / 9.0, contentMode: .fit)
+                .clipShape(RoundedRectangle(cornerRadius: 6))
+            PlayerView(player: player.playerB)
+                .aspectRatio(16.0 / 9.0, contentMode: .fit)
+                .clipShape(RoundedRectangle(cornerRadius: 6))
+        }
+        .padding(8)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(Color.black)
+        .background {
+            ZStack {
+                ShortcutButton(key: .space) { player.togglePlay() }
+                ShortcutButton(key: .leftArrow) { player.step(-1) }
+                ShortcutButton(key: .rightArrow) { player.step(1) }
+                ShortcutButton(key: "i") { player.setIn() }
+                ShortcutButton(key: "o") { player.setOut() }
+            }
+        }
+    }
+
+    private var normalBody: some View {
         HStack(spacing: 0) {
             if showClipList {
                 takeList
@@ -39,32 +110,6 @@ struct PlaybackView: View {
             .frame(minWidth: 700)
         }
         .animation(.easeInOut(duration: 0.2), value: showClipList)
-        .onAppear {
-            // Switching to Playback always cues the latest recorded clip.
-            selectLatestPending = true
-            library.setFolder(settings.playbackFolderURL)
-            selectLatest()
-            // Stop waiting for a re-scan after a moment, so later folder changes do not jump the selection.
-            DispatchQueue.main.asyncAfter(deadline: .now() + 2) { selectLatestPending = false }
-        }
-        .onDisappear { selectLatestPending = false }
-        .onChange(of: settings.playbackFolderURL) { _, url in
-            selectLatestPending = true
-            library.setFolder(url)
-        }
-        .onChange(of: library.takes) { _, _ in
-            if selectLatestPending {
-                selectLatest()
-                selectLatestPending = false
-            }
-        }
-        .onChange(of: selection) { _, id in
-            player.load(library.takes.first { $0.id == id })
-        }
-        .onChange(of: player.currentTime) { _, t in
-            if !isScrubbing { scrubValue = t }
-        }
-        .onReceive(NotificationCenter.default.publisher(for: .takeFinished)) { _ in library.refresh() }
     }
 
     /// Newest clip = first in the list (sorted by clip number, descending).

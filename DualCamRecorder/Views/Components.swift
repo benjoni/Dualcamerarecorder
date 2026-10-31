@@ -64,3 +64,19 @@ enum DisplayFormat {
         return m >= 60 ? "≈ \(m / 60) h \(m % 60) min" : "≈ \(m) min"
     }
 }
+
+/// Invisible button that only provides a keyboard shortcut (used in "screens only" mode,
+/// where the visible controls – and their shortcuts – are hidden).
+struct ShortcutButton: View {
+    let key: KeyEquivalent
+    var modifiers: EventModifiers = []
+    let action: () -> Void
+
+    var body: some View {
+        Button("", action: action)
+            .keyboardShortcut(key, modifiers: modifiers)
+            .opacity(0)
+            .frame(width: 0, height: 0)
+            .accessibilityHidden(true)
+    }
+}
