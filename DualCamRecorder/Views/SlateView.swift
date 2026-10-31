@@ -191,12 +191,12 @@ struct SlateEditSheet: View {
                     HStack(spacing: 16) {
                         Text("Camera clip #").foregroundStyle(.secondary)
                         Text("A")
-                        TextField("0", value: $slate.cameraClipA, format: .number.grouping(.never))
-                            .textFieldStyle(.roundedBorder).frame(width: 80)
+                        TextField("A001C0001", text: $slate.cameraClipA)
+                            .textFieldStyle(.roundedBorder).font(.body.monospaced()).frame(width: 200)
                         Text("B")
-                        TextField("0", value: $slate.cameraClipB, format: .number.grouping(.never))
-                            .textFieldStyle(.roundedBorder).frame(width: 80)
-                        Text("(0 = camera did not record)").font(.callout).foregroundStyle(.secondary)
+                        TextField("B001C0001", text: $slate.cameraClipB)
+                            .textFieldStyle(.roundedBorder).font(.body.monospaced()).frame(width: 200)
+                        Text("(empty = camera did not record)").font(.callout).foregroundStyle(.secondary)
                     }
                 }
             }

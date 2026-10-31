@@ -34,13 +34,13 @@ enum ClipLog {
                 slates[entry.take] = s
             }
             let s = slates[entry.take]
-            let cameraClip = s.map { $0.cameraClip(entry.role) } ?? 0
+            let cameraClip = s.map { $0.cameraClip(entry.role) } ?? ""
             let row: [String] = [
                 String(format: "%03d", entry.take),
                 entry.role.rawValue,
                 names.name(entry.role),
                 entry.file,
-                cameraClip > 0 ? String(format: "%04d", cameraClip) : "",
+                cameraClip,
                 s?.shootingDay ?? "",
                 s?.scene ?? "",
                 s?.shot ?? "",

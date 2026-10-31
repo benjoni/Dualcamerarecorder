@@ -344,8 +344,8 @@ final class RecordingController: NSObject, ObservableObject, DLDeviceBrowserDele
             let recordedB = pendingResults.contains { $0.role == .b && $0.error == nil }
             let clipA = slate.cameraClipA
             let clipB = slate.cameraClipB
-            if !recordedA { slate.cameraClipA = 0 }
-            if !recordedB { slate.cameraClipB = 0 }
+            if !recordedA { slate.cameraClipA = "" }
+            if !recordedB { slate.cameraClipB = "" }
             do {
                 try TakeSlateStore.save(slate, folder: folder, take: take)
             } catch {
@@ -357,8 +357,8 @@ final class RecordingController: NSObject, ObservableObject, DLDeviceBrowserDele
             next.good = false
             next.recordedAt = nil
             // The cameras start a new internal clip with every take.
-            if recordedA { next.cameraClipA = clipA + 1 }
-            if recordedB { next.cameraClipB = clipB + 1 }
+            if recordedA { next.cameraClipA = CameraClipID.next(clipA) }
+            if recordedB { next.cameraClipB = CameraClipID.next(clipB) }
             settings.slate = next
 
             // Script-friendly log of all clips in the project folder.

@@ -47,12 +47,12 @@ struct SlateInfo: Codable, Hashable {
     var note = ""            // note
     var good = false         // good (circled) take
     var recordedAt: Date?    // set at REC
-    /// Clip number in each camera's own (internal) recording – goes up by 1 after every take.
-    /// 0 = that camera did not record this take.
-    var cameraClipA = 1
-    var cameraClipB = 1
+    /// Clip name/ID in each camera's own (internal) recording, e.g. "A001C0023" (any length).
+    /// Its last number goes up by 1 after every take. Empty = that camera did not record this take.
+    var cameraClipA = ""
+    var cameraClipB = ""
 
-    func cameraClip(_ role: CameraRole) -> Int { role == .a ? cameraClipA : cameraClipB }
+    func cameraClip(_ role: CameraRole) -> String { role == .a ? cameraClipA : cameraClipB }
 
     /// "Day 3 · Scene 12 · Shot 3 · Take 2"
     var shortLabel: String {
@@ -81,8 +81,8 @@ struct SlateInfo: Codable, Hashable {
         if !cameraOperator.isEmpty { lines.append("DoP: \(cameraOperator)") }
         if good { lines.append("Good take") }
         var clips: [String] = []
-        if cameraClipA > 0 { clips.append(String(format: "A %04d", cameraClipA)) }
-        if cameraClipB > 0 { clips.append(String(format: "B %04d", cameraClipB)) }
+        if !cameraClipA.isEmpty { clips.append("A " + cameraClipA) }
+        if !cameraClipB.isEmpty { clips.append("B " + cameraClipB) }
         if !clips.isEmpty { lines.append("Camera clip: " + clips.joined(separator: " / ")) }
         if !note.isEmpty { lines.append("Note: \(note)") }
         return lines.joined(separator: "\n")
@@ -112,13 +112,13 @@ struct SlateInfo: Codable, Hashable {
         // Camera's own clip number – a custom key scripts can read
         // (e.g. `exiftool -Keys:All file.MOV` or `ffprobe -show_format`).
         let cameraClip = self.cameraClip(camera)
-        if cameraClip > 0 {
+        if !cameraClip.isEmpty {
             let custom = AVMutableMetadataItem()
             custom.keySpace = .quickTimeMetadata
             custom.key = "sk.dualcam.camera-clip" as NSString
-            custom.value = String(format: "%04d", cameraClip) as NSString
+            custom.value = cameraClip as NSString
             items.append(custom)
-            if let comment = item(.quickTimeMetadataInformation, String(format: "Camera clip %04d", cameraClip)) {
+            if let comment = item(.quickTimeMetadataInformation, "Camera clip " + cameraClip) {
                 items.append(comment)
             }
         }
@@ -145,8 +145,35 @@ extension SlateInfo {
         note = try c.decodeIfPresent(String.self, forKey: .note) ?? note
         good = try c.decodeIfPresent(Bool.self, forKey: .good) ?? good
         recordedAt = try c.decodeIfPresent(Date.self, forKey: .recordedAt)
-        cameraClipA = try c.decodeIfPresent(Int.self, forKey: .cameraClipA) ?? cameraClipA
-        cameraClipB = try c.decodeIfPresent(Int.self, forKey: .cameraClipB) ?? cameraClipB
+        cameraClipA = Self.decodeClip(c, .cameraClipA)
+        cameraClipB = Self.decodeClip(c, .cameraClipB)
+    }
+}
+
+extension SlateInfo {
+    /// Camera clip as text; numbers written by an earlier version become "0023" (0 → empty).
+    private static func decodeClip(_ c: KeyedDecodingContainer<CodingKeys>, _ key: CodingKeys) -> String {
+        if let s = try? c.decodeIfPresent(String.self, forKey: key) { return s }
+        if let n = try? c.decodeIfPresent(Int.self, forKey: key) { return n > 0 ? String(format: "%04d", n) : "" }
+        return ""
+    }
+}
+
+/// Camera clip IDs like "A001C0023": the last number is counted up/down, keeping its zero padding.
+enum CameraClipID {
+    static func next(_ id: String) -> String { step(id, by: 1) }
+    static func previous(_ id: String) -> String { step(id, by: -1) }
+
+    static func step(_ id: String, by delta: Int) -> String {
+        let chars = Array(id)
+        guard let lastDigit = chars.lastIndex(where: { $0.isASCII && $0.isNumber }) else { return id }
+        var start = lastDigit
+        while start > 0, chars[start - 1].isASCII, chars[start - 1].isNumber { start -= 1 }
+        let digits = String(chars[start...lastDigit])
+        guard let value = Int(digits) else { return id }
+        let newValue = max(0, value + delta)
+        let padded = String(repeating: "0", count: max(0, digits.count - String(newValue).count)) + String(newValue)
+        return String(chars[..<start]) + padded + String(chars[(lastDigit + 1)...])
     }
 }
 

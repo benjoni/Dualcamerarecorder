@@ -200,12 +200,15 @@ struct CameraPanel: View {
                     .disabled(controller.isRecording)
                     .help("Camera name at the start of the file name, e.g. A → A007_S12_SH3B_T04.MOV")
                 Text("Cam clip").font(.caption).foregroundStyle(.secondary)
-                TextField("1", value: cameraClipBinding, format: .number.grouping(.never))
+                TextField("A001C0001", text: cameraClipBinding)
                     .textFieldStyle(.roundedBorder)
-                    .frame(width: 70)
+                    .font(.body.monospaced())
+                    .frame(minWidth: 150, idealWidth: 190, maxWidth: 230)
                     .disabled(controller.isRecording)
-                    .help("Clip number in the camera's own recording – goes up by 1 after every take, saved with the clip")
-                Stepper("", value: cameraClipBinding, in: 0...99_999)
+                    .help("Clip name in the camera's own recording (e.g. A001C0023). Its last number goes up by 1 after every take; saved with the clip.")
+                Stepper("",
+                        onIncrement: { cameraClipBinding.wrappedValue = CameraClipID.next(cameraClipBinding.wrappedValue) },
+                        onDecrement: { cameraClipBinding.wrappedValue = CameraClipID.previous(cameraClipBinding.wrappedValue) })
                     .labelsHidden()
                     .disabled(controller.isRecording)
             }
@@ -229,8 +232,8 @@ struct CameraPanel: View {
         .frame(maxWidth: .infinity)
     }
 
-    /// Camera's internal clip number (frozen value of the running take while recording).
-    private var cameraClipBinding: Binding<Int> {
+    /// Camera's internal clip name (frozen value of the running take while recording).
+    private var cameraClipBinding: Binding<String> {
         let role = channel.role
         return Binding(
             get: {
@@ -238,8 +241,9 @@ struct CameraPanel: View {
                 return controller.settings.slate.cameraClip(role)
             },
             set: { value in
-                if role == .a { controller.settings.slate.cameraClipA = max(0, value) }
-                else { controller.settings.slate.cameraClipB = max(0, value) }
+                let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
+                if role == .a { controller.settings.slate.cameraClipA = trimmed }
+                else { controller.settings.slate.cameraClipB = trimmed }
             })
     }
 

@@ -30,18 +30,20 @@ Rozhranie aplikácie je **v angličtine** (Record / Playback / Slate …); tento
 - Tlačidlo **Projects** v lište sa vráti na úvod (nie počas nahrávania).
 
 ### Číslo klipu v kamere (Cam clip)
-- Pri každej kamere v Record je pole **Cam clip** (+ šípky) – číslo klipu, pod ktorým kamera
-  nahráva interne. Po každom zábere sa samo zvýši o 1 (len pri kamere, ktorá nahrávala);
-  dá sa kedykoľvek prepísať, počas nahrávania je zamknuté.
+- Pri každej kamere v Record je textové pole **Cam clip** (+ šípky) – názov/ID klipu, pod ktorým
+  kamera nahráva interne, ľubovoľnej dĺžky (napr. `A001C0023`, `DJI_20261031_0023`).
+- Po každom zábere sa **posledné číslo v texte zvýši o 1** s rovnakým počtom núl
+  (`A001C0023` → `A001C0024`, `…_0099` → `…_0100`); len pri kamere, ktorá nahrávala.
+  Dá sa kedykoľvek prepísať, šípky robia ±1, počas nahrávania je zamknuté.
 - Ukladá sa ku klipu:
-  - `C007_SLATE.JSON` → `cameraClipA`, `cameraClipB` (0 = kamera nenahrávala),
-  - metadáta každého `.MOV`: vlastný kľúč `sk.dualcam.camera-clip` (napr. `0023`),
-    `com.apple.quicktime.information` = `Camera clip 0023` a riadok v popise,
+  - `C007_SLATE.JSON` → `cameraClipA`, `cameraClipB` (prázdne = kamera nenahrávala),
+  - metadáta každého `.MOV`: vlastný kľúč `sk.dualcam.camera-clip` (celé ID),
+    `com.apple.quicktime.information` = `Camera clip A001C0023` a riadok v popise,
   - **`CLIPLOG.CSV`** v priečinku projektu – riadok na každý súbor:
     `clip,camera,camera_name,file,camera_clip,shooting_day,scene,shot,take,good,mos,int_ext,day_night,recorded_at,production,note`.
     Prepíše sa po každom zábere, po úprave klapky a pri otvorení projektu.
 - Čítanie skriptom, napr. `exiftool -Keys:All A007_S12_SH3B_T04.MOV` alebo priamo CSV.
-- V Playback → **Edit slate…** sa dajú čísla dodatočne opraviť.
+- V Playback → **Edit slate…** sa dajú hodnoty dodatočne opraviť.
 
 ### Project settings (⚙ v lište projektu, ⌥⌘,)
 - **1 camera / 2 cameras** – pri jednej kamere sa zobrazuje a nahráva len kamera A (cez celú
