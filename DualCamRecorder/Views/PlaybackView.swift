@@ -145,8 +145,8 @@ struct PlaybackView: View {
                 Text(library.takes.isEmpty ? "No clips in this folder yet." : "No clip selected.")
                     .foregroundStyle(.secondary)
             }
-            Spacer()
         }
+        .frame(maxWidth: .infinity)
     }
 
     private var takeList: some View {
@@ -243,19 +243,24 @@ struct PlaybackView: View {
 
     /// Slate summary of the loaded take + edit button.
     private var slateInfo: some View {
-        HStack(alignment: .firstTextBaseline, spacing: 10) {
-            Image(systemName: "film.stack")
+        VStack(spacing: 4) {
+            HStack(alignment: .firstTextBaseline, spacing: 10) {
+                Image(systemName: "film.stack")
+                if let slate = player.slate {
+                    Text(slate.shortLabel).font(.headline).fixedSize()
+                } else {
+                    Text("This clip has no slate data.").foregroundStyle(.secondary)
+                }
+                Button("Slate…") { editingSlate = true }
+                    .disabled(player.take == nil)
+            }
             if let slate = player.slate {
-                Text(slate.shortLabel).font(.headline).fixedSize()
                 Text(slate.longDescription.replacingOccurrences(of: "\n", with: "  ·  "))
                     .font(.caption).foregroundStyle(.secondary).lineLimit(2)
-            } else {
-                Text("This clip has no slate data.").foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
             }
-            Spacer()
-            Button("Slate…") { editingSlate = true }
-                .disabled(player.take == nil)
         }
+        .frame(maxWidth: .infinity)
         .sheet(isPresented: $editingSlate) {
             SlateEditSheet(slate: player.slate ?? SlateInfo(),
                            takeName: player.take?.name ?? "",
@@ -264,28 +269,32 @@ struct PlaybackView: View {
     }
 
     private var markControls: some View {
-        HStack(spacing: 10) {
-            Button("Set IN") { player.setIn() }
-                .keyboardShortcut("i", modifiers: [])
-                .help("IN at the current frame (I)")
-            Button("Set OUT") { player.setOut() }
-                .keyboardShortcut("o", modifiers: [])
-                .help("OUT at the current frame (O)")
-            Button { player.goToIn() } label: { Label("Go to IN", systemImage: "arrow.left.to.line") }
-                .disabled(player.marks.inPoint == nil)
-            Button { player.goToOut() } label: { Label("Go to OUT", systemImage: "arrow.right.to.line") }
-                .disabled(player.marks.outPoint == nil)
-            Button("Clear") { player.clearMarks() }
-                .disabled(player.marks.isEmpty)
-            Toggle("Play IN–OUT only", isOn: $player.limitToRange)
-            Spacer()
-            Text("IN \(player.marks.inPoint.map { player.timecode($0) } ?? "—")  ·  OUT \(player.marks.outPoint.map { player.timecode($0) } ?? "—")")
-                .font(.system(.callout, design: .monospaced))
-                .foregroundStyle(.secondary)
-            if let msg = player.marksMessage {
-                Text(msg).font(.caption).foregroundStyle(.red)
+        VStack(spacing: 4) {
+            HStack(spacing: 10) {
+                Button("Set IN") { player.setIn() }
+                    .keyboardShortcut("i", modifiers: [])
+                    .help("IN at the current frame (I)")
+                Button("Set OUT") { player.setOut() }
+                    .keyboardShortcut("o", modifiers: [])
+                    .help("OUT at the current frame (O)")
+                Button { player.goToIn() } label: { Label("Go to IN", systemImage: "arrow.left.to.line") }
+                    .disabled(player.marks.inPoint == nil)
+                Button { player.goToOut() } label: { Label("Go to OUT", systemImage: "arrow.right.to.line") }
+                    .disabled(player.marks.outPoint == nil)
+                Button("Clear") { player.clearMarks() }
+                    .disabled(player.marks.isEmpty)
+                Toggle("Play IN–OUT only", isOn: $player.limitToRange)
+            }
+            HStack(spacing: 10) {
+                Text("IN \(player.marks.inPoint.map { player.timecode($0) } ?? "—")  ·  OUT \(player.marks.outPoint.map { player.timecode($0) } ?? "—")")
+                    .font(.system(.callout, design: .monospaced))
+                    .foregroundStyle(.secondary)
+                if let msg = player.marksMessage {
+                    Text(msg).font(.caption).foregroundStyle(.red)
+                }
             }
         }
+        .frame(maxWidth: .infinity)
         .disabled(player.take == nil)
     }
 
@@ -334,13 +343,13 @@ struct PlaybackView: View {
                 Toggle("Audio A", isOn: $player.audioA)
                 Toggle("Audio B", isOn: $player.audioB)
 
-                Spacer()
                 if let offset = player.abOffsetMs {
                     Text(String(format: "Offset B−A: %+.1f ms", offset))
                         .font(.caption.monospacedDigit())
                         .foregroundStyle(abs(offset) > 1000 * player.frameDuration.seconds ? .red : .secondary)
                 }
             }
+            .frame(maxWidth: .infinity)
             .disabled(player.take == nil)
         }
     }

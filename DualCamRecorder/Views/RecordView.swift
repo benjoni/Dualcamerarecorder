@@ -57,56 +57,55 @@ struct RecordView: View {
         .padding()
     }
 
+    /// All controls centered: REC / timer / IN-OUT on the first row, disk info below.
     private var transportBar: some View {
-        HStack(alignment: .center, spacing: 24) {
-            Button(action: controller.toggleRecording) {
-                HStack(spacing: 10) {
-                    Image(systemName: controller.isRecording ? "stop.fill" : "record.circle")
-                        .font(.system(size: 28))
-                    Text(recordButtonTitle)
-                        .font(.title2.weight(.bold))
+        VStack(spacing: 10) {
+            HStack(alignment: .center, spacing: 24) {
+                Button(action: controller.toggleRecording) {
+                    HStack(spacing: 10) {
+                        Image(systemName: controller.isRecording ? "stop.fill" : "record.circle")
+                            .font(.system(size: 28))
+                        Text(recordButtonTitle)
+                            .font(.title2.weight(.bold))
+                    }
+                    .frame(width: 180, height: 48)
                 }
-                .frame(width: 180, height: 48)
-            }
-            .buttonStyle(.borderedProminent)
-            .tint(controller.isRecording ? .gray : .red)
-            .keyboardShortcut("r", modifiers: [.command])
-            .disabled(isStopping)
+                .buttonStyle(.borderedProminent)
+                .tint(controller.isRecording ? .gray : .red)
+                .keyboardShortcut("r", modifiers: [.command])
+                .disabled(isStopping)
 
-            VStack(alignment: .leading, spacing: 4) {
-                Text(DisplayFormat.duration(controller.elapsed))
-                    .font(.system(size: 30, weight: .semibold, design: .monospaced))
-                    .foregroundStyle(controller.isRecording ? .red : .primary)
-                Text(takeLabel).font(.callout).foregroundStyle(.secondary)
-            }
-
-            markControls
-
-            Spacer()
-
-            VStack(alignment: .trailing, spacing: 4) {
-                HStack {
-                    Image(systemName: "internaldrive")
-                    Text("Free: \(DisplayFormat.bytes(controller.freeBytes)) of \(DisplayFormat.bytes(controller.totalBytes))")
+                VStack(alignment: .center, spacing: 4) {
+                    Text(DisplayFormat.duration(controller.elapsed))
+                        .font(.system(size: 30, weight: .semibold, design: .monospaced))
+                        .foregroundStyle(controller.isRecording ? .red : .primary)
+                    Text(takeLabel).font(.callout).foregroundStyle(.secondary)
                 }
+
+                markControls
+            }
+
+            HStack(spacing: 12) {
+                Image(systemName: "internaldrive")
+                Text("Free: \(DisplayFormat.bytes(controller.freeBytes)) of \(DisplayFormat.bytes(controller.totalBytes))")
                 if let free = controller.freeBytes, let total = controller.totalBytes, total > 0 {
                     ProgressView(value: Double(total - free), total: Double(total))
-                        .frame(width: 260)
+                        .frame(width: 160)
                         .tint(Double(free) / Double(total) < 0.1 ? .red : .accentColor)
                 }
                 Text("Recording time left: \(DisplayFormat.remaining(controller.estimatedRemaining))")
-                    .font(.caption).foregroundStyle(.secondary)
-                HStack(spacing: 6) {
-                    Text(settings.recordFolderPath)
-                        .font(.caption).foregroundStyle(.secondary)
-                        .lineLimit(1).truncationMode(.middle)
-                        .frame(maxWidth: 300, alignment: .trailing)
-                    Button("Change…") { controller.chooseRecordFolder() }
-                        .controlSize(.small)
-                        .disabled(controller.isRecording)
-                }
+                    .foregroundStyle(.secondary)
+                Text(settings.recordFolderPath)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1).truncationMode(.middle)
+                    .frame(maxWidth: 300)
+                Button("Change…") { controller.chooseRecordFolder() }
+                    .controlSize(.small)
+                    .disabled(controller.isRecording)
             }
+            .font(.caption)
         }
+        .frame(maxWidth: .infinity)
     }
 
     /// IN / OUT marks set while recording (saved with the take, used by playback).
@@ -115,7 +114,7 @@ struct RecordView: View {
             if case .recording = controller.state { return true }
             return false
         }()
-        return VStack(alignment: .leading, spacing: 6) {
+        return VStack(alignment: .center, spacing: 6) {
             HStack(spacing: 8) {
                 Button { controller.markIn() } label: {
                     Text("IN").font(.headline).frame(width: 44, height: 28)
