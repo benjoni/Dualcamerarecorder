@@ -16,9 +16,6 @@ final class AppSettings: ObservableObject {
     @Published var projectsRootPath: String { didSet { defaults.set(projectsRootPath, forKey: "projectsRootPath") } }
     /// Folder (disk) new takes are written to – the folder of the open project.
     @Published var recordFolderPath: String { didSet { defaults.set(recordFolderPath, forKey: "recordFolderPath") } }
-    /// When true, the Playback tab reads from `playbackFolderPath` (e.g. a different disk) instead of the record folder.
-    @Published var separatePlaybackFolder: Bool { didSet { defaults.set(separatePlaybackFolder, forKey: "separatePlaybackFolder") } }
-    @Published var playbackFolderPath: String { didSet { defaults.set(playbackFolderPath, forKey: "playbackFolderPath") } }
     /// 1 = only camera A is shown and recorded, 2 = cameras A and B.
     @Published var cameraCount: Int { didSet { defaults.set(cameraCount, forKey: "cameraCount") } }
     /// 0 = no audio, 2 / 8 / 16 embedded SDI channels.
@@ -45,8 +42,6 @@ final class AppSettings: ObservableObject {
 
         recordFolderPath = defaults.string(forKey: "recordFolderPath") ?? defaultFolder
         projectsRootPath = defaults.string(forKey: "projectsRootPath") ?? defaultFolder
-        separatePlaybackFolder = defaults.bool(forKey: "separatePlaybackFolder")
-        playbackFolderPath = defaults.string(forKey: "playbackFolderPath") ?? defaultFolder
         audioChannels = defaults.object(forKey: "audioChannels") as? Int ?? 2
         cameraCount = defaults.object(forKey: "cameraCount") as? Int ?? 2
         forceEightBit = defaults.bool(forKey: "forceEightBit")
@@ -88,7 +83,6 @@ final class AppSettings: ObservableObject {
 
     var recordFolderURL: URL { URL(fileURLWithPath: recordFolderPath, isDirectory: true) }
 
-    var playbackFolderURL: URL {
-        separatePlaybackFolder ? URL(fileURLWithPath: playbackFolderPath, isDirectory: true) : recordFolderURL
-    }
+    /// Playback always reads the open project's folder (recording and playback never run at the same time).
+    var playbackFolderURL: URL { recordFolderURL }
 }

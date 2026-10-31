@@ -3,7 +3,7 @@
 ## Cieľ
 Natívna macOS 14+ (Apple Silicon) aplikácia na súčasné nahrávanie dvoch SDI kamier cez
 dve Blackmagic UltraStudio Recorder 3G do ProRes 422 `.mov` a synchronizované prehrávanie
-dvojice záberov – oboje naraz bez vynechávania snímok.
+dvojice záberov bez vynechávania snímok (nahrávanie a prehrávanie nebežia naraz).
 
 ## Architektúra (vrstvy)
 

@@ -18,12 +18,6 @@ struct SettingsView: View {
                         .lineLimit(1).truncationMode(.middle)
                 }
                 folderRow(title: "New projects are created in", path: settings.projectsRootPath) { settings.projectsRootPath = $0 }
-                Toggle("Play back from another disk / folder", isOn: $settings.separatePlaybackFolder)
-                if settings.separatePlaybackFolder {
-                    folderRow(title: "Read (playback)", path: settings.playbackFolderPath) { settings.playbackFolderPath = $0 }
-                }
-                Text("When recording and playing back at the same time, it is safest to read from a different disk than the one being written to.")
-                    .font(.caption).foregroundStyle(.secondary)
             }
 
             Section("Project settings") {

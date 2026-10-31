@@ -2,7 +2,7 @@
 
 Natívna macOS aplikácia (Swift / SwiftUI + Objective-C++ most na Blackmagic DeckLink SDK) na
 **súčasné nahrávanie dvoch SDI kamier** cez dve Blackmagic UltraStudio Recorder 3G do ProRes 422
-`.mov` a **synchronizované prehrávanie** dvojice záberov. Nahrávanie a prehrávanie môžu bežať naraz.
+`.mov` a **synchronizované prehrávanie** dvojice záberov (nahrávanie a prehrávanie sa striedajú, nebežia naraz).
 
 Cieľový hardvér: Mac mini M4 Pro, 2× UltraStudio Recorder 3G (Thunderbolt), 2× DJI Ronin 4D so SDI
 výstupom nastaveným na HD (1080p, 3G-SDI).
@@ -51,8 +51,7 @@ Rozhranie aplikácie je **v angličtine** (Record / Playback / Slate …); tento
 - Zariadenie a názov každej kamery, kodek (ProRes 422 / HQ / LT), audio kanály, vynútenie 8-bit.
 - Všetko sa ukladá do `PROJECT.JSON` projektu a obnoví sa pri jeho otvorení; nový projekt
   prevezme nastavenia z naposledy otvoreného. Počas nahrávania sa meniť nedajú.
-- Globálne nastavenia (⌘,) obsahujú už len umiestnenie projektov, prehrávanie z iného disku
-  a informácie o DeckLink.
+- Globálne nastavenia (⌘,) obsahujú už len umiestnenie projektov a informácie o DeckLink.
 
 ### Záložka NAHRÁVANIE
 - Automatické zistenie DeckLink zariadení (`IDeckLinkDiscovery`, aj hot-plug); priradenie
@@ -136,8 +135,8 @@ Rozhranie aplikácie je **v angličtine** (Record / Playback / Slate …); tento
   ← / →, I / O; prepnutie záložiek ⌘1 / ⌘2. Červený rámik a odznaky REC / No signal ostávajú.
 
 ### Nastavenia (⌘,)
-- Priečinok na **zápis** a voliteľne **oddelený disk/priečinok na čítanie** (prehrávanie).
-- Kodek, počet audio kanálov, vynútenie 8-bit zachytávania, informácie o SDK / ovládači / zariadeniach.
+- Umiestnenie nových projektov a informácie o SDK / ovládači / zariadeniach.
+- Playback vždy číta z priečinka otvoreného projektu.
 
 ### Simulovaný vstup
 V zozname zariadení je vždy položka **„Simulovaný vstup (testovací obraz)“** – farebné pruhy,
@@ -199,8 +198,8 @@ Po pridaní/odobratí zdrojových súborov sa dá projekt pregenerovať:
 open build/Build/Products/Release/DualCamRecorder.app
 ```
 
-1. V *Nastaveniach* (⌘,) vyber priečinok na zápis (ideálne rýchly externý SSD) a prípadne iný
-   disk na prehrávanie.
+1. V *Nastaveniach* (⌘,) vyber umiestnenie projektov (ideálne rýchly externý SSD) a na úvodnej
+   stránke vytvor projekt.
 2. Na záložke **Nahrávanie** priraď zariadenia ku Kamera A / B, skontroluj formát a audio meter.
 3. **REC** (⌘R) → **STOP**. Pod časovačom sa zobrazí uložený záber a posun štartu B−A.
 4. Záložka **Prehrávanie** → vyber záber → medzerník / ← → / 0,5×–1×.
@@ -229,13 +228,12 @@ docs/PLAN.md                      plán a architektúra
 tools/gen_xcodeproj.py            generátor project.pbxproj + zdieľanej schémy
 ```
 
-### Prečo to nevynecháva snímky pri súčasnom prehrávaní
+### Prečo sa pri nahrávaní nevynechávajú snímky
 - DeckLink callback iba skopíruje snímku do `CVPixelBufferPool` (IOSurface) a vráti sa.
 - Zápis beží na samostatnej sériovej fronte s QoS *userInteractive* pre každú kameru;
   ProRes kódovanie ide na hardvérový ProRes engine M4 Pro.
 - Náhľad má vlastnú frontu a pri zaneprázdnení snímky preskakuje (nikdy neblokuje zápis);
   keď je otvorená záložka Prehrávanie, náhľad sa nevykresľuje vôbec.
-- Prehrávanie (AVPlayer) má vlastné vlákna a dekóduje ProRes hardvérovo.
 - Aplikácia drží `ProcessInfo` aktivitu *latencyCritical* (bez App Nap / spánku).
 - Ak by fronta zápisu narástla nad 10 snímok, snímka sa zahodí a započíta do
   „Vynechané (zápis)“ – nič sa tak nedeje potichu.
