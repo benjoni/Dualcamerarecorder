@@ -19,6 +19,7 @@ struct HelpView: View {
                     key("⌘,", "App settings – projects location, live view on phones, DeckLink devices")
                     key("⇧⌘W", "Waveform over the pictures")
                     key("⌘F", "Screens only / show all controls")
+                    key("R  P", "Record / Playback (not while typing in a field)")
                     key("⌘1  ⌘2", "Record / Playback (in Screens only)")
                     key("⌘?", "This help")
                 }

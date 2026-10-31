@@ -74,6 +74,7 @@ Rozhranie aplikácie je **v angličtine** (Record / Playback / Slate …); tento
 - Všetko sa ukladá do `PROJECT.JSON` projektu a obnoví sa pri jeho otvorení; nový projekt
   prevezme nastavenia z naposledy otvoreného. Počas nahrávania sa meniť nedajú.
 - Globálne nastavenia (⌘,) obsahujú umiestnenie projektov, živý náhľad na telefóny a informácie o DeckLink.
+- **Record / Playback** sa prepína veľkým prepínačom pod lištou alebo klávesmi **R** / **P** (nie počas písania do poľa).
 - **Help** (tlačidlo v lište projektu, menu Help alebo ⌘?) otvorí okno so všetkými klávesovými skratkami,
   vysvetlivkami značiek (REC, LATEST, ★, vlajočka IN/OUT, MOS …), čísel a názvov súborov.
 

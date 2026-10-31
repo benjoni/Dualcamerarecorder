@@ -4,6 +4,7 @@
 //
 
 import SwiftUI
+import AppKit
 import Combine
 
 /// Long-lived objects live here so capture keeps running while switching tabs.
@@ -220,6 +221,7 @@ struct ContentView: View {
     @State private var screensOnly = false
     @State private var showProjectSettings = false
     @Environment(\.openWindow) private var openWindow
+    @State private var tabKeyMonitor: Any?
 
     var body: some View {
         Group {
@@ -238,6 +240,11 @@ struct ContentView: View {
             tab = 0
             screensOnly = false
             applyActivity()
+        }
+        .onAppear { installTabKeys() }
+        .onDisappear {
+            if let tabKeyMonitor { NSEvent.removeMonitor(tabKeyMonitor) }
+            tabKeyMonitor = nil
         }
         .onChange(of: tab) { _, newTab in
             applyActivity()
@@ -267,13 +274,18 @@ struct ContentView: View {
             } else {
                 // Record / Playback switch under the toolbar (TabView puts it into the title bar on macOS 26).
                 VStack(spacing: 0) {
-                    Picker("", selection: $tab) {
-                        Label("Record", systemImage: "record.circle").tag(0)
-                        Label("Playback", systemImage: "play.fill").tag(1)
+                    SegmentGroup {
+                        Toggle(isOn: Binding(get: { tab == 0 }, set: { if $0 { tab = 0 } })) {
+                            Label("Record", systemImage: "record.circle")
+                        }
+                        .help("Record (R)")
+                        Toggle(isOn: Binding(get: { tab == 1 }, set: { if $0 { tab = 1 } })) {
+                            Label("Playback", systemImage: "play.fill")
+                        }
+                        .help("Playback (P)")
                     }
-                    .pickerStyle(.segmented)
-                    .labelsHidden()
-                    .fixedSize()
+                    .toggleStyle(SegmentToggleStyle(width: 180, minHeight: 38))
+                    .font(.title3.weight(.semibold))
                     .padding(.top, 8)
                     if tab == 0 {
                         RecordView(controller: model.recorder, settings: model.settings, backup: model.backup)
@@ -338,6 +350,22 @@ struct ContentView: View {
                 }
                 .keyboardShortcut("f", modifiers: [.command])
                 .help(screensOnly ? "Show all controls (⌘F)" : "Hide everything except the pictures (⌘F)")
+            }
+        }
+    }
+
+    /// R → Record, P → Playback (plain keys, ignored while typing in a text field).
+    private func installTabKeys() {
+        guard tabKeyMonitor == nil else { return }
+        tabKeyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
+            guard projects.current != nil,
+                  event.modifierFlags.intersection([.command, .option, .control]).isEmpty,
+                  !(NSApp.keyWindow?.firstResponder is NSText),
+                  NSApp.keyWindow?.attachedSheet == nil else { return event }
+            switch event.charactersIgnoringModifiers?.lowercased() {
+            case "r": tab = 0; return nil
+            case "p": tab = 1; return nil
+            default: return event
             }
         }
     }
