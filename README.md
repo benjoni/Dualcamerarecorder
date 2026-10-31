@@ -98,7 +98,7 @@ Rozhranie aplikácie je **v angličtine** (Record / Playback / Slate …); tento
 
 ### Waveform (⇧⌘W)
 - Tlačidlo **Waveform** v lište okna zapne **luma waveform (0–100 IRE)** zvlášť pre každú kameru –
-  polopriehľadný panel cez spodnú tretinu obrazu (Record aj Playback, aj v Screens only).
+  malý panel v pravom dolnom rohu obrazu (Record aj Playback, aj v Screens only).
 - Record: počíta sa zo zmenšeného náhľadu (~12× za sekundu), nezaťažuje nahrávanie.
   Playback: z aktuálne zobrazenej snímky oboch prehrávačov (aj pri pauze / krokovaní).
 - Super-whites nad 100 IRE a pod 0 IRE sa orežú na okraj stupnice.

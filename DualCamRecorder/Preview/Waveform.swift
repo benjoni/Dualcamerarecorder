@@ -78,46 +78,45 @@ enum WaveformRenderer {
     }
 }
 
-/// Waveform panel with an IRE graticule; placed over the lower part of a picture.
+/// Small waveform panel with an IRE graticule in the bottom-right corner of a picture.
 struct WaveformOverlay: View {
     @ObservedObject var model: WaveformModel
 
     var body: some View {
         GeometryReader { geo in
-            VStack {
-                Spacer(minLength: 0)
-                ZStack(alignment: .topLeading) {
-                    RoundedRectangle(cornerRadius: 4).fill(Color.black.opacity(0.6))
-                    if let image = model.image {
-                        Image(decorative: image, scale: 1)
-                            .resizable()
-                            .interpolation(.medium)
-                            .padding(.leading, 28)
-                    }
-                    graticule
+            // Small monitor in the bottom-right corner of the picture.
+            ZStack(alignment: .topLeading) {
+                RoundedRectangle(cornerRadius: 4).fill(Color.black.opacity(0.65))
+                if let image = model.image {
+                    Image(decorative: image, scale: 1)
+                        .resizable()
+                        .interpolation(.medium)
+                        .padding(.leading, 22)
                 }
-                .frame(height: geo.size.height * 0.34)
-                .padding(6)
+                graticule
             }
+            .frame(width: max(140, geo.size.width * 0.3), height: max(70, geo.size.height * 0.28))
+            .padding(8)
+            .frame(width: geo.size.width, height: geo.size.height, alignment: .bottomTrailing)
         }
         .allowsHitTesting(false)
     }
 
-    /// 100 / 75 / 50 / 25 / 0 IRE lines with labels.
+    /// 100 / 50 / 0 IRE lines with labels.
     private var graticule: some View {
         GeometryReader { g in
-            ForEach([100, 75, 50, 25, 0], id: \.self) { ire in
+            ForEach([100, 50, 0], id: \.self) { ire in
                 let y = g.size.height * CGFloat(100 - ire) / 100
                 Path { path in
-                    path.move(to: CGPoint(x: 28, y: y))
+                    path.move(to: CGPoint(x: 22, y: y))
                     path.addLine(to: CGPoint(x: g.size.width, y: y))
                 }
                 .stroke(Color.white.opacity(ire == 100 || ire == 0 ? 0.45 : 0.2),
                         style: StrokeStyle(lineWidth: 1, dash: ire == 100 || ire == 0 ? [] : [3, 3]))
                 Text("\(ire)")
-                    .font(.system(size: 9, weight: .semibold, design: .monospaced))
+                    .font(.system(size: 8, weight: .semibold, design: .monospaced))
                     .foregroundStyle(.white.opacity(0.75))
-                    .position(x: 14, y: min(max(y, 6), g.size.height - 6))
+                    .position(x: 11, y: min(max(y, 6), g.size.height - 6))
             }
         }
     }
