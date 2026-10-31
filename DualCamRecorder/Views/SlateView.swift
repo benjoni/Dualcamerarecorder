@@ -100,18 +100,22 @@ struct SlateFields: View {
                 }
                 .disabled(locked)
             }
-            GridRow {
-                field("Note", text: $slate.note)
-                    .frame(maxWidth: large ? 560 : .infinity)   // 3 × 180 + spacing
-                    .gridCellColumns(3)
-                SegmentGroup {
-                    Toggle(isOn: $slate.good) {
-                        Label("Good take", systemImage: slate.good ? "star.fill" : "star")
+            if large {
+                // Note · Good take as one group, centered like the row above.
+                GridRow {
+                    HStack(alignment: .top, spacing: 10) {
+                        field("Note", text: $slate.note).frame(width: 420)
+                        goodToggle
                     }
-                    .help("Good (circled) take")
+                    .gridCellColumns(4)
+                    .gridCellAnchor(.top)
                 }
-                .toggleStyle(SegmentToggleStyle(width: large ? 180 : 150, minHeight: large ? 32 : 30))
-                .padding(.top, large ? 22 : 14)
+            } else {
+                GridRow {
+                    field("Note", text: $slate.note)
+                        .gridCellColumns(3)
+                    goodToggle
+                }
             }
         }
     }
@@ -137,6 +141,17 @@ struct SlateFields: View {
                 Stepper("", value: $slate.take, in: 1...999).labelsHidden()
             }
         }
+    }
+
+    private var goodToggle: some View {
+        SegmentGroup {
+            Toggle(isOn: $slate.good) {
+                Label("Good take", systemImage: slate.good ? "star.fill" : "star")
+            }
+            .help("Good (circled) take")
+        }
+        .toggleStyle(SegmentToggleStyle(width: large ? 180 : 150, minHeight: large ? 32 : 30))
+        .padding(.top, large ? 22 : 14)
     }
 
     /// EXT / DAY / MOS.
