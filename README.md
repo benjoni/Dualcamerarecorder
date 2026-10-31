@@ -115,10 +115,10 @@ Rozhranie aplikácie je **v angličtine** (Record / Playback / Slate …); tento
 ### Export PDF (⇧⌘P)
 - V Playback tlačidlo **Export PDF…**: report klipov **podľa natáčacích dní** (všetky dni alebo
   jeden deň, voliteľne len ★ dobré pokusy, s obrázkami alebo bez).
-- A4 na šírku, každý deň začína novou stranou (projekt, deň, dátum, počet klipov); na strane
+- **A4 na šírku (6 klipov / strana) alebo na výšku (8 klipov / strana)**, každý deň začína novou stranou (projekt, deň, dátum, počet klipov); na strane
   6 klipov. Riadok: obrázok zo stredu klipu z kamery A aj B, číslo klipu, ★ / MOS,
   Scene / Shot / Take, INT/EXT · DAY/NIGHT, súbory + Cam clip, dĺžka, IN / OUT / DUR,
-  čas nahrávania, poznámka. Ukážka: `docs/preview/sample_clip_report.pdf`.
+  čas nahrávania, poznámka. Ukážky: `docs/preview/sample_clip_report.pdf` (na šírku), `docs/preview/sample_clip_report_portrait.pdf` (na výšku).
 - PDF sa uloží (predvolene do priečinka projektu) a hneď otvorí.
 
 ### Waveform (⇧⌘W)

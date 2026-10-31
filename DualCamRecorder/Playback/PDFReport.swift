@@ -18,6 +18,12 @@ struct ReportOptions {
     var shootingDay: String?
     var includePictures = true
     var onlyGoodTakes = false
+    /// A4 portrait instead of landscape.
+    var portrait = false
+
+    var pageSize: CGSize { portrait ? CGSize(width: 595, height: 842) : CGSize(width: 842, height: 595) }
+    /// Clips per page (portrait rows are taller but there is more height).
+    var rowsPerPage: Int { portrait ? 8 : 6 }
 }
 
 /// Everything one PDF row needs (pictures already generated).
@@ -32,8 +38,6 @@ struct ReportClip: Identifiable {
 }
 
 enum PDFReport {
-    static let pageSize = CGSize(width: 842, height: 595)   // A4 landscape, points
-    static let rowsPerPage = 6
 
     /// Shooting days present in `takes`, natural order ("" = clips without a day, last).
     static func days(in takes: [Take]) -> [String] {
@@ -83,6 +87,8 @@ enum PDFReport {
     /// Writes the PDF. Must run on the main thread (SwiftUI rendering).
     @MainActor
     static func write(clips: [ReportClip], production: String, options: ReportOptions, to url: URL) throws {
+        let pageSize = options.pageSize
+        let rowsPerPage = options.rowsPerPage
         var mediaBox = CGRect(origin: .zero, size: pageSize)
         guard let context = CGContext(url as CFURL, mediaBox: &mediaBox, nil) else {
             throw CocoaError(.fileWriteUnknown)
@@ -108,6 +114,7 @@ enum PDFReport {
                                   dayClipCount: clips.filter { $0.take.shootingDay == page.day }.count,
                                   clips: page.clips,
                                   pictures: options.includePictures,
+                                  portrait: options.portrait,
                                   showB: showB,
                                   pageNumber: index + 1,
                                   pageCount: pages.count,
@@ -145,6 +152,7 @@ private struct ReportPage: View {
     let dayClipCount: Int
     let clips: [ReportClip]
     let pictures: Bool
+    let portrait: Bool
     let showB: Bool
     let pageNumber: Int
     let pageCount: Int
@@ -179,25 +187,31 @@ private struct ReportPage: View {
             .padding(.bottom, 8)
             Rectangle().fill(Color.black).frame(height: 1.5)
 
-            // Column titles
-            HStack(spacing: 10) {
-                if pictures {
-                    Text("Camera A").frame(width: 104, alignment: .leading)
-                    if showB { Text("Camera B").frame(width: 104, alignment: .leading) }
+            // Column titles (landscape only – portrait rows label themselves)
+            if !portrait {
+                HStack(spacing: 10) {
+                    if pictures {
+                        Text("Camera A").frame(width: 104, alignment: .leading)
+                        if showB { Text("Camera B").frame(width: 104, alignment: .leading) }
+                    }
+                    Text("Clip").frame(width: 46, alignment: .leading)
+                    Text("Scene / Shot / Take").frame(width: 100, alignment: .leading)
+                    Text("Files · Camera clip").frame(width: 170, alignment: .leading)
+                    Text("Duration · IN / OUT").frame(width: 96, alignment: .leading)
+                    Text("Note").frame(maxWidth: .infinity, alignment: .leading)
                 }
-                Text("Clip").frame(width: 46, alignment: .leading)
-                Text("Scene / Shot / Take").frame(width: 100, alignment: .leading)
-                Text("Files · Camera clip").frame(width: 170, alignment: .leading)
-                Text("Duration · IN / OUT").frame(width: 96, alignment: .leading)
-                Text("Note").frame(maxWidth: .infinity, alignment: .leading)
+                .font(.system(size: 8, weight: .bold))
+                .foregroundStyle(Color(white: 0.4))
+                .padding(.vertical, 5)
+                Rectangle().fill(Color(white: 0.7)).frame(height: 0.5)
             }
-            .font(.system(size: 8, weight: .bold))
-            .foregroundStyle(Color(white: 0.4))
-            .padding(.vertical, 5)
-            Rectangle().fill(Color(white: 0.7)).frame(height: 0.5)
 
             ForEach(clips) { clip in
-                ReportRow(clip: clip, pictures: pictures, showB: showB)
+                if portrait {
+                    ReportRowPortrait(clip: clip, pictures: pictures, showB: showB)
+                } else {
+                    ReportRow(clip: clip, pictures: pictures, showB: showB)
+                }
                 Rectangle().fill(Color(white: 0.85)).frame(height: 0.5)
             }
             Spacer(minLength: 0)
@@ -309,6 +323,92 @@ private struct ReportRow: View {
     }
 }
 
+/// A4 portrait row: pictures on the left, details stacked on the right.
+private struct ReportRowPortrait: View {
+    let clip: ReportClip
+    let pictures: Bool
+    let showB: Bool
+
+    var body: some View {
+        let s = clip.slate
+        HStack(alignment: .top, spacing: 10) {
+            if pictures {
+                picture(clip.pictureA)
+                if showB { picture(clip.pictureB) }
+            }
+            VStack(alignment: .leading, spacing: 3) {
+                HStack(alignment: .firstTextBaseline, spacing: 8) {
+                    Text(String(format: "%03d", clip.take.number)).font(.system(size: 13, weight: .bold))
+                    Text("\(s?.scene.isEmpty == false ? s!.scene : "–") / \(s?.shot.isEmpty == false ? s!.shot : "–") / \(s.map { String($0.take) } ?? "–")")
+                        .font(.system(size: 12, weight: .semibold))
+                    if s?.good == true { tag("★ GOOD", Color(red: 0.75, green: 0.55, blue: 0)) }
+                    if s?.mos == true { tag("MOS", Color(white: 0.4)) }
+                    Spacer(minLength: 0)
+                    Text(([s?.location.rawValue ?? "", s?.timeOfDay.rawValue ?? ""].filter { !$0.isEmpty }
+                          + [PDFReport.timecode(clip.duration, fps: clip.fps),
+                             (s?.recordedAt ?? clip.take.modified).formatted(date: .omitted, time: .shortened)])
+                            .joined(separator: " · "))
+                        .font(.system(size: 8, design: .monospaced))
+                }
+                if let marks = inOut {
+                    Text(marks).font(.system(size: 8, design: .monospaced))
+                }
+                line("A", clip.take.camA?.lastPathComponent, s?.cameraClipA)
+                if clip.take.camB != nil || !(s?.cameraClipB ?? "").isEmpty {
+                    line("B", clip.take.camB?.lastPathComponent, s?.cameraClipB)
+                }
+                if let note = s?.note, !note.isEmpty {
+                    Text(note).font(.system(size: 8.5)).lineLimit(2)
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .padding(.vertical, 5)
+        .frame(height: 78, alignment: .top)
+    }
+
+    /// "IN 00:00:08:10 · OUT 00:00:41:22 · DUR 00:00:33:12" (nil without marks)
+    private var inOut: String? {
+        guard let m = clip.take.marks, !m.isEmpty else { return nil }
+        let lo = m.inPoint ?? 0
+        let hi = m.outPoint ?? clip.duration
+        return ["IN " + PDFReport.timecode(lo, fps: clip.fps),
+                "OUT " + PDFReport.timecode(hi, fps: clip.fps),
+                "DUR " + PDFReport.timecode(max(0, hi - lo), fps: clip.fps)].joined(separator: "  ·  ")
+    }
+
+    private func picture(_ image: CGImage?) -> some View {
+        ZStack {
+            Rectangle().fill(Color(white: 0.9))
+            if let image {
+                Image(decorative: image, scale: 1).resizable().aspectRatio(contentMode: .fit)
+            } else {
+                Text("—").font(.system(size: 9)).foregroundStyle(Color(white: 0.5))
+            }
+        }
+        .frame(width: 96, height: 54)
+        .clipShape(RoundedRectangle(cornerRadius: 2))
+    }
+
+    private func line(_ cam: String, _ file: String?, _ cameraClip: String?) -> some View {
+        HStack(spacing: 8) {
+            Text("\(cam): \(file ?? "—")").lineLimit(1)
+            if let cameraClip, !cameraClip.isEmpty {
+                Text("cam clip \(cameraClip)").fontWeight(.semibold).lineLimit(1)
+            }
+        }
+        .font(.system(size: 8, design: .monospaced))
+    }
+
+    private func tag(_ text: String, _ color: Color) -> some View {
+        Text(text)
+            .font(.system(size: 7, weight: .bold))
+            .padding(.horizontal, 4).padding(.vertical, 1)
+            .foregroundStyle(Color.white)
+            .background(RoundedRectangle(cornerRadius: 2).fill(color))
+    }
+}
+
 // MARK: - Export sheet
 
 struct ExportPDFSheet: View {
@@ -319,6 +419,7 @@ struct ExportPDFSheet: View {
     @State private var day: String = "*"          // "*" = all days
     @State private var includePictures = true
     @State private var onlyGood = false
+    @State private var portrait = false
     @State private var working = false
     @State private var error: String?
 
@@ -334,6 +435,11 @@ struct ExportPDFSheet: View {
                         Text(d.isEmpty ? "No shooting day" : "Day \(d)").tag(d)
                     }
                 }
+                Picker("Orientation", selection: $portrait) {
+                    Text("Landscape (6 clips / page)").tag(false)
+                    Text("Portrait (8 clips / page)").tag(true)
+                }
+                .pickerStyle(.segmented)
                 Toggle("Include pictures (middle of each clip)", isOn: $includePictures)
                 Toggle("Only good takes (★)", isOn: $onlyGood)
                 LabeledContent("Clips") {
@@ -377,7 +483,8 @@ struct ExportPDFSheet: View {
         panel.nameFieldStringValue = "\(production.isEmpty ? "Clips" : ProjectStore.folderName(for: production)) – \(dayPart).pdf"
         guard panel.runModal() == .OK, let url = panel.url else { return }
 
-        let options = ReportOptions(shootingDay: day == "*" ? nil : day, includePictures: includePictures, onlyGoodTakes: onlyGood)
+        let options = ReportOptions(shootingDay: day == "*" ? nil : day, includePictures: includePictures,
+                                    onlyGoodTakes: onlyGood, portrait: portrait)
         let takes = library.takes
         working = true
         error = nil
