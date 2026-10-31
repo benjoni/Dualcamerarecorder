@@ -104,9 +104,9 @@ struct PlaybackView: View {
             VStack(spacing: 12) {
                 header
                 HStack(spacing: 12) {
-                    playerPane(title: "Camera A", file: player.take?.camA, available: player.take?.camA != nil, content: PlayerView(player: player.playerA), waveform: player.waveformA)
+                    playerPane(title: "Camera A", role: .a, file: player.take?.camA, available: player.take?.camA != nil, content: PlayerView(player: player.playerA), waveform: player.waveformA)
                     if showCameraB {
-                        playerPane(title: "Camera B", file: player.take?.camB, available: player.take?.camB != nil, content: PlayerView(player: player.playerB), waveform: player.waveformB)
+                        playerPane(title: "Camera B", role: .b, file: player.take?.camB, available: player.take?.camB != nil, content: PlayerView(player: player.playerB), waveform: player.waveformB)
                     }
                 }
                 transport
@@ -215,7 +215,7 @@ struct PlaybackView: View {
         }
     }
 
-    private func playerPane(title: String, file: URL?, available: Bool, content: PlayerView,
+    private func playerPane(title: String, role: CameraRole, file: URL?, available: Bool, content: PlayerView,
                             waveform: WaveformModel) -> some View {
         VStack(alignment: .leading, spacing: 6) {
             Text(title).font(.title3.weight(.bold))
@@ -230,10 +230,16 @@ struct PlaybackView: View {
             }
             .aspectRatio(16.0 / 9.0, contentMode: .fit)
             .clipShape(RoundedRectangle(cornerRadius: 6))
-            Text(file?.lastPathComponent ?? " ")
-                .font(.callout.monospaced()).foregroundStyle(.secondary)
-                .lineLimit(1).truncationMode(.middle)
-                .textSelection(.enabled)
+            HStack(spacing: 14) {
+                Text(file?.lastPathComponent ?? " ")
+                    .lineLimit(1).truncationMode(.middle)
+                if let clip = player.slate?.cameraClip(role), !clip.isEmpty {
+                    Text("Cam clip \(clip)")
+                        .foregroundStyle(.primary)
+                }
+            }
+            .font(.callout.monospaced()).foregroundStyle(.secondary)
+            .textSelection(.enabled)
         }
         .frame(maxWidth: .infinity)
     }
