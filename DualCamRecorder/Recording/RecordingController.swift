@@ -207,7 +207,8 @@ final class RecordingController: NSObject, ObservableObject, DLDeviceBrowserDele
             return
         }
 
-        let take = TakeNaming.nextTakeNumber(in: folder)
+        let names = settings.cameraNames
+        let take = TakeNaming.nextTakeNumber(in: folder, names: names)
         // Common start instant slightly in the future so both channels see it.
         let startHost = HostClock.nowNanos + 200_000_000
         let audioChannels = settings.audioChannels
@@ -219,11 +220,11 @@ final class RecordingController: NSObject, ObservableObject, DLDeviceBrowserDele
         var armed: [CameraChannel] = []
         for role in active {
             let ch = channel(role)
-            let url = folder.appendingPathComponent(TakeNaming.fileName(take: take, role: role, slate: slate))
+            let url = folder.appendingPathComponent(TakeNaming.fileName(take: take, role: role, slate: slate, names: names))
             ch.resetCounters()
             if let failure = ch.arm(url: url, startHostNanos: startHost, flavor: settings.proResFlavor,
                                     audioChannels: audioChannels,
-                                    metadata: slate.metadataItems(camera: role, takeNumber: take),
+                                    metadata: slate.metadataItems(camera: role, takeNumber: take, names: names),
                                     completion: { [weak self] result in self?.channelFinished(result) }) {
                 armed.forEach { $0.cancelArmed() }
                 errorMessage = failure
@@ -368,8 +369,16 @@ final class RecordingController: NSObject, ObservableObject, DLDeviceBrowserDele
         }
     }
 
+    /// Camera name used at the start of the file names (A007_… / B007_…).
+    func setCameraName(_ name: String, for role: CameraRole) {
+        guard !isRecording else { return }
+        if role == .a { settings.cameraNameA = name } else { settings.cameraNameB = name }
+        refreshNextTake()
+        NotificationCenter.default.post(name: .takeFinished, object: nil)   // library re-scan
+    }
+
     func refreshNextTake() {
-        nextTake = TakeNaming.nextTakeNumber(in: settings.recordFolderURL)
+        nextTake = TakeNaming.nextTakeNumber(in: settings.recordFolderURL, names: settings.cameraNames)
     }
 
     private func tick() {

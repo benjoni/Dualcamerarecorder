@@ -2,24 +2,58 @@
 //  TakeNaming.swift
 //  DualCamRecorder
 //
-//  File names – all upper case, English initials:
-//      C007_S12_SH3B_T04_CAMA.MOV     C = clip (running number), S = scene, SH = shot, T = take
-//      C007_S12_SH3B_T04_CAMB.MOV
-//      C007_MARKS.JSON, C007_SLATE.JSON   (sidecars keyed by the clip number only)
-//  S / SH parts are left out when the slate field is empty; T is always present (2 digits).
-//  The running clip number is the unique key (auto-numbering, pairing A/B, sidecars).
-//  Older names (TAKE_007_…_CAMA.MOV, Take_001_CamA.mov and their sidecars) are still recognised.
+//  Movie names – all upper case, camera name + clip number first:
+//      A007_S12_SH3B_T04.MOV     A / B = camera name (configurable, e.g. RONIN1 → RONIN1_007_…)
+//      B007_S12_SH3B_T04.MOV     007 = running clip number (shared by both cameras of one take)
+//                                S = scene, SH = shot, T = take (2 digits)
+//  Sidecars (shared by A and B): C007_MARKS.JSON, C007_SLATE.JSON.
+//  S / SH are left out when the slate field is empty.
+//  Older names (C007_…_CAMA.MOV, TAKE_007_…_CAMA.MOV, Take_001_CamA.mov) are still recognised.
 //
 
 import Foundation
 
+/// Camera names used at the start of the file names.
+struct CameraNames: Equatable {
+    var a: String
+    var b: String
+
+    init(a: String = "A", b: String = "B") {
+        var na = TakeNaming.sanitize(a)
+        var nb = TakeNaming.sanitize(b)
+        if na.isEmpty { na = "A" }
+        if nb.isEmpty { nb = "B" }
+        if na == nb { nb += "-B" }   // must differ, otherwise A/B could not be told apart
+        self.a = na
+        self.b = nb
+    }
+
+    func name(_ role: CameraRole) -> String { role == .a ? a : b }
+
+    func role(forPrefix prefix: String) -> CameraRole? {
+        let p = prefix.uppercased()
+        if p == a { return .a }
+        if p == b { return .b }
+        return nil
+    }
+}
+
 enum TakeNaming {
-    /// C<n>[_anything]_CAM<A|B>.MOV – case-insensitive; also matches TAKE_007_…_CAMA.MOV and Take_001_CamA.mov.
-    private static let regex = try! NSRegularExpression(pattern: "^(?:C|TAKE_)(\\d{3,})(?:_.*)?_CAM([AB])\\.MOV$",
+    /// Older formats: C007_…_CAMA.MOV, TAKE_007_…_CAMA.MOV, Take_001_CamA.mov.
+    private static let legacyRegex = try! NSRegularExpression(pattern: "^(?:C|TAKE_)(\\d{3,})(?:_.*)?_CAM([AB])\\.MOV$",
+                                                              options: [.caseInsensitive])
+    /// Current format: <CAMERA>[_]<clip>[_…].MOV
+    private static let regex = try! NSRegularExpression(pattern: "^([A-Z0-9-]+?)_?(\\d{3,})(?:_.*)?\\.MOV$",
                                                         options: [.caseInsensitive])
 
-    static func fileName(take: Int, role: CameraRole, slate: SlateInfo? = nil) -> String {
-        var parts = [String(format: "C%03d", take)]
+    /// "A" + 7 → "A007", "RONIN1" + 7 → "RONIN1_007" (underscore when the name is longer than one letter).
+    static func clipPrefix(take: Int, cameraName: String) -> String {
+        let number = String(format: "%03d", take)
+        return cameraName.count == 1 ? cameraName + number : cameraName + "_" + number
+    }
+
+    static func fileName(take: Int, role: CameraRole, slate: SlateInfo? = nil, names: CameraNames = CameraNames()) -> String {
+        var parts = [clipPrefix(take: take, cameraName: names.name(role))]
         if let slate {
             let scene = sanitize(slate.scene)
             let shot = sanitize(slate.shot)
@@ -27,12 +61,11 @@ enum TakeNaming {
             if !shot.isEmpty { parts.append("SH" + shot) }
             parts.append(String(format: "T%02d", slate.take))
         }
-        parts.append("CAM" + role.rawValue)
         return parts.joined(separator: "_") + ".MOV"
     }
 
     static func displayName(take: Int) -> String {
-        String(format: "C%03d", take)
+        String(format: "Klip %03d", take)
     }
 
     static func sidecarName(take: Int, kind: String) -> String {
@@ -80,22 +113,30 @@ enum TakeNaming {
         return out
     }
 
-    /// Parses "C012_S4_SH2_T03_CAMB.MOV" (or "TAKE_012_…_CAMB.MOV", "Take_012_CamB.mov") → (12, .b)
-    static func parse(_ fileName: String) -> (take: Int, role: CameraRole)? {
+    /// Parses a movie name → (clip number, camera). Current names need the camera names to know A from B.
+    static func parse(_ fileName: String, names: CameraNames = CameraNames()) -> (take: Int, role: CameraRole)? {
         let range = NSRange(fileName.startIndex..., in: fileName)
-        guard let m = regex.firstMatch(in: fileName, range: range),
-              let numRange = Range(m.range(at: 1), in: fileName),
-              let camRange = Range(m.range(at: 2), in: fileName),
-              let number = Int(fileName[numRange]),
-              let role = CameraRole(rawValue: fileName[camRange].uppercased())
-        else { return nil }
-        return (number, role)
+        if let m = legacyRegex.firstMatch(in: fileName, range: range),
+           let numRange = Range(m.range(at: 1), in: fileName),
+           let camRange = Range(m.range(at: 2), in: fileName),
+           let number = Int(fileName[numRange]),
+           let role = CameraRole(rawValue: fileName[camRange].uppercased()) {
+            return (number, role)
+        }
+        if let m = regex.firstMatch(in: fileName, range: range),
+           let prefixRange = Range(m.range(at: 1), in: fileName),
+           let numRange = Range(m.range(at: 2), in: fileName),
+           let number = Int(fileName[numRange]),
+           let role = names.role(forPrefix: String(fileName[prefixRange])) {
+            return (number, role)
+        }
+        return nil
     }
 
-    /// Highest existing take number + 1 (never reuses a number, even if only one camera's file exists).
-    static func nextTakeNumber(in folder: URL) -> Int {
-        let names = (try? FileManager.default.contentsOfDirectory(atPath: folder.path)) ?? []
-        let maxTake = names.compactMap { parse($0)?.take }.max() ?? 0
+    /// Highest existing clip number + 1 (never reuses a number, even if only one camera's file exists).
+    static func nextTakeNumber(in folder: URL, names: CameraNames = CameraNames()) -> Int {
+        let files = (try? FileManager.default.contentsOfDirectory(atPath: folder.path)) ?? []
+        let maxTake = files.compactMap { parse($0, names: names)?.take }.max() ?? 0
         return maxTake + 1
     }
 }

@@ -61,7 +61,7 @@ struct SlateInfo: Codable, Hashable {
     }
 
     /// QuickTime metadata for one camera's file.
-    func metadataItems(camera: CameraRole, takeNumber: Int) -> [AVMetadataItem] {
+    func metadataItems(camera: CameraRole, takeNumber: Int, names: CameraNames) -> [AVMetadataItem] {
         func item(_ id: AVMetadataIdentifier, _ value: String) -> AVMetadataItem? {
             guard !value.isEmpty else { return nil }
             let m = AVMutableMetadataItem()
@@ -70,15 +70,15 @@ struct SlateInfo: Codable, Hashable {
             m.extendedLanguageTag = "und"
             return m
         }
-        var title = shortLabel + " · Cam\(camera.rawValue)"
+        var title = shortLabel + " · " + names.name(camera)
         if !production.isEmpty { title = production + " – " + title }
         let date = ISO8601DateFormatter().string(from: recordedAt ?? Date())
         return [
             item(.quickTimeMetadataTitle, title),
-            item(.quickTimeMetadataDescription, longDescription + "\nSúbor: " + TakeNaming.fileName(take: takeNumber, role: camera, slate: self)),
+            item(.quickTimeMetadataDescription, longDescription + "\nSúbor: " + TakeNaming.fileName(take: takeNumber, role: camera, slate: self, names: names)),
             item(.quickTimeMetadataComment, note),
             item(.quickTimeMetadataDirector, director),
-            item(.quickTimeMetadataCameraIdentifier, "Cam\(camera.rawValue)"),
+            item(.quickTimeMetadataCameraIdentifier, names.name(camera)),
             item(.quickTimeMetadataCreationDate, date),
         ].compactMap { $0 }
     }

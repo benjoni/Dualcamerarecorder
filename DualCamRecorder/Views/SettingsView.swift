@@ -22,6 +22,19 @@ struct SettingsView: View {
                     .font(.caption).foregroundStyle(.secondary)
             }
 
+            Section("Názvy kamier (začiatok názvu súboru)") {
+                HStack {
+                    TextField("Kamera A", text: Binding(get: { settings.cameraNameA },
+                                                        set: { controller.setCameraName($0, for: .a) }))
+                    TextField("Kamera B", text: Binding(get: { settings.cameraNameB },
+                                                        set: { controller.setCameraName($0, for: .b) }))
+                }
+                .disabled(controller.isRecording)
+                Text("Príklad: \(TakeNaming.fileName(take: controller.nextTake, role: .a, slate: settings.slate, names: settings.cameraNames))  ·  \(TakeNaming.fileName(take: controller.nextTake, role: .b, slate: settings.slate, names: settings.cameraNames))")
+                    .font(.caption.monospaced()).foregroundStyle(.secondary)
+                Text("Pri zmene názvu sa staršie súbory s pôvodným názvom v zozname záberov nezobrazia, kým názov nevrátiš späť.")
+                    .font(.caption).foregroundStyle(.secondary)
+            }
             Section("Záznam") {
                 Picker("Kodek", selection: $settings.proResFlavor) {
                     ForEach(ProResFlavor.allCases) { Text($0.title).tag($0) }

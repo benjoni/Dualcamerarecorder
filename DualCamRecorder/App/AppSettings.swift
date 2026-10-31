@@ -24,6 +24,9 @@ final class AppSettings: ObservableObject {
     /// Device assignment: DeckLink identifier, `simulatedDeviceID` or "" (none).
     @Published var deviceA: String { didSet { defaults.set(deviceA, forKey: "deviceA") } }
     @Published var deviceB: String { didSet { defaults.set(deviceB, forKey: "deviceB") } }
+    /// Camera names at the start of the file names (A007_… / B007_…).
+    @Published var cameraNameA: String { didSet { defaults.set(cameraNameA, forKey: "cameraNameA") } }
+    @Published var cameraNameB: String { didSet { defaults.set(cameraNameB, forKey: "cameraNameB") } }
     /// Current slate (clapperboard) – used for the next take.
     @Published var slate: SlateInfo {
         didSet { if let data = try? JSONEncoder().encode(slate) { defaults.set(data, forKey: "slate") } }
@@ -42,12 +45,17 @@ final class AppSettings: ObservableObject {
         proResFlavor = ProResFlavor(rawValue: defaults.string(forKey: "proResFlavor") ?? "") ?? .proRes422
         deviceA = defaults.string(forKey: "deviceA") ?? ""
         deviceB = defaults.string(forKey: "deviceB") ?? ""
+        cameraNameA = defaults.string(forKey: "cameraNameA") ?? "A"
+        cameraNameB = defaults.string(forKey: "cameraNameB") ?? "B"
         if let data = defaults.data(forKey: "slate"), let saved = try? JSONDecoder().decode(SlateInfo.self, from: data) {
             slate = saved
         } else {
             slate = SlateInfo()
         }
     }
+
+    /// Sanitized, guaranteed-distinct camera names.
+    var cameraNames: CameraNames { CameraNames(a: cameraNameA, b: cameraNameB) }
 
     var recordFolderURL: URL { URL(fileURLWithPath: recordFolderPath, isDirectory: true) }
 

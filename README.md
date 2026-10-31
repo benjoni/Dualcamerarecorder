@@ -23,12 +23,17 @@ Plán a architektúra: [`docs/PLAN.md`](docs/PLAN.md).
 - Jedno tlačidlo **REC / STOP** (⌘R) ovláda obe kamery naraz.
 - Každá kamera do vlastného súboru **ProRes 422** (voliteľne 422 HQ / LT) cez `AVAssetWriter`,
   so **SDI embedded audiom** (48 kHz, 2/8/16 kanálov, uložené ako 24-bit LPCM).
-- Názvy súborov veľkými písmenami s anglickými skratkami z klapky:
-  `C007_S12_SH3B_T04_CAMA.MOV` / `…_CAMB.MOV` – **C** = priebežné číslo klipu (automatické,
-  nikdy sa nepoužije znova), **S** = scene (obraz), **SH** = shot (záber), **T** = take (pokus,
-  2 číslice). Obraz/záber sa prevedú na veľké písmená bez diakritiky (iné znaky → `-`),
-  prázdne pole sa v názve vynechá. Pri REC je vidno presný názov ďalšieho súboru.
-  Staršie názvy (`TAKE_007_…_CAMA.MOV`, `Take_001_CamA.mov`) aplikácia stále načíta.
+- Názvy súborov veľkými písmenami, na začiatku **názov kamery** a číslo klipu, potom skratky
+  z klapky: `A007_S12_SH3B_T04.MOV` / `B007_S12_SH3B_T04.MOV`.
+  - **A / B** = názov kamery – nastaviteľný pri náhľade alebo v Nastaveniach (napr. `RONIN1` →
+    `RONIN1_007_S12_SH3B_T04.MOV`; pri viacpísmenovom názve sa pred číslo pridá `_`).
+  - **007** = priebežné číslo klipu, rovnaké pre A aj B toho istého záberu, nikdy sa nepoužije znova.
+  - **S** = scene (obraz), **SH** = shot (záber), **T** = take (pokus, 2 číslice).
+  - Obraz/záber sa prevedú na veľké písmená bez diakritiky (iné znaky → `-`), prázdne pole sa vynechá.
+  - Pri REC je vidno presné názvy ďalších súborov. Spoločné súbory záberu: `C007_SLATE.JSON`,
+    `C007_MARKS.JSON`.
+  - Staršie názvy (`C007_…_CAMA.MOV`, `TAKE_007_…_CAMA.MOV`, `Take_001_CamA.mov`) sa stále načítajú.
+  - Po zmene názvu kamery sa súbory s pôvodným názvom v zozname nezobrazia, kým sa názov nevráti.
 - **Synchronizovaný štart/stop** podľa hardvérových časových značiek (viď nižšie); po zábere sa
   zobrazí nameraný posun štartu B−A v ms.
 - Počítadlá: zachytené / zapísané / **vynechané snímky (vstup)** / **vynechané (zápis)**,

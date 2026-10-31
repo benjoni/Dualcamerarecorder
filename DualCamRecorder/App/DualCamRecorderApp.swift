@@ -17,6 +17,7 @@ final class AppModel: ObservableObject {
         recorder = RecordingController(settings: settings)
         // Never list the take that is being written right now.
         library.excludedTake = { [weak recorder = self.recorder] in recorder?.activeTake }
+        library.cameraNames = { [weak settings = self.settings] in settings?.cameraNames ?? CameraNames() }
     }
 }
 

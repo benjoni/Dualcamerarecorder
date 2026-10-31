@@ -29,6 +29,8 @@ final class TakeLibrary: ObservableObject {
 
     /// Take numbers currently being recorded into this folder – hidden until finished.
     var excludedTake: () -> Int? = { nil }
+    /// Current camera names (needed to tell A from B in file names).
+    var cameraNames: () -> CameraNames = { CameraNames() }
 
     private var watcher: DispatchSourceFileSystemObject?
     private var debounce: DispatchWorkItem?
@@ -44,21 +46,22 @@ final class TakeLibrary: ObservableObject {
     func refresh() {
         guard let folder else { takes = []; return }
         let excluded = excludedTake()
+        let names = cameraNames()
         scanQueue.async {
-            let found = Self.scan(folder, excluding: excluded)
+            let found = Self.scan(folder, excluding: excluded, names: names)
             DispatchQueue.main.async {
                 if self.folder == folder { self.takes = found }
             }
         }
     }
 
-    private static func scan(_ folder: URL, excluding excluded: Int?) -> [Take] {
+    private static func scan(_ folder: URL, excluding excluded: Int?, names: CameraNames) -> [Take] {
         let keys: [URLResourceKey] = [.contentModificationDateKey, .fileSizeKey]
         guard let urls = try? FileManager.default.contentsOfDirectory(at: folder, includingPropertiesForKeys: keys,
                                                                       options: [.skipsHiddenFiles]) else { return [] }
         var byNumber: [Int: Take] = [:]
         for url in urls {
-            guard let parsed = TakeNaming.parse(url.lastPathComponent), parsed.take != excluded else { continue }
+            guard let parsed = TakeNaming.parse(url.lastPathComponent, names: names), parsed.take != excluded else { continue }
             let values = try? url.resourceValues(forKeys: Set(keys))
             let date = values?.contentModificationDate ?? .distantPast
             let size = Int64(values?.fileSize ?? 0)

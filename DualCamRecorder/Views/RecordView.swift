@@ -126,12 +126,15 @@ struct RecordView: View {
 
     private var takeLabel: String {
         var parts: [String] = []
+        let names = settings.cameraNames
         if let active = controller.activeTake {
-            let name = TakeNaming.fileName(take: active, role: .a, slate: controller.recordingSlate)
-            parts.append("Nahráva sa \(name.replacingOccurrences(of: "_CAMA.MOV", with: "_CAMA/B.MOV"))")
+            let a = TakeNaming.fileName(take: active, role: .a, slate: controller.recordingSlate, names: names)
+            let b = TakeNaming.fileName(take: active, role: .b, slate: controller.recordingSlate, names: names)
+            parts.append("Nahráva sa \(a) + \(b)")
         } else {
-            let name = TakeNaming.fileName(take: controller.nextTake, role: .a, slate: settings.slate)
-            parts.append("Ďalší súbor: \(name.replacingOccurrences(of: "_CAMA.MOV", with: "_CAMA/B.MOV"))")
+            let a = TakeNaming.fileName(take: controller.nextTake, role: .a, slate: settings.slate, names: names)
+            let b = TakeNaming.fileName(take: controller.nextTake, role: .b, slate: settings.slate, names: names)
+            parts.append("Ďalšie súbory: \(a) + \(b)")
         }
         if let offset = controller.lastStartOffsetMs, !controller.isRecording {
             parts.append(String(format: "posun štartu B−A: %+.1f ms", offset))
@@ -160,6 +163,14 @@ struct CameraPanel: View {
                 }
                 .labelsHidden()
                 .disabled(controller.isRecording)
+                Text("Názov").font(.caption).foregroundStyle(.secondary)
+                TextField("A", text: Binding(
+                    get: { channel.role == .a ? controller.settings.cameraNameA : controller.settings.cameraNameB },
+                    set: { controller.setCameraName($0, for: channel.role) }))
+                    .textFieldStyle(.roundedBorder)
+                    .frame(width: 80)
+                    .disabled(controller.isRecording)
+                    .help("Názov kamery na začiatku názvu súboru, napr. A → A007_S12_SH3B_T04.MOV")
             }
 
             ZStack(alignment: .topLeading) {
