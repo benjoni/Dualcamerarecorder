@@ -1,0 +1,435 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 56;
+	objects = {
+/* Begin PBXBuildFile section */
+		0EB300BCE1A456A16C129D71 /* AppSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 65B2A27984C255B7C483E047 /* AppSettings.swift */; };
+		3D6B891F11CC0CE302C654E7 /* DualCamRecorderApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 01DEF721423275B1A7F6323A /* DualCamRecorderApp.swift */; };
+		9702D5C78A7731A21798CE69 /* DLCapture.mm in Sources */ = {isa = PBXBuildFile; fileRef = A4CED7CFCAAD74CB7DEA1EED /* DLCapture.mm */; };
+		630F330E84A6D4165DB8AAD0 /* DeckLinkSource.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6117E90CD68D5B390594AEB6 /* DeckLinkSource.swift */; };
+		6600DF44958D153CDA02B31F /* HostClock.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9271C3CCB72AF1A9ABD071F4 /* HostClock.swift */; };
+		A10A2878105CB9C121421B72 /* SimulatedSource.swift in Sources */ = {isa = PBXBuildFile; fileRef = A90675E0408BFEE05A438E81 /* SimulatedSource.swift */; };
+		D574554270A2F11C80647E61 /* VideoSource.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8E2EF906A5821F6AA648C303 /* VideoSource.swift */; };
+		0B27B44163033F8362D89767 /* PlayerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0B9E5830569A82B806F54A7F /* PlayerView.swift */; };
+		F7ECB134D22BCFEAA2004CFD /* SyncPlaybackController.swift in Sources */ = {isa = PBXBuildFile; fileRef = A57B1970A4CECEE2CD3EACA6 /* SyncPlaybackController.swift */; };
+		0CE80DEB4C70FF63E18D842E /* TakeLibrary.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6524525F456E0CA9FC7AE712 /* TakeLibrary.swift */; };
+		9168DEFF5C8ACED2D8579F70 /* PreviewRenderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 86EE76A2E0DF03A995D87568 /* PreviewRenderer.swift */; };
+		0D2CA9BB78FD0035D5D36DF6 /* PreviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54A98420FFEC2C998E26B947 /* PreviewView.swift */; };
+		8A95CF0EB055A53010FE371A /* CameraChannel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9C6E675FB14A7235CFCF3850 /* CameraChannel.swift */; };
+		801F49D4930640D47F344B2C /* MovieWriter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4AAEE032902641AFB372D5C2 /* MovieWriter.swift */; };
+		847956D8CA68D4BD49F4303C /* RecordingController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9F63A88B3FF58DABCEC4CBC9 /* RecordingController.swift */; };
+		D774852BBEEBB78BDD7E7FCC /* TakeNaming.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4044731AE50F056638B1C5A0 /* TakeNaming.swift */; };
+		E72739D66FB84EAFDDDD40FB /* Components.swift in Sources */ = {isa = PBXBuildFile; fileRef = D904E764B33B5961920C3080 /* Components.swift */; };
+		9C38C3FC26E697763DF1A65B /* PlaybackView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 912ECBEF9548220CA52C8564 /* PlaybackView.swift */; };
+		50A9FEC0F6D9E21C7BAFB20F /* RecordView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7BD5BC128CE4428835DAFD64 /* RecordView.swift */; };
+		AFB0CBBE344EE4627C35B680 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 986E2D84EE22E38CEAA98268 /* SettingsView.swift */; };
+		7445CCBC7A03D5596183C4C3 /* AVFoundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 120A3B9C5DB6AAD59FDAD4C2 /* AVFoundation.framework */; };
+		7F98A92897F334CE0D2B8328 /* CoreMedia.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = B012EC397DCF3D447BBEBEBB /* CoreMedia.framework */; };
+		EA4EA06B847CBFC031421927 /* CoreVideo.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = BFE88E16FFD213DA188450AF /* CoreVideo.framework */; };
+		86A85D6D4A38F115E8306102 /* VideoToolbox.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = FAB5CAFC7405DAACB643C75D /* VideoToolbox.framework */; };
+		FFB3329272CF114020A2981A /* CoreFoundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1A1C8CF8DCED25CBF3969D70 /* CoreFoundation.framework */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		65B2A27984C255B7C483E047 /* AppSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppSettings.swift; sourceTree = "<group>"; };
+		01DEF721423275B1A7F6323A /* DualCamRecorderApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DualCamRecorderApp.swift; sourceTree = "<group>"; };
+		A11E4BF0364B81E5DAC6AAD8 /* DLCapture.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = DLCapture.h; sourceTree = "<group>"; };
+		A4CED7CFCAAD74CB7DEA1EED /* DLCapture.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = DLCapture.mm; sourceTree = "<group>"; };
+		8E914CCF7EDC0F606247452E /* DualCamRecorder-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "DualCamRecorder-Bridging-Header.h"; sourceTree = "<group>"; };
+		6117E90CD68D5B390594AEB6 /* DeckLinkSource.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeckLinkSource.swift; sourceTree = "<group>"; };
+		9271C3CCB72AF1A9ABD071F4 /* HostClock.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HostClock.swift; sourceTree = "<group>"; };
+		A90675E0408BFEE05A438E81 /* SimulatedSource.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SimulatedSource.swift; sourceTree = "<group>"; };
+		8E2EF906A5821F6AA648C303 /* VideoSource.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VideoSource.swift; sourceTree = "<group>"; };
+		0B9E5830569A82B806F54A7F /* PlayerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlayerView.swift; sourceTree = "<group>"; };
+		A57B1970A4CECEE2CD3EACA6 /* SyncPlaybackController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SyncPlaybackController.swift; sourceTree = "<group>"; };
+		6524525F456E0CA9FC7AE712 /* TakeLibrary.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TakeLibrary.swift; sourceTree = "<group>"; };
+		86EE76A2E0DF03A995D87568 /* PreviewRenderer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PreviewRenderer.swift; sourceTree = "<group>"; };
+		54A98420FFEC2C998E26B947 /* PreviewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PreviewView.swift; sourceTree = "<group>"; };
+		9C6E675FB14A7235CFCF3850 /* CameraChannel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraChannel.swift; sourceTree = "<group>"; };
+		4AAEE032902641AFB372D5C2 /* MovieWriter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MovieWriter.swift; sourceTree = "<group>"; };
+		9F63A88B3FF58DABCEC4CBC9 /* RecordingController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordingController.swift; sourceTree = "<group>"; };
+		4044731AE50F056638B1C5A0 /* TakeNaming.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TakeNaming.swift; sourceTree = "<group>"; };
+		D904E764B33B5961920C3080 /* Components.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Components.swift; sourceTree = "<group>"; };
+		912ECBEF9548220CA52C8564 /* PlaybackView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaybackView.swift; sourceTree = "<group>"; };
+		7BD5BC128CE4428835DAFD64 /* RecordView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordView.swift; sourceTree = "<group>"; };
+		986E2D84EE22E38CEAA98268 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
+		120A3B9C5DB6AAD59FDAD4C2 /* AVFoundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AVFoundation.framework; path = System/Library/Frameworks/AVFoundation.framework; sourceTree = SDKROOT; };
+		B012EC397DCF3D447BBEBEBB /* CoreMedia.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreMedia.framework; path = System/Library/Frameworks/CoreMedia.framework; sourceTree = SDKROOT; };
+		BFE88E16FFD213DA188450AF /* CoreVideo.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreVideo.framework; path = System/Library/Frameworks/CoreVideo.framework; sourceTree = SDKROOT; };
+		FAB5CAFC7405DAACB643C75D /* VideoToolbox.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = VideoToolbox.framework; path = System/Library/Frameworks/VideoToolbox.framework; sourceTree = SDKROOT; };
+		1A1C8CF8DCED25CBF3969D70 /* CoreFoundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreFoundation.framework; path = System/Library/Frameworks/CoreFoundation.framework; sourceTree = SDKROOT; };
+		F5BF48AA40CAD7891EB709FC /* DualCamRecorder.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = DualCamRecorder.app; sourceTree = BUILT_PRODUCTS_DIR; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		C18F88D444D8FE65E18D39E9 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				7445CCBC7A03D5596183C4C3 /* AVFoundation.framework in Frameworks */,
+				7F98A92897F334CE0D2B8328 /* CoreMedia.framework in Frameworks */,
+				EA4EA06B847CBFC031421927 /* CoreVideo.framework in Frameworks */,
+				86A85D6D4A38F115E8306102 /* VideoToolbox.framework in Frameworks */,
+				FFB3329272CF114020A2981A /* CoreFoundation.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		70C976C0846E428A69FED210 /* DualCamRecorder */ = {
+			isa = PBXGroup;
+			children = (
+				E22F0D10F63FE474775C630F /* App */,
+				6ACF7CA61AE8C17F2D7EA157 /* Bridge */,
+				52972602E0593B71147E1751 /* Capture */,
+				B3B796B27FB682FC3F40B168 /* Playback */,
+				26432D7ACCDE6A80CAE3E2B1 /* Preview */,
+				A2B6AD46AD5B1EB0037ED029 /* Recording */,
+				4EB27E3FD8D0E961E5FF5146 /* Views */,
+			);
+			path = DualCamRecorder;
+			sourceTree = "<group>";
+		};
+		E22F0D10F63FE474775C630F /* App */ = {
+			isa = PBXGroup;
+			children = (
+				65B2A27984C255B7C483E047 /* AppSettings.swift */,
+				01DEF721423275B1A7F6323A /* DualCamRecorderApp.swift */,
+			);
+			path = App;
+			sourceTree = "<group>";
+		};
+		6ACF7CA61AE8C17F2D7EA157 /* Bridge */ = {
+			isa = PBXGroup;
+			children = (
+				A11E4BF0364B81E5DAC6AAD8 /* DLCapture.h */,
+				A4CED7CFCAAD74CB7DEA1EED /* DLCapture.mm */,
+				8E914CCF7EDC0F606247452E /* DualCamRecorder-Bridging-Header.h */,
+			);
+			path = Bridge;
+			sourceTree = "<group>";
+		};
+		52972602E0593B71147E1751 /* Capture */ = {
+			isa = PBXGroup;
+			children = (
+				6117E90CD68D5B390594AEB6 /* DeckLinkSource.swift */,
+				9271C3CCB72AF1A9ABD071F4 /* HostClock.swift */,
+				A90675E0408BFEE05A438E81 /* SimulatedSource.swift */,
+				8E2EF906A5821F6AA648C303 /* VideoSource.swift */,
+			);
+			path = Capture;
+			sourceTree = "<group>";
+		};
+		B3B796B27FB682FC3F40B168 /* Playback */ = {
+			isa = PBXGroup;
+			children = (
+				0B9E5830569A82B806F54A7F /* PlayerView.swift */,
+				A57B1970A4CECEE2CD3EACA6 /* SyncPlaybackController.swift */,
+				6524525F456E0CA9FC7AE712 /* TakeLibrary.swift */,
+			);
+			path = Playback;
+			sourceTree = "<group>";
+		};
+		26432D7ACCDE6A80CAE3E2B1 /* Preview */ = {
+			isa = PBXGroup;
+			children = (
+				86EE76A2E0DF03A995D87568 /* PreviewRenderer.swift */,
+				54A98420FFEC2C998E26B947 /* PreviewView.swift */,
+			);
+			path = Preview;
+			sourceTree = "<group>";
+		};
+		A2B6AD46AD5B1EB0037ED029 /* Recording */ = {
+			isa = PBXGroup;
+			children = (
+				9C6E675FB14A7235CFCF3850 /* CameraChannel.swift */,
+				4AAEE032902641AFB372D5C2 /* MovieWriter.swift */,
+				9F63A88B3FF58DABCEC4CBC9 /* RecordingController.swift */,
+				4044731AE50F056638B1C5A0 /* TakeNaming.swift */,
+			);
+			path = Recording;
+			sourceTree = "<group>";
+		};
+		4EB27E3FD8D0E961E5FF5146 /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				D904E764B33B5961920C3080 /* Components.swift */,
+				912ECBEF9548220CA52C8564 /* PlaybackView.swift */,
+				7BD5BC128CE4428835DAFD64 /* RecordView.swift */,
+				986E2D84EE22E38CEAA98268 /* SettingsView.swift */,
+			);
+			path = Views;
+			sourceTree = "<group>";
+		};
+		4EAE695AD1F489F78EA3E1C6 = {
+			isa = PBXGroup;
+			children = (
+				70C976C0846E428A69FED210 /* DualCamRecorder */,
+				258A5BC7AC11AE7435452A2E /* Frameworks */,
+				1D5F545FBA1B7116946BB4C6 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		1D5F545FBA1B7116946BB4C6 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				F5BF48AA40CAD7891EB709FC /* DualCamRecorder.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		258A5BC7AC11AE7435452A2E /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				120A3B9C5DB6AAD59FDAD4C2 /* AVFoundation.framework */,
+				B012EC397DCF3D447BBEBEBB /* CoreMedia.framework */,
+				BFE88E16FFD213DA188450AF /* CoreVideo.framework */,
+				FAB5CAFC7405DAACB643C75D /* VideoToolbox.framework */,
+				1A1C8CF8DCED25CBF3969D70 /* CoreFoundation.framework */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		42AEFBAE01D2DFD981F7DA7D /* DualCamRecorder */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = E589D98E9C10B6E6EF092B1C /* Build configuration list for PBXNativeTarget "DualCamRecorder" */;
+			buildPhases = (
+				C4D5163706E5908DC9E032F3 /* Sources */,
+				C18F88D444D8FE65E18D39E9 /* Frameworks */,
+				4FDAD6DB49035FA75C21467D /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = DualCamRecorder;
+			productName = DualCamRecorder;
+			productReference = F5BF48AA40CAD7891EB709FC /* DualCamRecorder.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		46F86FAA6BBF9AC94A7E4595 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 1500;
+				LastUpgradeCheck = 1500;
+				TargetAttributes = {
+					42AEFBAE01D2DFD981F7DA7D = {
+						CreatedOnToolsVersion = 15.0;
+					};
+				};
+			};
+			buildConfigurationList = B61A476A5531CC175278BDCF /* Build configuration list for PBXProject "DualCamRecorder" */;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+				sk,
+			);
+			mainGroup = 4EAE695AD1F489F78EA3E1C6;
+			productRefGroup = 1D5F545FBA1B7116946BB4C6 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				42AEFBAE01D2DFD981F7DA7D /* DualCamRecorder */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		4FDAD6DB49035FA75C21467D /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		C4D5163706E5908DC9E032F3 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				0EB300BCE1A456A16C129D71 /* AppSettings.swift in Sources */,
+				3D6B891F11CC0CE302C654E7 /* DualCamRecorderApp.swift in Sources */,
+				9702D5C78A7731A21798CE69 /* DLCapture.mm in Sources */,
+				630F330E84A6D4165DB8AAD0 /* DeckLinkSource.swift in Sources */,
+				6600DF44958D153CDA02B31F /* HostClock.swift in Sources */,
+				A10A2878105CB9C121421B72 /* SimulatedSource.swift in Sources */,
+				D574554270A2F11C80647E61 /* VideoSource.swift in Sources */,
+				0B27B44163033F8362D89767 /* PlayerView.swift in Sources */,
+				F7ECB134D22BCFEAA2004CFD /* SyncPlaybackController.swift in Sources */,
+				0CE80DEB4C70FF63E18D842E /* TakeLibrary.swift in Sources */,
+				9168DEFF5C8ACED2D8579F70 /* PreviewRenderer.swift in Sources */,
+				0D2CA9BB78FD0035D5D36DF6 /* PreviewView.swift in Sources */,
+				8A95CF0EB055A53010FE371A /* CameraChannel.swift in Sources */,
+				801F49D4930640D47F344B2C /* MovieWriter.swift in Sources */,
+				847956D8CA68D4BD49F4303C /* RecordingController.swift in Sources */,
+				D774852BBEEBB78BDD7E7FCC /* TakeNaming.swift in Sources */,
+				E72739D66FB84EAFDDDD40FB /* Components.swift in Sources */,
+				9C38C3FC26E697763DF1A65B /* PlaybackView.swift in Sources */,
+				50A9FEC0F6D9E21C7BAFB20F /* RecordView.swift in Sources */,
+				AFB0CBBE344EE4627C35B680 /* SettingsView.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		80DB6ACE13380ADC3D86D6C5 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ARCHS = arm64;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_CXX_LANGUAGE_STANDARD = "c++17";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = NO;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = macosx;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		08723DE70035A45CE7E33CC1 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ARCHS = arm64;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_CXX_LANGUAGE_STANDARD = "c++17";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = NO;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = s;
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				SDKROOT = macosx;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
+		B373EA90B6F23CCAEDAF6FEE /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_IDENTITY = "-";
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				ENABLE_APP_SANDBOX = NO;
+				ENABLE_HARDENED_RUNTIME = NO;
+				GENERATE_INFOPLIST_FILE = YES;
+				HEADER_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(SRCROOT)/DeckLinkSDK/Mac/include",
+					"$(SRCROOT)/DeckLinkSDK/include",
+					"$(SRCROOT)/DeckLinkSDK",
+				);
+				INFOPLIST_KEY_CFBundleDisplayName = DualCamRecorder;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.video";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = sk.dualcam.DualCamRecorder;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_OBJC_BRIDGING_HEADER = "DualCamRecorder/Bridge/DualCamRecorder-Bridging-Header.h";
+			};
+			name = Debug;
+		};
+		03DD51312A9DE8E4A570DD7D /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_IDENTITY = "-";
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				ENABLE_APP_SANDBOX = NO;
+				ENABLE_HARDENED_RUNTIME = NO;
+				GENERATE_INFOPLIST_FILE = YES;
+				HEADER_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(SRCROOT)/DeckLinkSDK/Mac/include",
+					"$(SRCROOT)/DeckLinkSDK/include",
+					"$(SRCROOT)/DeckLinkSDK",
+				);
+				INFOPLIST_KEY_CFBundleDisplayName = DualCamRecorder;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.video";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = sk.dualcam.DualCamRecorder;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_OBJC_BRIDGING_HEADER = "DualCamRecorder/Bridge/DualCamRecorder-Bridging-Header.h";
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		B61A476A5531CC175278BDCF /* Build configuration list for PBXProject "DualCamRecorder" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				80DB6ACE13380ADC3D86D6C5 /* Debug */,
+				08723DE70035A45CE7E33CC1 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		E589D98E9C10B6E6EF092B1C /* Build configuration list for PBXNativeTarget "DualCamRecorder" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				B373EA90B6F23CCAEDAF6FEE /* Debug */,
+				03DD51312A9DE8E4A570DD7D /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 46F86FAA6BBF9AC94A7E4595 /* Project object */;
+}

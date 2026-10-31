@@ -1,0 +1,173 @@
+# DualCamRecorder
+
+Natívna macOS aplikácia (Swift / SwiftUI + Objective-C++ most na Blackmagic DeckLink SDK) na
+**súčasné nahrávanie dvoch SDI kamier** cez dve Blackmagic UltraStudio Recorder 3G do ProRes 422
+`.mov` a **synchronizované prehrávanie** dvojice záberov. Nahrávanie a prehrávanie môžu bežať naraz.
+
+Cieľový hardvér: Mac mini M4 Pro, 2× UltraStudio Recorder 3G (Thunderbolt), 2× DJI Ronin 4D so SDI
+výstupom nastaveným na HD (1080p, 3G-SDI).
+
+Plán a architektúra: [`docs/PLAN.md`](docs/PLAN.md).
+
+---
+
+## Funkcie
+
+### Záložka NAHRÁVANIE
+- Automatické zistenie DeckLink zariadení (`IDeckLinkDiscovery`, aj hot-plug); priradenie
+  *zariadenie → Kamera A / Kamera B* cez výber nad náhľadom (pri prvom spustení 1. → A, 2. → B).
+  Dve rovnaké zariadenia sa rozlišujú podľa `BMDDeckLinkPersistentID`, priradenie sa pamätá.
+- Dva živé náhľady vedľa seba + **automaticky detegovaný formát** (`bmdVideoInputEnableFormatDetection`):
+  rozlíšenie, snímková frekvencia, p/i, YUV/RGB, bitová hĺbka.
+- Vstup je vynútene prepnutý na **SDI** (UltraStudio Recorder 3G má aj HDMI).
+- Jedno tlačidlo **REC / STOP** (⌘R) ovláda obe kamery naraz.
+- Každá kamera do vlastného súboru **ProRes 422** (voliteľne 422 HQ / LT) cez `AVAssetWriter`,
+  so **SDI embedded audiom** (48 kHz, 2/8/16 kanálov, uložené ako 24-bit LPCM).
+- Názvy `Take_001_CamA.mov` / `Take_001_CamB.mov`, automatické číslovanie (číslo sa nikdy nepoužije
+  znova, ani keď existuje len jeden zo súborov).
+- **Synchronizovaný štart/stop** podľa hardvérových časových značiek (viď nižšie); po zábere sa
+  zobrazí nameraný posun štartu B−A v ms.
+- Počítadlá: zachytené / zapísané / **vynechané snímky (vstup)** / **vynechané (zápis)**,
+  audio meter, odznak „Bez signálu“.
+- **Voľné miesto** na cieľovom disku + odhad zostávajúceho času nahrávania.
+
+### Záložka PREHRÁVANIE
+- Zoznam záberov v priečinku (sleduje zmeny v priečinku; práve nahrávaný záber je skrytý).
+- Po výbere sa načíta CamA a CamB vedľa seba v dvoch `AVPlayer`-och.
+- Spoločné **play/pause** (medzerník), **posuvník**, **krokovanie po snímkach** (← / →),
+  **rýchlosť 0,5× / 1×**, výber zvuku A/B, zobrazenie rozdielu pozícií B−A.
+- Synchronizácia cez `setRate(_:time:atHostTime:)` so spoločným časom hostiteľských hodín;
+  seek a krokovanie sú presné na snímku (nulová tolerancia) na oboch prehrávačoch.
+
+### Nastavenia (⌘,)
+- Priečinok na **zápis** a voliteľne **oddelený disk/priečinok na čítanie** (prehrávanie).
+- Kodek, počet audio kanálov, vynútenie 8-bit zachytávania, informácie o SDK / ovládači / zariadeniach.
+
+### Simulovaný vstup
+V zozname zariadení je vždy položka **„Simulovaný vstup (testovací obraz)“** – farebné pruhy,
+časový kód, bežiaci pruh, **biely blesk + 1 kHz pípnutie každú sekundu**. Obe simulované kamery
+zdieľajú hodiny, kamera B má posun fázy 0,4 snímky (ako dve negenlocknuté kamery). Takto sa dá
+celé UI aj synchronizácia (štart, prehrávanie, krokovanie) overiť bez hardvéru – blesky v A a B
+musia v prehrávaní padnúť na rovnakú snímku.
+
+---
+
+## Ako funguje synchronizácia A/B
+
+1. Každá snímka z DeckLinku má `GetHardwareReferenceTimestamp` (hodiny zariadenia) a
+   `GetStreamTime` (časová os streamu, rovnaká ako `GetPacketTime` audia).
+2. Most (`DLCapture.mm`) pri každej snímke vzorkuje `GetHardwareReferenceClock` spolu s
+   hostiteľskými hodinami (`CLOCK_UPTIME_RAW`), vyhladzuje offset a prepočíta čas snímky na
+   **spoločný hostiteľský čas** – ten je porovnateľný medzi oboma zariadeniami.
+3. REC určí spoločný okamih `T0 = teraz + 200 ms`. Každý kanál zahodí snímky s
+   `hostTime < T0 − ½ snímky`. Prvé snímky A a B sú teda od seba **max. ½ snímky**.
+4. STOP určí spoločné `T1`; zapíšu sa snímky s `hostTime < T1 − ½ snímky` → rovnaká dĺžka.
+5. PTS v súbore = `streamTime − streamTime(prvej snímky)`; audio používa tú istú os a je
+   orezané po vzorkách. Výpadok snímky zostane v súbore ako medzera, takže sa súbory nerozídu.
+
+---
+
+## Požiadavky
+
+- macOS 14 Sonoma alebo novší, Apple Silicon (projekt je nastavený na `arm64`).
+- Xcode 15 alebo novší (testované nastavenia: Swift 5 režim).
+- **Blackmagic Desktop Video** (ovládač) – nainštalovaný `/Library/Frameworks/DeckLinkAPI.framework`.
+- **Blackmagic DeckLink SDK** 12.x – 15.x rozbalené do `./DeckLinkSDK` tak, aby existoval
+  `DeckLinkSDK/Mac/include/DeckLinkAPI.h` (viď [`DeckLinkSDK/README.md`](DeckLinkSDK/README.md)).
+
+## Zostavenie
+
+```bash
+# 1) SDK: obsah "Blackmagic DeckLink SDK xx.y/" skopírovať do ./DeckLinkSDK
+ls DeckLinkSDK/Mac/include/DeckLinkAPI.h
+
+# 2) Build (Release)
+xcodebuild -project DualCamRecorder.xcodeproj -scheme DualCamRecorder \
+           -configuration Release -derivedDataPath build build
+
+# ak by podpisovanie robilo problémy:
+xcodebuild -project DualCamRecorder.xcodeproj -scheme DualCamRecorder \
+           -configuration Release -derivedDataPath build build CODE_SIGNING_ALLOWED=NO
+```
+
+Ak SDK chýba, build prejde s varovaním
+`DeckLink SDK headers not found … building with simulated input only` a aplikácia ponúkne len
+simulovaný vstup.
+
+Po pridaní/odobratí zdrojových súborov sa dá projekt pregenerovať:
+`python3 tools/gen_xcodeproj.py`.
+
+## Spustenie
+
+```bash
+open build/Build/Products/Release/DualCamRecorder.app
+```
+
+1. V *Nastaveniach* (⌘,) vyber priečinok na zápis (ideálne rýchly externý SSD) a prípadne iný
+   disk na prehrávanie.
+2. Na záložke **Nahrávanie** priraď zariadenia ku Kamera A / B, skontroluj formát a audio meter.
+3. **REC** (⌘R) → **STOP**. Pod časovačom sa zobrazí uložený záber a posun štartu B−A.
+4. Záložka **Prehrávanie** → vyber záber → medzerník / ← → / 0,5×–1×.
+
+Na test bez kamier vyber pri oboch kamerách „Simulovaný vstup“.
+
+---
+
+## Štruktúra projektu
+
+```
+DualCamRecorder.xcodeproj         Xcode projekt (generovaný tools/gen_xcodeproj.py)
+DeckLinkSDK/                      sem patrí Blackmagic SDK (nie je v gite)
+DualCamRecorder/
+  App/        DualCamRecorderApp.swift (TabView, Settings), AppSettings.swift
+  Bridge/     DLCapture.h / DLCapture.mm (Obj-C++ nad DeckLink SDK), bridging header
+  Capture/    VideoSource protokol, DeckLinkSource, SimulatedSource, HostClock
+  Recording/  CameraChannel (sync štart/stop, štatistiky), MovieWriter (ProRes+LPCM),
+              RecordingController (zariadenia, REC/STOP, disk), TakeNaming
+  Preview/    PreviewRenderer (VTPixelTransfer → AVSampleBufferDisplayLayer), PreviewView
+  Playback/   TakeLibrary, SyncPlaybackController (2× AVPlayer), PlayerView
+  Views/      RecordView, PlaybackView, SettingsView, Components
+docs/PLAN.md                      plán a architektúra
+tools/gen_xcodeproj.py            generátor project.pbxproj + zdieľanej schémy
+```
+
+### Prečo to nevynecháva snímky pri súčasnom prehrávaní
+- DeckLink callback iba skopíruje snímku do `CVPixelBufferPool` (IOSurface) a vráti sa.
+- Zápis beží na samostatnej sériovej fronte s QoS *userInteractive* pre každú kameru;
+  ProRes kódovanie ide na hardvérový ProRes engine M4 Pro.
+- Náhľad má vlastnú frontu a pri zaneprázdnení snímky preskakuje (nikdy neblokuje zápis);
+  keď je otvorená záložka Prehrávanie, náhľad sa nevykresľuje vôbec.
+- Prehrávanie (AVPlayer) má vlastné vlákna a dekóduje ProRes hardvérovo.
+- Aplikácia drží `ProcessInfo` aktivitu *latencyCritical* (bez App Nap / spánku).
+- Ak by fronta zápisu narástla nad 10 snímok, snímka sa zahodí a započíta do
+  „Vynechané (zápis)“ – nič sa tak nedeje potichu.
+
+---
+
+## Známe obmedzenia
+
+- **Stav overenia:** projekt bol napísaný a skontrolovaný mimo macOS. Objective-C++ most bol
+  preložený (`clang -fsyntax-only -Wall -Wextra`, bez varovaní) proti macOS 14.5 SDK a reálnym
+  hlavičkám DeckLink SDK 12.0, aj v režime bez SDK. Swift kód prešiel len syntaktickou kontrolou –
+  **`xcodebuild` ani test na hardvéri zatiaľ neprebehol**, prvé zostavenie na Macu môže
+  vyžadovať drobné opravy.
+- **Kamery nie sú genlocknuté:** zarovnanie je na ±½ snímky (fyzický limit bez genlocku).
+  Pre úplne presnú synchronizáciu treba obom kamerám spoločný sync/genlock alebo dosynchronizovať
+  podľa timecodu v postprodukcii.
+- Offset hodín zariadenia voči hostiteľovi sa odhaduje softvérovo (vzorkovanie
+  `GetHardwareReferenceClock`); presnosť je typicky pod 1 ms.
+- **Zmena formátu počas nahrávania** (napr. prepnutie snímkovej frekvencie na kamere) nie je
+  podporovaná – záber treba zastaviť a spustiť znova.
+- Pri strate signálu DeckLink dodáva čierne snímky; zapisujú sa (časová os ostane zarovnaná)
+  a počítajú sa ako „bez signálu“.
+- Audio: SDI vždy nesie audio kanály. Ak kamera nič neembeduje, zapíše sa ticho – či audio
+  naozaj prichádza, ukazuje audio meter. Počet kanálov (2/8/16) sa mení v Nastaveniach
+  a aplikuje tlačidlom „reštart vstupov“.
+- 10-bit 4:2:2 (v210) je predvolený, ak ho zdroj posiela; pri problémoch zapni
+  „Vynútiť 8-bit“. RGB 4:4:4 vstup sa zachytáva ako 8-bit BGRA.
+- Prekladané formáty (1080i) sa označia field atribútmi, ale neboli overené na hardvéri.
+- Aplikácia nie je sandboxovaná a nemá hardened runtime (kvôli načítaniu `DeckLinkAPI.framework`
+  z `/Library/Frameworks`); je podpísaná ad-hoc („Sign to Run Locally“).
+- Odhad zostávajúceho času vychádza z nominálnych dátových tokov ProRes (Apple white paper).
+- Synchronizácia dvoch `AVPlayer`-ov je na úrovni zobrazovacieho snímku; pri pauze sa oba
+  prehrávače dorovnajú presne na rovnakú snímku.
