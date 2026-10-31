@@ -58,9 +58,14 @@ struct RecordView: View {
     }
 
     /// All controls centered: REC / timer / IN-OUT on the first row, disk info below.
+    /// REC/STOP, IN and OUT side by side with the same height; timer, file names and IN/OUT times below.
     private var transportBar: some View {
-        VStack(spacing: 10) {
-            HStack(alignment: .center, spacing: 24) {
+        let recording: Bool = {
+            if case .recording = controller.state { return true }
+            return false
+        }()
+        return VStack(spacing: 10) {
+            HStack(alignment: .center, spacing: 10) {
                 Button(action: controller.toggleRecording) {
                     HStack(spacing: 10) {
                         Image(systemName: controller.isRecording ? "stop.fill" : "record.circle")
@@ -75,15 +80,35 @@ struct RecordView: View {
                 .keyboardShortcut("r", modifiers: [.command])
                 .disabled(isStopping)
 
-                VStack(alignment: .center, spacing: 4) {
-                    Text(DisplayFormat.duration(controller.elapsed))
-                        .font(.system(size: 30, weight: .semibold, design: .monospaced))
-                        .foregroundStyle(controller.isRecording ? .red : .primary)
-                    Text(takeLabel).font(.body).foregroundStyle(.secondary)
+                Group {
+                    Button { controller.markIn() } label: {
+                        Text("IN").font(.title2.weight(.bold)).frame(width: 90, height: 48)
+                    }
+                    .keyboardShortcut("i", modifiers: [.command])
+                    .help("Set IN at the current take time (⌘I)")
+                    Button { controller.markOut() } label: {
+                        Text("OUT").font(.title2.weight(.bold)).frame(width: 90, height: 48)
+                    }
+                    .keyboardShortcut("o", modifiers: [.command])
+                    .help("Set OUT at the current take time (⌘O)")
                 }
+                .buttonStyle(.bordered)
+                .disabled(!recording)
 
-                markControls
+                Button { controller.clearMarks() } label: { Image(systemName: "xmark.circle").font(.title2) }
+                    .buttonStyle(.borderless)
+                    .help("Clear IN/OUT")
+                    .disabled(!recording || controller.marks.isEmpty)
             }
+
+            Text(DisplayFormat.duration(controller.elapsed))
+                .font(.system(size: 30, weight: .semibold, design: .monospaced))
+                .foregroundStyle(controller.isRecording ? .red : .primary)
+            Text(takeLabel).font(.body).foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+            Text("IN \(DisplayFormat.mark(controller.marks.inPoint))  ·  OUT \(DisplayFormat.mark(controller.marks.outPoint))")
+                .font(.system(.title3, design: .monospaced))
+                .foregroundStyle(.secondary)
 
             HStack(spacing: 12) {
                 Image(systemName: "internaldrive")
@@ -105,36 +130,6 @@ struct RecordView: View {
             .font(.callout)
         }
         .frame(maxWidth: .infinity)
-    }
-
-    /// IN / OUT marks set while recording (saved with the take, used by playback).
-    private var markControls: some View {
-        let recording: Bool = {
-            if case .recording = controller.state { return true }
-            return false
-        }()
-        return VStack(alignment: .center, spacing: 6) {
-            HStack(spacing: 8) {
-                Button { controller.markIn() } label: {
-                    Text("IN").font(.title2.weight(.semibold)).frame(width: 64, height: 36)
-                }
-                .keyboardShortcut("i", modifiers: [.command])
-                .help("Set IN at the current take time (⌘I)")
-                Button { controller.markOut() } label: {
-                    Text("OUT").font(.title2.weight(.semibold)).frame(width: 64, height: 36)
-                }
-                .keyboardShortcut("o", modifiers: [.command])
-                .help("Set OUT at the current take time (⌘O)")
-                Button { controller.clearMarks() } label: { Image(systemName: "xmark.circle") }
-                    .buttonStyle(.borderless)
-                    .help("Clear IN/OUT")
-                    .disabled(controller.marks.isEmpty)
-            }
-            .disabled(!recording)
-            Text("IN \(DisplayFormat.mark(controller.marks.inPoint))  ·  OUT \(DisplayFormat.mark(controller.marks.outPoint))")
-                .font(.system(.title3, design: .monospaced))
-                .foregroundStyle(.secondary)
-        }
     }
 
     private var isStopping: Bool {
