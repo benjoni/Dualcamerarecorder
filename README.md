@@ -54,7 +54,7 @@ Rozhranie aplikácie je **v angličtine** (Record / Playback / Slate …); tento
 
 ### Záložka PREHRÁVANIE
 - Pri zábere v zozname je aj „Obraz · Záber · Pokus“ a ★ pri dobrom pokuse; pod prehrávačmi
-  je súhrn klapky a tlačidlo **Klapka…** na dodatočnú úpravu (uloží sa do `C###_SLATE.JSON`).
+  je súhrn klapky a tlačidlo **Edit slate…** na dodatočnú úpravu (uloží sa do `C###_SLATE.JSON`).
 - Zoznam klipov je **zoradený podľa shooting day** (najnovší deň hore, prirodzené poradie
   „9 < 10“, „D02 < D03“), každý deň má vlastný nadpis; v rámci dňa najnovší klip hore.
   Klipy bez shooting day sú na konci.

@@ -251,7 +251,7 @@ struct PlaybackView: View {
                 } else {
                     Text("This clip has no slate data.").foregroundStyle(.secondary)
                 }
-                Button("Slate…") { editingSlate = true }
+                Button("Edit slate…") { editingSlate = true }
                     .disabled(player.take == nil)
             }
             if let slate = player.slate {
