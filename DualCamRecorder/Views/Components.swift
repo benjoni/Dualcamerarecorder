@@ -119,3 +119,13 @@ struct SegmentGroup<Content: View>: View {
             .background(RoundedRectangle(cornerRadius: 8).fill(Color.gray.opacity(0.2)))
     }
 }
+
+/// Label with the icon after the title ("Next ⏭").
+struct TrailingIconLabelStyle: LabelStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        HStack(spacing: 6) {
+            configuration.title
+            configuration.icon
+        }
+    }
+}

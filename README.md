@@ -109,6 +109,8 @@ Rozhranie aplikácie je **v angličtine** (Record / Playback / Slate …); tento
 - Zoznam klipov je **zoradený podľa shooting day** (najnovší deň hore, prirodzené poradie
   „9 < 10“, „D02 < D03“), každý deň má vlastný nadpis; v rámci dňa najnovší klip hore.
   Klipy bez shooting day sú na konci.
+- **Prev / Next** (⌘← / ⌘→) prepne na predchádzajúci / nasledujúci klip (podľa čísla klipu),
+  funguje aj v Screens only.
 - **Zoznam klipov je predvolene skrytý** – otvorí/skryje ho tlačidlo **Clips** (⌘L), takže
   prehrávače majú celú šírku okna. Pri prepnutí na Playback sa **automaticky načíta posledný
   nahraný klip** (označený LATEST); iný klip vyberieš v zozname a zoznam potom skryješ.

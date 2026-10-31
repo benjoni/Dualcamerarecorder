@@ -90,6 +90,8 @@ struct PlaybackView: View {
                 ShortcutButton(key: .rightArrow) { player.step(1) }
                 ShortcutButton(key: "i") { player.setIn() }
                 ShortcutButton(key: "o") { player.setOut() }
+                ShortcutButton(key: .leftArrow, modifiers: [.command]) { selectAdjacentClip(-1) }
+                ShortcutButton(key: .rightArrow, modifiers: [.command]) { selectAdjacentClip(1) }
             }
         }
     }
@@ -335,6 +337,13 @@ struct PlaybackView: View {
 
     private var transportButtons: some View {
         HStack(spacing: 14) {
+            Button { selectAdjacentClip(-1) } label: {
+                Label("Prev", systemImage: "backward.end.alt.fill")
+            }
+            .keyboardShortcut(.leftArrow, modifiers: [.command])
+            .disabled(adjacentClip(-1) == nil)
+            .help("Previous clip (⌘←)")
+
             Button { player.goToStart() } label: { Image(systemName: "backward.end.fill") }
                 .help("Go to start")
             Button { player.step(-1) } label: { Image(systemName: "backward.frame.fill") }
@@ -356,7 +365,32 @@ struct PlaybackView: View {
             }
             .pickerStyle(.segmented)
             .frame(width: 240)
+
+            Button { selectAdjacentClip(1) } label: {
+                Label("Next", systemImage: "forward.end.alt.fill")
+                    .labelStyle(TrailingIconLabelStyle())
+            }
+            .keyboardShortcut(.rightArrow, modifiers: [.command])
+            .disabled(adjacentClip(1) == nil)
+            .help("Next clip (⌘→)")
         }
+    }
+
+    // MARK: - Previous / next clip (by clip number, i.e. recording order)
+
+    private func adjacentClip(_ delta: Int) -> Take? {
+        let ordered = library.takes.sorted { $0.number < $1.number }
+        guard let currentID = selection ?? player.take?.id,
+              let index = ordered.firstIndex(where: { $0.id == currentID }) else {
+            return delta > 0 ? ordered.first : ordered.last
+        }
+        let target = index + delta
+        return ordered.indices.contains(target) ? ordered[target] : nil
+    }
+
+    private func selectAdjacentClip(_ delta: Int) {
+        guard let take = adjacentClip(delta) else { return }
+        selection = take.id
     }
 
     private var audioButtons: some View {
