@@ -533,7 +533,7 @@ struct PlaybackView: View {
         HStack(spacing: 8) {
             Text("Loop").foregroundStyle(.secondary)
             SegmentGroup {
-                Toggle("No", isOn: Binding(
+                Toggle("NO", isOn: Binding(
                     get: { !player.loopInOut && !player.loopClip },
                     set: { if $0 { player.loopInOut = false; player.loopClip = false } }))
                     .help("Play once, to the end of the clip")
