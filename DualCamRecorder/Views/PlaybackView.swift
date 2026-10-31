@@ -405,7 +405,7 @@ struct PlaybackView: View {
         }
     }
 
-    /// Prev · start · frame back · play · frame forward · Next.
+    /// Prev · frame back · play · frame forward · Next.
     private var transportButtons: some View {
         HStack(spacing: 14) {
             Button { selectAdjacentClip(-1) } label: {
@@ -415,8 +415,6 @@ struct PlaybackView: View {
             .disabled(adjacentClip(-1) == nil)
             .help("Previous clip (⌘←)")
 
-            Button { player.goToStart() } label: { Image(systemName: "backward.end.fill") }
-                .help("Go to start")
             Button { player.step(-1) } label: { Image(systemName: "backward.frame.fill") }
                 .keyboardShortcut(shortcut(.leftArrow))
                 .help("One frame back (←)")
