@@ -150,6 +150,19 @@ final class RecordingController: NSObject, ObservableObject, DLDeviceBrowserDele
         applyAssignment(role: .b)
     }
 
+    /// Temporarily switch one camera of a two-camera project off/on (the other one fills the screen and
+    /// records alone). At least one camera stays on; not while recording.
+    func setCamera(_ role: CameraRole, on: Bool) {
+        guard state == .idle, settings.twoCameras else { return }
+        let other: CameraRole = role == .a ? .b : .a
+        if !on && !settings.isCameraOn(other) { return }
+        if role == .a { settings.cameraAOn = on } else { settings.cameraBOn = on }
+    }
+
+    func toggleCamera(_ role: CameraRole) {
+        setCamera(role, on: !settings.isCameraOn(role))
+    }
+
     /// One or two cameras for the open project (camera B is stopped in one-camera mode).
     func setCameraCount(_ count: Int) {
         guard state == .idle else { return }
@@ -209,7 +222,7 @@ final class RecordingController: NSObject, ObservableObject, DLDeviceBrowserDele
             errorMessage = "Record folder is not available: \(error.localizedDescription)"
             return
         }
-        let active = CameraRole.allCases.filter { channel($0).hasSource }
+        let active = CameraRole.allCases.filter { channel($0).hasSource && settings.isCameraOn($0) }
         guard !active.isEmpty else {
             errorMessage = "No camera is assigned."
             return

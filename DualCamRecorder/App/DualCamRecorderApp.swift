@@ -69,6 +69,8 @@ final class AppModel: ObservableObject {
         settings.recordFolderPath = opened.folder.path
         // Project settings: cameras, codec, audio … (new / older projects start from the current ones).
         settings.apply(opened.project.settings ?? settings.projectSettings)
+        settings.cameraAOn = true
+        settings.cameraBOn = true
         projects.saveSettings(settings.projectSettings)
         recorder.restartSources()
 
@@ -120,15 +122,15 @@ final class AppModel: ObservableObject {
     /// Status for the phone page; JPEGs are only produced while a phone is watching.
     private func updateLiveView() {
         let watching = liveView.hasViewers
-        recorder.channelA.preview.streamEnabled = watching
-        recorder.channelB.preview.streamEnabled = watching && settings.twoCameras
+        recorder.channelA.preview.streamEnabled = watching && settings.isCameraOn(.a)
+        recorder.channelB.preview.streamEnabled = watching && settings.isCameraOn(.b)
         guard watching else { return }
 
         let names = settings.cameraNames
         var files = ""
         if let take = recorder.activeTake {
             files = TakeNaming.fileName(take: take, role: .a, slate: recorder.recordingSlate, names: names)
-            if settings.twoCameras {
+            if recorder.channelB.isRecording {
                 files += "  ·  " + TakeNaming.fileName(take: take, role: .b, slate: recorder.recordingSlate, names: names)
             }
         } else {
@@ -143,7 +145,8 @@ final class AppModel: ObservableObject {
             "slate": slate.shortLabel + (slate.good ? "  ★" : "") + (slate.mos ? "  MOS" : ""),
             "nameA": names.a,
             "nameB": names.b,
-            "twoCameras": settings.twoCameras,
+            "showA": settings.isCameraOn(.a),
+            "twoCameras": settings.isCameraOn(.b),
         ]
         if let json = try? JSONSerialization.data(withJSONObject: status) {
             liveView.updateStatus(json)

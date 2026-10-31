@@ -65,6 +65,21 @@ final class AppSettings: ObservableObject {
 
     var twoCameras: Bool { cameraCount >= 2 }
 
+    /// Temporary on/off of each camera in a two-camera project (not saved – both are on when a project opens).
+    @Published var cameraAOn = true
+    @Published var cameraBOn = true
+
+    /// Camera is shown and recorded.
+    func isCameraOn(_ role: CameraRole) -> Bool {
+        switch role {
+        case .a: return cameraAOn || !twoCameras
+        case .b: return twoCameras && cameraBOn
+        }
+    }
+
+    /// Cameras that will record (in A, B order).
+    var activeRoles: [CameraRole] { CameraRole.allCases.filter { isCameraOn($0) } }
+
     /// The per-project part of the settings.
     var projectSettings: ProjectSettings {
         ProjectSettings(cameraCount: cameraCount, proResFlavor: proResFlavor.rawValue, audioChannels: audioChannels,

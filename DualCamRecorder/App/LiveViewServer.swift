@@ -269,6 +269,7 @@ async function status(){
     document.getElementById('files').textContent = s.files || '';
     document.getElementById('nameA').textContent = s.nameA || 'A';
     document.getElementById('nameB').textContent = s.nameB || 'B';
+    document.getElementById('boxA').classList.toggle('hidden', s.showA === false);
     document.getElementById('boxB').classList.toggle('hidden', !s.twoCameras);
     document.getElementById('boxA').classList.toggle('rec', !!s.recording);
     document.getElementById('boxB').classList.toggle('rec', !!s.recording);

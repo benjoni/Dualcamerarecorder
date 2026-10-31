@@ -58,6 +58,14 @@ Rozhranie aplikácie je **v angličtine** (Record / Playback / Slate …); tento
 - Čítanie skriptom, napr. `exiftool -Keys:All A007_S12_SH3B_T04.MOV` alebo priamo CSV.
 - V Playback → **Edit slate…** sa dajú hodnoty dodatočne opraviť.
 
+### Dočasné vypnutie jednej kamery (Record, ⌥1 / ⌥2)
+- V projekte s dvoma kamerami sú nad obrazmi tlačidlá **Camera A / Camera B**. Vypnutá kamera
+  zmizne, druhá sa roztiahne na celú šírku a **nahráva sa len ona** (aj Cam clip sa zvýši len jej).
+- Aspoň jedna kamera ostáva zapnutá; počas nahrávania sa prepínať nedá. Vypnutá kamera beží ďalej
+  na pozadí, takže sa zapne okamžite. Platí aj v Screens only a pre živý náhľad na telefóny.
+- Je to len dočasné – nastavenie projektu sa nemení a pri otvorení projektu sú obe kamery zapnuté.
+- Playback ukáže len kameru, ktorá v zábere nahrávala (pri zábere len z B sa zapne zvuk B).
+
 ### Project settings (⚙ v lište projektu, ⌥⌘,)
 - **1 camera / 2 cameras** – pri jednej kamere sa zobrazuje a nahráva len kamera A (cez celú
   šírku), kamera B sa vôbec nespúšťa; Playback ukáže B len pri záberoch, ktoré ju majú.

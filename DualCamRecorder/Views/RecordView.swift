@@ -24,8 +24,10 @@ struct RecordView: View {
     /// Both pictures filling the window; shortcuts (⌘R, ⌘I, ⌘O) keep working.
     private var screensOnlyBody: some View {
         HStack(spacing: 8) {
-            CameraScreen(channel: controller.channelA, showWaveform: settings.showWaveform)
-            if settings.twoCameras {
+            if settings.isCameraOn(.a) {
+                CameraScreen(channel: controller.channelA, showWaveform: settings.showWaveform)
+            }
+            if settings.isCameraOn(.b) {
                 CameraScreen(channel: controller.channelB, showWaveform: settings.showWaveform)
             }
         }
@@ -37,18 +39,27 @@ struct RecordView: View {
                 ShortcutButton(key: "r", modifiers: [.command]) { controller.toggleRecording() }
                 ShortcutButton(key: "i", modifiers: [.command]) { controller.markIn() }
                 ShortcutButton(key: "o", modifiers: [.command]) { controller.markOut() }
+                ShortcutButton(key: "1", modifiers: [.option]) { controller.toggleCamera(.a) }
+                ShortcutButton(key: "2", modifiers: [.option]) { controller.toggleCamera(.b) }
             }
         }
     }
 
     private var normalBody: some View {
         VStack(spacing: 12) {
+            if settings.twoCameras {
+                cameraSwitches
+            }
             HStack(alignment: .top, spacing: 12) {
-                CameraPanel(controller: controller, channel: controller.channelA, showWaveform: settings.showWaveform)
-                if settings.twoCameras {
+                if settings.isCameraOn(.a) {
+                    CameraPanel(controller: controller, channel: controller.channelA, showWaveform: settings.showWaveform)
+                }
+                if settings.isCameraOn(.b) {
                     CameraPanel(controller: controller, channel: controller.channelB, showWaveform: settings.showWaveform)
                 }
             }
+            .animation(.easeInOut(duration: 0.2), value: settings.cameraAOn)
+            .animation(.easeInOut(duration: 0.2), value: settings.cameraBOn)
             Divider()
             transportBar
             Divider()
@@ -156,17 +167,48 @@ struct RecordView: View {
         }
     }
 
+    /// Two-camera projects: switch camera A or B off for a while – the other fills the screen and records alone.
+    private var cameraSwitches: some View {
+        HStack(spacing: 12) {
+            Text("Cameras").foregroundStyle(.secondary)
+            SegmentGroup {
+                ForEach(CameraRole.allCases) { role in
+                    Toggle(isOn: Binding(get: { settings.isCameraOn(role) },
+                                         set: { controller.setCamera(role, on: $0) })) {
+                        Label("Camera \(role.rawValue)", systemImage: settings.isCameraOn(role) ? "video.fill" : "video.slash")
+                    }
+                    .help("Camera \(role.rawValue) on / off (⌥\(role == .a ? 1 : 2))")
+                }
+            }
+            .toggleStyle(SegmentToggleStyle(width: 150))
+            .disabled(controller.isRecording)
+            .background {
+                ZStack {
+                    ShortcutButton(key: "1", modifiers: [.option]) { controller.toggleCamera(.a) }
+                    ShortcutButton(key: "2", modifiers: [.option]) { controller.toggleCamera(.b) }
+                }
+            }
+            if settings.activeRoles.count == 1 {
+                Text("Only camera \(settings.activeRoles[0].rawValue) records")
+                    .foregroundStyle(.orange)
+            }
+        }
+        .font(.title3)
+        .frame(maxWidth: .infinity)
+    }
+
     private var takeLabel: String {
         var parts: [String] = []
         let names = settings.cameraNames
+        let roles = controller.isRecording
+            ? CameraRole.allCases.filter { controller.channel($0).isRecording }
+            : settings.activeRoles
         if let active = controller.activeTake {
-            let a = TakeNaming.fileName(take: active, role: .a, slate: controller.recordingSlate, names: names)
-            let b = TakeNaming.fileName(take: active, role: .b, slate: controller.recordingSlate, names: names)
-            parts.append("Recording \(a) + \(b)")
+            let files = roles.map { TakeNaming.fileName(take: active, role: $0, slate: controller.recordingSlate, names: names) }
+            parts.append("Recording " + files.joined(separator: " + "))
         } else {
-            let a = TakeNaming.fileName(take: controller.nextTake, role: .a, slate: settings.slate, names: names)
-            let b = TakeNaming.fileName(take: controller.nextTake, role: .b, slate: settings.slate, names: names)
-            parts.append("Next files: \(a) + \(b)")
+            let files = roles.map { TakeNaming.fileName(take: controller.nextTake, role: $0, slate: settings.slate, names: names) }
+            parts.append("Next files: " + files.joined(separator: " + "))
         }
         if let offset = controller.lastStartOffsetMs, !controller.isRecording {
             parts.append(String(format: "start offset B−A: %+.1f ms", offset))

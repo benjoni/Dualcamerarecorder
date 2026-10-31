@@ -133,6 +133,8 @@ final class SyncPlaybackController: ObservableObject {
         forceWaveformRefresh = true
         playerA.replaceCurrentItem(with: itemA)
         playerB.replaceCurrentItem(with: itemB)
+        // Clip recorded by camera B alone: hear B.
+        if itemA == nil, itemB != nil, !audioB { audioB = true }
 
         if let endObserver { NotificationCenter.default.removeObserver(endObserver) }
         endObserver = nil

@@ -73,10 +73,12 @@ struct PlaybackView: View {
     /// Both players filling the window; transport shortcuts keep working.
     private var screensOnlyBody: some View {
         HStack(spacing: 8) {
-            PlayerView(player: player.playerA)
-                .aspectRatio(16.0 / 9.0, contentMode: .fit)
-                .overlay { if settings.showWaveform { WaveformOverlay(model: player.waveformA) } }
-                .clipShape(RoundedRectangle(cornerRadius: 6))
+            if showCameraA {
+                PlayerView(player: player.playerA)
+                    .aspectRatio(16.0 / 9.0, contentMode: .fit)
+                    .overlay { if settings.showWaveform { WaveformOverlay(model: player.waveformA) } }
+                    .clipShape(RoundedRectangle(cornerRadius: 6))
+            }
             if showCameraB {
                 PlayerView(player: player.playerB)
                     .aspectRatio(16.0 / 9.0, contentMode: .fit)
@@ -111,7 +113,9 @@ struct PlaybackView: View {
             VStack(spacing: 12) {
                 header
                 HStack(spacing: 12) {
-                    playerPane(title: "Camera A", role: .a, file: player.take?.camA, available: player.take?.camA != nil, content: PlayerView(player: player.playerA), waveform: player.waveformA)
+                    if showCameraA {
+                        playerPane(title: "Camera A", role: .a, file: player.take?.camA, available: player.take?.camA != nil, content: PlayerView(player: player.playerA), waveform: player.waveformA)
+                    }
                     if showCameraB {
                         playerPane(title: "Camera B", role: .b, file: player.take?.camB, available: player.take?.camB != nil, content: PlayerView(player: player.playerB), waveform: player.waveformB)
                     }
@@ -129,6 +133,12 @@ struct PlaybackView: View {
     private var showCameraB: Bool {
         if let take = player.take { return take.camB != nil }
         return settings.twoCameras
+    }
+
+    /// Camera A is hidden only for clips recorded with camera B alone.
+    private var showCameraA: Bool {
+        if let take = player.take { return take.camA != nil || take.camB == nil }
+        return true
     }
 
     /// Newest clip = first in the list (sorted by clip number, descending).
@@ -438,8 +448,10 @@ struct PlaybackView: View {
 
     private var audioButtons: some View {
         SegmentGroup {
-            Toggle("Audio A", isOn: $player.audioA)
-                .help("Hear camera A")
+            if showCameraA {
+                Toggle("Audio A", isOn: $player.audioA)
+                    .help("Hear camera A")
+            }
             if showCameraB {
                 Toggle("Audio B", isOn: $player.audioB)
                     .help("Hear camera B")
