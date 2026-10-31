@@ -74,7 +74,13 @@ final class AppModel: ObservableObject {
         projects.saveSettings(settings.projectSettings)
         recorder.restartSources()
 
-        var slate = opened.project.slate ?? SlateInfo()
+        var slate = opened.project.slate ?? {
+            // New project: EXT / DAY by default.
+            var fresh = SlateInfo()
+            fresh.location = .exterior
+            fresh.timeOfDay = .day
+            return fresh
+        }()
         slate.production = opened.project.name
         if !opened.project.director.isEmpty { slate.director = opened.project.director }
         if !opened.project.dop.isEmpty { slate.cameraOperator = opened.project.dop }
