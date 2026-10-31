@@ -335,6 +335,7 @@ struct PlaybackView: View {
         }
     }
 
+    /// Prev · start · frame back · play · frame forward · Next, then (a bit apart) the speed.
     private var transportButtons: some View {
         HStack(spacing: 14) {
             Button { selectAdjacentClip(-1) } label: {
@@ -358,14 +359,6 @@ struct PlaybackView: View {
                 .keyboardShortcut(.rightArrow, modifiers: [])
                 .help("One frame forward (→)")
 
-            Picker("Speed", selection: $player.rate) {
-                Text("0.5×").tag(Float(0.5))
-                Text("1×").tag(Float(1.0))
-                Text("2×").tag(Float(2.0))
-            }
-            .pickerStyle(.segmented)
-            .frame(width: 240)
-
             Button { selectAdjacentClip(1) } label: {
                 Label("Next", systemImage: "forward.end.alt.fill")
                     .labelStyle(TrailingIconLabelStyle())
@@ -373,6 +366,15 @@ struct PlaybackView: View {
             .keyboardShortcut(.rightArrow, modifiers: [.command])
             .disabled(adjacentClip(1) == nil)
             .help("Next clip (⌘→)")
+
+            Picker("Speed", selection: $player.rate) {
+                Text("0.5×").tag(Float(0.5))
+                Text("1×").tag(Float(1.0))
+                Text("2×").tag(Float(2.0))
+            }
+            .pickerStyle(.segmented)
+            .frame(width: 240)
+            .padding(.leading, 36)   // set apart from the transport buttons
         }
     }
 
