@@ -13,7 +13,11 @@ struct SettingsView: View {
     var body: some View {
         Form {
             Section("Folders") {
-                folderRow(title: "Write (recording)", path: settings.recordFolderPath) { settings.recordFolderPath = $0 }
+                LabeledContent("Recording folder (open project)") {
+                    Text(settings.recordFolderPath).font(.caption).foregroundStyle(.secondary)
+                        .lineLimit(1).truncationMode(.middle)
+                }
+                folderRow(title: "New projects are created in", path: settings.projectsRootPath) { settings.projectsRootPath = $0 }
                 Toggle("Play back from another disk / folder", isOn: $settings.separatePlaybackFolder)
                 if settings.separatePlaybackFolder {
                     folderRow(title: "Read (playback)", path: settings.playbackFolderPath) { settings.playbackFolderPath = $0 }

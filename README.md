@@ -15,6 +15,20 @@ Plán a architektúra: [`docs/PLAN.md`](docs/PLAN.md).
 
 Rozhranie aplikácie je **v angličtine** (Record / Playback / Slate …); tento README zostáva po slovensky.
 
+### Úvodná stránka – projekty
+- Po spustení sa zobrazí zoznam projektov (posledný otvorený hore) s počtom klipov, shooting day,
+  réžiou, DoP a poznámkou.
+- **New project…** (⌘N): názov + voliteľne réžia, DoP, poznámka. V *Projects location*
+  (nastaviteľné) sa vytvorí **priečinok s rovnakým názvom** a doň sa nahráva. Znaky `/` a `:`
+  sa v názve priečinka nahradia `-`.
+- **Edit…**: zmena názvu (premenuje aj priečinok), réžie, DoP, poznámky.
+- **Open** (alebo dvojklik): projekt sa otvorí v Record/Playback; na klapke sa vyplní
+  Production / Director / DoP. Každý projekt si pamätá vlastnú klapku (shooting day, scéna,
+  záber, pokus …) v `PROJECT.JSON` vo svojom priečinku.
+- **Open folder as project…** pridá existujúci priečinok; **⋯ → Remove from list** projekt len
+  skryje (súbory ostanú); 🔍 ho ukáže vo Finderi.
+- Tlačidlo **Projects** v lište sa vráti na úvod (nie počas nahrávania).
+
 ### Záložka NAHRÁVANIE
 - Automatické zistenie DeckLink zariadení (`IDeckLinkDiscovery`, aj hot-plug); priradenie
   *zariadenie → Kamera A / Kamera B* cez výber nad náhľadom (pri prvom spustení 1. → A, 2. → B).

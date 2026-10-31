@@ -4,6 +4,7 @@
 //
 
 import SwiftUI
+import AppKit
 
 struct RecordView: View {
     @ObservedObject var controller: RecordingController
@@ -124,8 +125,9 @@ struct RecordView: View {
                     .foregroundStyle(.secondary)
                     .lineLimit(1).truncationMode(.middle)
                     .frame(maxWidth: 300)
-                Button("Change…") { controller.chooseRecordFolder() }
-                    .disabled(controller.isRecording)
+                Button("Show in Finder") {
+                    NSWorkspace.shared.activateFileViewerSelecting([settings.recordFolderURL])
+                }
             }
             .font(.callout)
         }

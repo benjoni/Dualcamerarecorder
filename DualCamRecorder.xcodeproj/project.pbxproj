@@ -8,6 +8,7 @@
 /* Begin PBXBuildFile section */
 		0EB300BCE1A456A16C129D71 /* AppSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 65B2A27984C255B7C483E047 /* AppSettings.swift */; };
 		3D6B891F11CC0CE302C654E7 /* DualCamRecorderApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 01DEF721423275B1A7F6323A /* DualCamRecorderApp.swift */; };
+		2C588EFFB2A5C116880E0887 /* ProjectStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = CD5109A5E98FE81FDE5290F5 /* ProjectStore.swift */; };
 		9702D5C78A7731A21798CE69 /* DLCapture.mm in Sources */ = {isa = PBXBuildFile; fileRef = A4CED7CFCAAD74CB7DEA1EED /* DLCapture.mm */; };
 		630F330E84A6D4165DB8AAD0 /* DeckLinkSource.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6117E90CD68D5B390594AEB6 /* DeckLinkSource.swift */; };
 		6600DF44958D153CDA02B31F /* HostClock.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9271C3CCB72AF1A9ABD071F4 /* HostClock.swift */; };
@@ -31,6 +32,7 @@
 		50A9FEC0F6D9E21C7BAFB20F /* RecordView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7BD5BC128CE4428835DAFD64 /* RecordView.swift */; };
 		AFB0CBBE344EE4627C35B680 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 986E2D84EE22E38CEAA98268 /* SettingsView.swift */; };
 		78731ACF8C9C80C2CA5D1133 /* SlateView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 00CB9D37D4DFB09AF75F5AE8 /* SlateView.swift */; };
+		DABB2B61594260C281D4EE10 /* WelcomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 34B270A5E1E1DDA6C264C0E4 /* WelcomeView.swift */; };
 		7445CCBC7A03D5596183C4C3 /* AVFoundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 120A3B9C5DB6AAD59FDAD4C2 /* AVFoundation.framework */; };
 		7F98A92897F334CE0D2B8328 /* CoreMedia.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = B012EC397DCF3D447BBEBEBB /* CoreMedia.framework */; };
 		EA4EA06B847CBFC031421927 /* CoreVideo.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = BFE88E16FFD213DA188450AF /* CoreVideo.framework */; };
@@ -41,6 +43,7 @@
 /* Begin PBXFileReference section */
 		65B2A27984C255B7C483E047 /* AppSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppSettings.swift; sourceTree = "<group>"; };
 		01DEF721423275B1A7F6323A /* DualCamRecorderApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DualCamRecorderApp.swift; sourceTree = "<group>"; };
+		CD5109A5E98FE81FDE5290F5 /* ProjectStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProjectStore.swift; sourceTree = "<group>"; };
 		A11E4BF0364B81E5DAC6AAD8 /* DLCapture.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = DLCapture.h; sourceTree = "<group>"; };
 		A4CED7CFCAAD74CB7DEA1EED /* DLCapture.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = DLCapture.mm; sourceTree = "<group>"; };
 		8E914CCF7EDC0F606247452E /* DualCamRecorder-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "DualCamRecorder-Bridging-Header.h"; sourceTree = "<group>"; };
@@ -66,6 +69,7 @@
 		7BD5BC128CE4428835DAFD64 /* RecordView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordView.swift; sourceTree = "<group>"; };
 		986E2D84EE22E38CEAA98268 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		00CB9D37D4DFB09AF75F5AE8 /* SlateView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SlateView.swift; sourceTree = "<group>"; };
+		34B270A5E1E1DDA6C264C0E4 /* WelcomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WelcomeView.swift; sourceTree = "<group>"; };
 		120A3B9C5DB6AAD59FDAD4C2 /* AVFoundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AVFoundation.framework; path = System/Library/Frameworks/AVFoundation.framework; sourceTree = SDKROOT; };
 		B012EC397DCF3D447BBEBEBB /* CoreMedia.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreMedia.framework; path = System/Library/Frameworks/CoreMedia.framework; sourceTree = SDKROOT; };
 		BFE88E16FFD213DA188450AF /* CoreVideo.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreVideo.framework; path = System/Library/Frameworks/CoreVideo.framework; sourceTree = SDKROOT; };
@@ -109,6 +113,7 @@
 			children = (
 				65B2A27984C255B7C483E047 /* AppSettings.swift */,
 				01DEF721423275B1A7F6323A /* DualCamRecorderApp.swift */,
+				CD5109A5E98FE81FDE5290F5 /* ProjectStore.swift */,
 			);
 			path = App;
 			sourceTree = "<group>";
@@ -176,6 +181,7 @@
 				7BD5BC128CE4428835DAFD64 /* RecordView.swift */,
 				986E2D84EE22E38CEAA98268 /* SettingsView.swift */,
 				00CB9D37D4DFB09AF75F5AE8 /* SlateView.swift */,
+				34B270A5E1E1DDA6C264C0E4 /* WelcomeView.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -280,6 +286,7 @@
 			files = (
 				0EB300BCE1A456A16C129D71 /* AppSettings.swift in Sources */,
 				3D6B891F11CC0CE302C654E7 /* DualCamRecorderApp.swift in Sources */,
+				2C588EFFB2A5C116880E0887 /* ProjectStore.swift in Sources */,
 				9702D5C78A7731A21798CE69 /* DLCapture.mm in Sources */,
 				630F330E84A6D4165DB8AAD0 /* DeckLinkSource.swift in Sources */,
 				6600DF44958D153CDA02B31F /* HostClock.swift in Sources */,
@@ -303,6 +310,7 @@
 				50A9FEC0F6D9E21C7BAFB20F /* RecordView.swift in Sources */,
 				AFB0CBBE344EE4627C35B680 /* SettingsView.swift in Sources */,
 				78731ACF8C9C80C2CA5D1133 /* SlateView.swift in Sources */,
+				DABB2B61594260C281D4EE10 /* WelcomeView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

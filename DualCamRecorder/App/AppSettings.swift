@@ -12,7 +12,9 @@ final class AppSettings: ObservableObject {
 
     private let defaults = UserDefaults.standard
 
-    /// Folder (disk) new takes are written to.
+    /// Where new projects (folders) are created.
+    @Published var projectsRootPath: String { didSet { defaults.set(projectsRootPath, forKey: "projectsRootPath") } }
+    /// Folder (disk) new takes are written to – the folder of the open project.
     @Published var recordFolderPath: String { didSet { defaults.set(recordFolderPath, forKey: "recordFolderPath") } }
     /// When true, the Playback tab reads from `playbackFolderPath` (e.g. a different disk) instead of the record folder.
     @Published var separatePlaybackFolder: Bool { didSet { defaults.set(separatePlaybackFolder, forKey: "separatePlaybackFolder") } }
@@ -40,6 +42,7 @@ final class AppSettings: ObservableObject {
         let defaultFolder = movies.appendingPathComponent("DualCamRecorder").path
 
         recordFolderPath = defaults.string(forKey: "recordFolderPath") ?? defaultFolder
+        projectsRootPath = defaults.string(forKey: "projectsRootPath") ?? defaultFolder
         separatePlaybackFolder = defaults.bool(forKey: "separatePlaybackFolder")
         playbackFolderPath = defaults.string(forKey: "playbackFolderPath") ?? defaultFolder
         audioChannels = defaults.object(forKey: "audioChannels") as? Int ?? 2
