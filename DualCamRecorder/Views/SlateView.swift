@@ -172,14 +172,28 @@ struct SlateFields: View {
     /// EXT / DAY / MOS.
     private var extrasGroup: some View {
         HStack(spacing: 10) {
-            Picker("", selection: $slate.location) {
-                ForEach(SlateInfo.Location.allCases) { Text($0.title).tag($0) }
+            if large {
+                // Same rounded box as MOS (system pop-ups are capsules on macOS 26).
+                boxMenu(slate.location.title) {
+                    Picker("", selection: $slate.location) {
+                        ForEach(SlateInfo.Location.allCases) { Text($0.title).tag($0) }
+                    }
+                }
+                boxMenu(slate.timeOfDay.title) {
+                    Picker("", selection: $slate.timeOfDay) {
+                        ForEach(SlateInfo.TimeOfDay.allCases) { Text($0.title).tag($0) }
+                    }
+                }
+            } else {
+                Picker("", selection: $slate.location) {
+                    ForEach(SlateInfo.Location.allCases) { Text($0.title).tag($0) }
+                }
+                .labelsHidden().frame(width: 90)
+                Picker("", selection: $slate.timeOfDay) {
+                    ForEach(SlateInfo.TimeOfDay.allCases) { Text($0.title).tag($0) }
+                }
+                .labelsHidden().frame(width: 90)
             }
-            .labelsHidden().frame(width: large ? 110 : 90)
-            Picker("", selection: $slate.timeOfDay) {
-                ForEach(SlateInfo.TimeOfDay.allCases) { Text($0.title).tag($0) }
-            }
-            .labelsHidden().frame(width: large ? 110 : 90)
             SegmentGroup {
                 Toggle(isOn: $slate.mos) {
                     Label("MOS", systemImage: "speaker.slash")
@@ -190,6 +204,25 @@ struct SlateFields: View {
         }
         .controlSize(large ? .extraLarge : .regular)
         .padding(.top, large ? 22 : 14)
+    }
+
+    /// Pop-up menu drawn as a 110 × 36 rounded box like the MOS toggle group.
+    private func boxMenu<Items: View>(_ title: String, @ViewBuilder items: () -> Items) -> some View {
+        Menu {
+            items().pickerStyle(.inline).labelsHidden()
+        } label: {
+            HStack(spacing: 6) {
+                Text(title)
+                Image(systemName: "chevron.up.chevron.down").font(.caption)
+            }
+            .frame(width: 110, height: 36)
+            .background(RoundedRectangle(cornerRadius: 8).fill(Color.gray.opacity(0.2)))
+            .contentShape(RoundedRectangle(cornerRadius: 8))
+        }
+        .menuStyle(.button)
+        .buttonStyle(.plain)
+        .menuIndicator(.hidden)
+        .fixedSize()
     }
 
     private func field(_ title: String, text: Binding<String>) -> some View {
