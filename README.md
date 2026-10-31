@@ -73,6 +73,13 @@ Rozhranie aplikácie je **v angličtine** (Record / Playback / Slate …); tento
 - Synchronizácia cez `setRate(_:time:atHostTime:)` so spoločným časom hostiteľských hodín;
   seek a krokovanie sú presné na snímku (nulová tolerancia) na oboch prehrávačoch.
 
+### Waveform (⇧⌘W)
+- Tlačidlo **Waveform** v lište okna zapne **luma waveform (0–100 IRE)** zvlášť pre každú kameru –
+  polopriehľadný panel cez spodnú tretinu obrazu (Record aj Playback, aj v Screens only).
+- Record: počíta sa zo zmenšeného náhľadu (~12× za sekundu), nezaťažuje nahrávanie.
+  Playback: z aktuálne zobrazenej snímky oboch prehrávačov (aj pri pauze / krokovaní).
+- Super-whites nad 100 IRE a pod 0 IRE sa orežú na okraj stupnice.
+
 ### Režim „Screens only“ (⌘F)
 - Tlačidlo **Screens only** v lište okna (alebo **⌘F**) skryje v Record aj Playback všetko okrem
   dvoch obrazoviek; **Show controls** / ⌘F ich vráti. Pre úplne čistú plochu použi aj celú

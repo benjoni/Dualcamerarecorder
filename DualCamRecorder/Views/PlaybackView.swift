@@ -70,9 +70,11 @@ struct PlaybackView: View {
         HStack(spacing: 8) {
             PlayerView(player: player.playerA)
                 .aspectRatio(16.0 / 9.0, contentMode: .fit)
+                .overlay { if settings.showWaveform { WaveformOverlay(model: player.waveformA) } }
                 .clipShape(RoundedRectangle(cornerRadius: 6))
             PlayerView(player: player.playerB)
                 .aspectRatio(16.0 / 9.0, contentMode: .fit)
+                .overlay { if settings.showWaveform { WaveformOverlay(model: player.waveformB) } }
                 .clipShape(RoundedRectangle(cornerRadius: 6))
         }
         .padding(8)
@@ -100,8 +102,8 @@ struct PlaybackView: View {
             VStack(spacing: 12) {
                 header
                 HStack(spacing: 12) {
-                    playerPane(title: "Camera A", file: player.take?.camA, available: player.take?.camA != nil, content: PlayerView(player: player.playerA))
-                    playerPane(title: "Camera B", file: player.take?.camB, available: player.take?.camB != nil, content: PlayerView(player: player.playerB))
+                    playerPane(title: "Camera A", file: player.take?.camA, available: player.take?.camA != nil, content: PlayerView(player: player.playerA), waveform: player.waveformA)
+                    playerPane(title: "Camera B", file: player.take?.camB, available: player.take?.camB != nil, content: PlayerView(player: player.playerB), waveform: player.waveformB)
                 }
                 transport
                 Spacer(minLength: 0)
@@ -203,11 +205,15 @@ struct PlaybackView: View {
         }
     }
 
-    private func playerPane(title: String, file: URL?, available: Bool, content: PlayerView) -> some View {
+    private func playerPane(title: String, file: URL?, available: Bool, content: PlayerView,
+                            waveform: WaveformModel) -> some View {
         VStack(alignment: .leading, spacing: 6) {
             Text(title).font(.title3.weight(.bold))
             ZStack {
                 content
+                if available && settings.showWaveform {
+                    WaveformOverlay(model: waveform)
+                }
                 if !available {
                     Text(player.take == nil ? "Select a clip" : "File missing").foregroundStyle(.secondary)
                 }

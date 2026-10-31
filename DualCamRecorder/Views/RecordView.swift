@@ -22,8 +22,8 @@ struct RecordView: View {
     /// Both pictures filling the window; shortcuts (⌘R, ⌘I, ⌘O) keep working.
     private var screensOnlyBody: some View {
         HStack(spacing: 8) {
-            CameraScreen(channel: controller.channelA)
-            CameraScreen(channel: controller.channelB)
+            CameraScreen(channel: controller.channelA, showWaveform: settings.showWaveform)
+            CameraScreen(channel: controller.channelB, showWaveform: settings.showWaveform)
         }
         .padding(8)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -40,8 +40,8 @@ struct RecordView: View {
     private var normalBody: some View {
         VStack(spacing: 12) {
             HStack(alignment: .top, spacing: 12) {
-                CameraPanel(controller: controller, channel: controller.channelA)
-                CameraPanel(controller: controller, channel: controller.channelB)
+                CameraPanel(controller: controller, channel: controller.channelA, showWaveform: settings.showWaveform)
+                CameraPanel(controller: controller, channel: controller.channelB, showWaveform: settings.showWaveform)
             }
             Divider()
             transportBar
@@ -169,6 +169,7 @@ struct RecordView: View {
 struct CameraPanel: View {
     @ObservedObject var controller: RecordingController
     @ObservedObject var channel: CameraChannel
+    var showWaveform = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -194,7 +195,7 @@ struct CameraPanel: View {
                     .help("Camera name at the start of the file name, e.g. A → A007_S12_SH3B_T04.MOV")
             }
 
-            CameraScreen(channel: channel)
+            CameraScreen(channel: channel, showWaveform: showWaveform)
 
             Text(channel.format?.displayString ?? "Format: —")
                 .font(.system(.body, design: .monospaced))
@@ -225,12 +226,17 @@ struct CameraPanel: View {
 /// Live picture of one camera with REC / signal badges and the red recording frame.
 struct CameraScreen: View {
     @ObservedObject var channel: CameraChannel
+    var showWaveform = false
 
     var body: some View {
         ZStack(alignment: .topLeading) {
             PreviewView(renderer: channel.preview)
                 .aspectRatio(16.0 / 9.0, contentMode: .fit)
                 .clipShape(RoundedRectangle(cornerRadius: 6))
+                // Luma waveform over the lower part of the picture.
+                .overlay {
+                    if showWaveform { WaveformOverlay(model: channel.preview.waveform) }
+                }
                 // Red frame around the picture while this camera is recording.
                 .overlay(
                     RoundedRectangle(cornerRadius: 6)

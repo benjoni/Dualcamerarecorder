@@ -19,6 +19,7 @@
 		AF4F7E6721D69D5EC7B56450 /* ThumbnailCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36C17967F6FDC1F863F17DDF /* ThumbnailCache.swift */; };
 		9168DEFF5C8ACED2D8579F70 /* PreviewRenderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 86EE76A2E0DF03A995D87568 /* PreviewRenderer.swift */; };
 		0D2CA9BB78FD0035D5D36DF6 /* PreviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54A98420FFEC2C998E26B947 /* PreviewView.swift */; };
+		8B1FD6B4543A40394476CF5E /* Waveform.swift in Sources */ = {isa = PBXBuildFile; fileRef = E2FBE3F8BF993A66AAC34180 /* Waveform.swift */; };
 		8A95CF0EB055A53010FE371A /* CameraChannel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9C6E675FB14A7235CFCF3850 /* CameraChannel.swift */; };
 		801F49D4930640D47F344B2C /* MovieWriter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4AAEE032902641AFB372D5C2 /* MovieWriter.swift */; };
 		847956D8CA68D4BD49F4303C /* RecordingController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9F63A88B3FF58DABCEC4CBC9 /* RecordingController.swift */; };
@@ -53,6 +54,7 @@
 		36C17967F6FDC1F863F17DDF /* ThumbnailCache.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThumbnailCache.swift; sourceTree = "<group>"; };
 		86EE76A2E0DF03A995D87568 /* PreviewRenderer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PreviewRenderer.swift; sourceTree = "<group>"; };
 		54A98420FFEC2C998E26B947 /* PreviewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PreviewView.swift; sourceTree = "<group>"; };
+		E2FBE3F8BF993A66AAC34180 /* Waveform.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Waveform.swift; sourceTree = "<group>"; };
 		9C6E675FB14A7235CFCF3850 /* CameraChannel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraChannel.swift; sourceTree = "<group>"; };
 		4AAEE032902641AFB372D5C2 /* MovieWriter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MovieWriter.swift; sourceTree = "<group>"; };
 		9F63A88B3FF58DABCEC4CBC9 /* RecordingController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordingController.swift; sourceTree = "<group>"; };
@@ -148,6 +150,7 @@
 			children = (
 				86EE76A2E0DF03A995D87568 /* PreviewRenderer.swift */,
 				54A98420FFEC2C998E26B947 /* PreviewView.swift */,
+				E2FBE3F8BF993A66AAC34180 /* Waveform.swift */,
 			);
 			path = Preview;
 			sourceTree = "<group>";
@@ -288,6 +291,7 @@
 				AF4F7E6721D69D5EC7B56450 /* ThumbnailCache.swift in Sources */,
 				9168DEFF5C8ACED2D8579F70 /* PreviewRenderer.swift in Sources */,
 				0D2CA9BB78FD0035D5D36DF6 /* PreviewView.swift in Sources */,
+				8B1FD6B4543A40394476CF5E /* Waveform.swift in Sources */,
 				8A95CF0EB055A53010FE371A /* CameraChannel.swift in Sources */,
 				801F49D4930640D47F344B2C /* MovieWriter.swift in Sources */,
 				847956D8CA68D4BD49F4303C /* RecordingController.swift in Sources */,

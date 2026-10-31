@@ -27,7 +27,18 @@ final class PreviewRenderer {
         set { state.withLock { $0.active = newValue } }
     }
 
-    private struct State { var busy = false; var active = true }
+    /// Luma waveform of this camera (updated ~12× per second while enabled).
+    let waveform = WaveformModel()
+    var waveformEnabled: Bool {
+        get { state.withLock { $0.waveform } }
+        set {
+            state.withLock { $0.waveform = newValue }
+            if !newValue { DispatchQueue.main.async { self.waveform.image = nil } }
+        }
+    }
+
+    private struct State { var busy = false; var active = true; var waveform = false }
+    private var lastWaveformNanos: UInt64 = 0   // preview queue only
     private let state = OSAllocatedUnfairLock(initialState: State())
     private let queue = DispatchQueue(label: "preview", qos: .userInitiated)
     private var transferSession: VTPixelTransferSession?
@@ -61,7 +72,16 @@ final class PreviewRenderer {
         queue.async { [weak self] in
             guard let self else { return }
             defer { self.state.withLock { $0.busy = false } }
-            guard let sample = self.makePreviewSample(from: pixelBuffer) else { return }
+            guard let result = self.makePreviewSample(from: pixelBuffer) else { return }
+            let sample = result.0
+            let small = result.1
+            // Waveform from the already downscaled BGRA picture, ~12 Hz.
+            let now = HostClock.nowNanos
+            if self.waveformEnabled, now - self.lastWaveformNanos > 80_000_000 {
+                self.lastWaveformNanos = now
+                let image = WaveformRenderer.image(from: small)
+                DispatchQueue.main.async { self.waveform.image = image }
+            }
             DispatchQueue.main.async {
                 let renderer = self.displayLayer.sampleBufferRenderer
                 if renderer.status == .failed { renderer.flush() }
@@ -76,7 +96,7 @@ final class PreviewRenderer {
         }
     }
 
-    private func makePreviewSample(from source: CVPixelBuffer) -> CMSampleBuffer? {
+    private func makePreviewSample(from source: CVPixelBuffer) -> (CMSampleBuffer, CVPixelBuffer)? {
         guard let transferSession, let pool else { return nil }
         var out: CVPixelBuffer?
         guard CVPixelBufferPoolCreatePixelBuffer(kCFAllocatorDefault, pool, &out) == kCVReturnSuccess, let dst = out else { return nil }
@@ -100,6 +120,6 @@ final class PreviewRenderer {
                                  Unmanaged.passUnretained(kCMSampleAttachmentKey_DisplayImmediately).toOpaque(),
                                  Unmanaged.passUnretained(kCFBooleanTrue).toOpaque())
         }
-        return sample
+        return (sample, dst)
     }
 }

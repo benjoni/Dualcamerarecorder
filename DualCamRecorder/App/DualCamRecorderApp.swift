@@ -27,7 +27,7 @@ struct DualCamRecorderApp: App {
 
     var body: some Scene {
         WindowGroup("DualCamRecorder") {
-            ContentView(model: model)
+            ContentView(model: model, settings: model.settings)
                 .frame(minWidth: 1100, minHeight: 700)
         }
         .defaultSize(width: 1500, height: 950)
@@ -40,6 +40,7 @@ struct DualCamRecorderApp: App {
 
 struct ContentView: View {
     @ObservedObject var model: AppModel
+    @ObservedObject var settings: AppSettings
     @State private var tab = 0
     /// Hide everything except the camera pictures / players (⌘F).
     @State private var screensOnly = false
@@ -76,6 +77,14 @@ struct ContentView: View {
         }
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
+                Toggle(isOn: $settings.showWaveform) {
+                    Label("Waveform", systemImage: "waveform.path.ecg")
+                }
+                .toggleStyle(.button)
+                .keyboardShortcut("w", modifiers: [.command, .shift])
+                .help("Luma waveform over each picture (⇧⌘W)")
+            }
+            ToolbarItem(placement: .primaryAction) {
                 Button {
                     screensOnly.toggle()
                 } label: {
@@ -86,11 +95,22 @@ struct ContentView: View {
                 .help(screensOnly ? "Show all controls (⌘F)" : "Hide everything except the pictures (⌘F)")
             }
         }
+        .onAppear { applyWaveform() }
+        .onChange(of: settings.showWaveform) { _, _ in applyWaveform() }
         .onChange(of: tab) { _, newTab in
+            applyWaveform()
             // Preview rendering is not needed while the playback tab is visible.
             model.recorder.channelA.preview.isActive = (newTab == 0)
             model.recorder.channelB.preview.isActive = (newTab == 0)
             if newTab == 1 { model.library.cueLatestOnShow = true }
         }
+    }
+
+    /// Waveform work only where it is visible: camera previews on Record, players on Playback.
+    private func applyWaveform() {
+        let on = settings.showWaveform
+        model.recorder.channelA.preview.waveformEnabled = on && tab == 0
+        model.recorder.channelB.preview.waveformEnabled = on && tab == 0
+        model.player.waveformEnabled = on && tab == 1
     }
 }

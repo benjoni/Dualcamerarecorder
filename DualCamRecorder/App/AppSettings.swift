@@ -27,6 +27,8 @@ final class AppSettings: ObservableObject {
     /// Camera names at the start of the file names (A007_… / B007_…).
     @Published var cameraNameA: String { didSet { defaults.set(cameraNameA, forKey: "cameraNameA") } }
     @Published var cameraNameB: String { didSet { defaults.set(cameraNameB, forKey: "cameraNameB") } }
+    /// Luma waveform over each camera picture (Record and Playback).
+    @Published var showWaveform: Bool { didSet { defaults.set(showWaveform, forKey: "showWaveform") } }
     /// Current slate (clapperboard) – used for the next take.
     @Published var slate: SlateInfo {
         didSet { if let data = try? JSONEncoder().encode(slate) { defaults.set(data, forKey: "slate") } }
@@ -46,6 +48,7 @@ final class AppSettings: ObservableObject {
         deviceA = defaults.string(forKey: "deviceA") ?? ""
         deviceB = defaults.string(forKey: "deviceB") ?? ""
         cameraNameA = defaults.string(forKey: "cameraNameA") ?? "A"
+        showWaveform = defaults.bool(forKey: "showWaveform")
         cameraNameB = defaults.string(forKey: "cameraNameB") ?? "B"
         if let data = defaults.data(forKey: "slate"), let saved = try? JSONDecoder().decode(SlateInfo.self, from: data) {
             slate = saved

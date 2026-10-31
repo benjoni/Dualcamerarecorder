@@ -9,6 +9,7 @@
 
 import Foundation
 import AVFoundation
+import QuartzCore
 import CoreMedia
 import Combine
 
@@ -44,6 +45,33 @@ final class SyncPlaybackController: ObservableObject {
     @Published private(set) var slate: SlateInfo?
     private var boundaryObserver: Any?
     private weak var boundaryPlayer: AVPlayer?
+
+    // MARK: Waveform (luma) of both players
+    let waveformA = WaveformModel()
+    let waveformB = WaveformModel()
+    /// Pull frames for the waveform only while it is shown (Playback tab + Waveform on).
+    var waveformEnabled = false {
+        didSet {
+            guard oldValue != waveformEnabled else { return }
+            waveformTimer?.invalidate()
+            waveformTimer = nil
+            if waveformEnabled {
+                forceWaveformRefresh = true
+                waveformTimer = Timer.scheduledTimer(withTimeInterval: 1.0 / 12.0, repeats: true) { [weak self] _ in
+                    self?.updateWaveforms()
+                }
+            } else {
+                waveformA.image = nil
+                waveformB.image = nil
+            }
+        }
+    }
+    private var outputA: AVPlayerItemVideoOutput?
+    private var outputB: AVPlayerItemVideoOutput?
+    private var waveformTimer: Timer?
+    private var forceWaveformRefresh = false
+    private let waveformQueue = DispatchQueue(label: "playback-waveform", qos: .utility)
+    private var waveformBusy = false
 
     private var timeObserver: Any?
     private var endObserver: NSObjectProtocol?
@@ -88,6 +116,21 @@ final class SyncPlaybackController: ObservableObject {
         // Keep the audio pitch natural at 0.5× and 2×.
         itemA?.audioTimePitchAlgorithm = .spectral
         itemB?.audioTimePitchAlgorithm = .spectral
+        // BGRA frame taps for the waveform monitor (do not affect the AVPlayerLayer).
+        let bgra: [String: Any] = [kCVPixelBufferPixelFormatTypeKey as String: kCVPixelFormatType_32BGRA]
+        outputA = itemA.map { item in
+            let o = AVPlayerItemVideoOutput(pixelBufferAttributes: bgra)
+            item.add(o)
+            return o
+        }
+        outputB = itemB.map { item in
+            let o = AVPlayerItemVideoOutput(pixelBufferAttributes: bgra)
+            item.add(o)
+            return o
+        }
+        waveformA.image = nil
+        waveformB.image = nil
+        forceWaveformRefresh = true
         playerA.replaceCurrentItem(with: itemA)
         playerB.replaceCurrentItem(with: itemB)
 
@@ -296,6 +339,7 @@ final class SyncPlaybackController: ObservableObject {
             }
             guard let self, self.generation == gen else { return }
             self.updateTime()
+            self.forceWaveformRefresh = true
             if wasPlaying { self.play() }
         }
     }
@@ -313,6 +357,36 @@ final class SyncPlaybackController: ObservableObject {
     }
 
     func goToStart() { seek(seconds: 0) }
+
+    // MARK: - Waveform
+
+    /// Grabs the frame currently shown by each player and renders its waveform off the main thread.
+    private func updateWaveforms() {
+        guard !waveformBusy else { return }
+        let hostTime = CACurrentMediaTime()
+        let force = forceWaveformRefresh
+        forceWaveformRefresh = false
+        var jobs: [(CVPixelBuffer, WaveformModel)] = []
+        for (output, model) in [(outputA, waveformA), (outputB, waveformB)] {
+            guard let output else { continue }
+            let itemTime = output.itemTime(forHostTime: hostTime)
+            guard force || output.hasNewPixelBuffer(forItemTime: itemTime) else { continue }
+            if let pb = output.copyPixelBuffer(forItemTime: itemTime, itemTimeForDisplay: nil) {
+                jobs.append((pb, model))
+            } else if force {
+                forceWaveformRefresh = true   // frame not decoded yet – try again next tick
+            }
+        }
+        guard !jobs.isEmpty else { return }
+        waveformBusy = true
+        waveformQueue.async { [weak self] in
+            let results = jobs.map { (WaveformRenderer.image(from: $0.0), $0.1) }
+            DispatchQueue.main.async {
+                for (image, model) in results { model.image = image }
+                self?.waveformBusy = false
+            }
+        }
+    }
 
     // MARK: - Time
 
