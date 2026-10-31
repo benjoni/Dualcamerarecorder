@@ -29,6 +29,19 @@ Rozhranie aplikácie je **v angličtine** (Record / Playback / Slate …); tento
   skryje (súbory ostanú); 🔍 ho ukáže vo Finderi.
 - Tlačidlo **Projects** v lište sa vráti na úvod (nie počas nahrávania).
 
+### Záloha na druhý disk (Project settings → Backup copy)
+- Zapni **Copy clips to a second disk after every take** a vyber disk/priečinok – vytvorí sa v ňom
+  priečinok s **názvom projektu**.
+- Po každom STOP sa skopírujú nové / zmenené súbory: `.MOV` oboch kamier, `C###_SLATE.JSON`,
+  `C###_MARKS.JSON`, `CLIPLOG.CSV`, `PROJECT.JSON`. Práve nahrávaný záber sa nekopíruje, kým sa
+  nedokončí.
+- Kopíruje sa do dočasného súboru, kontroluje sa veľkosť a až potom sa premenuje → v zálohe nikdy
+  nie je polovičný súbor pod správnym menom.
+- **Back up now** dokopíruje všetko chýbajúce (napr. keď disk nebol pripojený). Stav je
+  v nastaveniach aj v Record pri voľnom mieste („Backup ✓ up to date“, „copying…“, červené
+  „Backup disk not connected“).
+- Nastavenie je súčasťou projektu (`PROJECT.JSON`).
+
 ### Číslo klipu v kamere (Cam clip)
 - Pri každej kamere v Record je textové pole **Cam clip** (+ šípky) – názov/ID klipu, pod ktorým
   kamera nahráva interne, ľubovoľnej dĺžky (napr. `A001C0023`, `DJI_20261031_0023`).

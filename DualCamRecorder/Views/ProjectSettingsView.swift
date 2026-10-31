@@ -13,6 +13,7 @@ struct ProjectSettingsView: View {
     @ObservedObject var model: AppModel
     @ObservedObject var settings: AppSettings
     @ObservedObject var recorder: RecordingController
+    @ObservedObject var backup: BackupManager
     @Environment(\.dismiss) private var dismiss
 
     /// Audio / bit depth need the inputs restarted – done once when the sheet closes.
@@ -64,6 +65,29 @@ struct ProjectSettingsView: View {
                         set: { settings.forceEightBit = $0; needsInputRestart = true }))
                 }
 
+                Section("Backup copy") {
+                    Toggle("Copy clips to a second disk after every take", isOn: $settings.backupEnabled)
+                    if settings.backupEnabled {
+                        LabeledContent("Backup disk / folder") {
+                            HStack {
+                                Text(backupPath)
+                                    .font(.callout).foregroundStyle(.secondary)
+                                    .lineLimit(1).truncationMode(.middle)
+                                Button("Choose…") { chooseBackupRoot() }
+                            }
+                        }
+                        LabeledContent("Status") {
+                            HStack {
+                                backupStatus
+                                Button("Back up now") { backup.sync() }
+                                    .disabled(settings.backupRootPath.isEmpty)
+                            }
+                        }
+                        Text("Movies, slate / IN-OUT files, CLIPLOG.CSV and PROJECT.JSON are copied into a folder named like the project. Missing or changed files are copied again when the disk is connected (Back up now). The take that is being recorded is copied after STOP.")
+                            .font(.caption).foregroundStyle(.secondary)
+                    }
+                }
+
                 if let project = model.projects.current {
                     Section("Folder") {
                         LabeledContent("Recordings") {
@@ -100,6 +124,46 @@ struct ProjectSettingsView: View {
         .onDisappear {
             if needsInputRestart { recorder.restartSources() }
         }
+    }
+
+    private var backupPath: String {
+        guard !settings.backupRootPath.isEmpty, let project = model.projects.current,
+              let url = BackupManager.destination(root: settings.backupRootPath, projectFolder: project.folder)
+        else { return "Not chosen" }
+        return url.path
+    }
+
+    @ViewBuilder
+    private var backupStatus: some View {
+        switch backup.state {
+        case .off:
+            Text("Off").foregroundStyle(.secondary)
+        case .idle:
+            Label("Up to date" + (backup.lastBackup.map { " · \($0.formatted(date: .omitted, time: .shortened))" } ?? ""),
+                  systemImage: "checkmark.circle.fill")
+                .foregroundStyle(.green)
+        case .copying(let remaining, let current):
+            HStack(spacing: 6) {
+                ProgressView().controlSize(.small)
+                Text("Copying \(current) (\(remaining) left)").lineLimit(1).truncationMode(.middle)
+            }
+        case .diskMissing:
+            Label("Backup disk not connected", systemImage: "externaldrive.badge.xmark").foregroundStyle(.red)
+        case .failed(let message):
+            Label(message, systemImage: "exclamationmark.triangle.fill").foregroundStyle(.red).lineLimit(2)
+        }
+    }
+
+    private func chooseBackupRoot() {
+        let panel = NSOpenPanel()
+        panel.canChooseDirectories = true
+        panel.canChooseFiles = false
+        panel.canCreateDirectories = true
+        panel.prompt = "Choose"
+        panel.message = "Choose the backup disk or a folder on it – a folder named like the project is created inside."
+        if !settings.backupRootPath.isEmpty { panel.directoryURL = URL(fileURLWithPath: settings.backupRootPath) }
+        else { panel.directoryURL = URL(fileURLWithPath: "/Volumes") }
+        if panel.runModal() == .OK, let url = panel.url { settings.backupRootPath = url.path }
     }
 
     /// Device + file-name prefix for one camera.

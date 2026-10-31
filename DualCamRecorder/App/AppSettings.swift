@@ -28,6 +28,9 @@ final class AppSettings: ObservableObject {
     /// Camera names at the start of the file names (A007_… / B007_…).
     @Published var cameraNameA: String { didSet { defaults.set(cameraNameA, forKey: "cameraNameA") } }
     @Published var cameraNameB: String { didSet { defaults.set(cameraNameB, forKey: "cameraNameB") } }
+    /// Backup copy of the project's clips on a second disk (per project).
+    @Published var backupEnabled: Bool { didSet { defaults.set(backupEnabled, forKey: "backupEnabled") } }
+    @Published var backupRootPath: String { didSet { defaults.set(backupRootPath, forKey: "backupRootPath") } }
     /// Luma waveform over each camera picture (Record and Playback).
     @Published var showWaveform: Bool { didSet { defaults.set(showWaveform, forKey: "showWaveform") } }
     /// Current slate (clapperboard) – used for the next take.
@@ -50,6 +53,8 @@ final class AppSettings: ObservableObject {
         deviceB = defaults.string(forKey: "deviceB") ?? ""
         cameraNameA = defaults.string(forKey: "cameraNameA") ?? "A"
         showWaveform = defaults.bool(forKey: "showWaveform")
+        backupEnabled = defaults.bool(forKey: "backupEnabled")
+        backupRootPath = defaults.string(forKey: "backupRootPath") ?? ""
         cameraNameB = defaults.string(forKey: "cameraNameB") ?? "B"
         if let data = defaults.data(forKey: "slate"), let saved = try? JSONDecoder().decode(SlateInfo.self, from: data) {
             slate = saved
@@ -64,7 +69,8 @@ final class AppSettings: ObservableObject {
     var projectSettings: ProjectSettings {
         ProjectSettings(cameraCount: cameraCount, proResFlavor: proResFlavor.rawValue, audioChannels: audioChannels,
                         forceEightBit: forceEightBit, cameraNameA: cameraNameA, cameraNameB: cameraNameB,
-                        deviceA: deviceA, deviceB: deviceB)
+                        deviceA: deviceA, deviceB: deviceB,
+                        backupEnabled: backupEnabled, backupRootPath: backupRootPath)
     }
 
     func apply(_ p: ProjectSettings) {
@@ -76,6 +82,8 @@ final class AppSettings: ObservableObject {
         cameraNameB = p.cameraNameB
         deviceA = p.deviceA
         deviceB = p.deviceB
+        backupEnabled = p.backupEnabled
+        backupRootPath = p.backupRootPath
     }
 
     /// Sanitized, guaranteed-distinct camera names.

@@ -7,6 +7,7 @@
 	objects = {
 /* Begin PBXBuildFile section */
 		0EB300BCE1A456A16C129D71 /* AppSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 65B2A27984C255B7C483E047 /* AppSettings.swift */; };
+		48FCDAA4CAF4337EB0D7D93D /* BackupManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = F26B18EEDBBAC2D21DB1389B /* BackupManager.swift */; };
 		3D6B891F11CC0CE302C654E7 /* DualCamRecorderApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 01DEF721423275B1A7F6323A /* DualCamRecorderApp.swift */; };
 		2C588EFFB2A5C116880E0887 /* ProjectStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = CD5109A5E98FE81FDE5290F5 /* ProjectStore.swift */; };
 		9702D5C78A7731A21798CE69 /* DLCapture.mm in Sources */ = {isa = PBXBuildFile; fileRef = A4CED7CFCAAD74CB7DEA1EED /* DLCapture.mm */; };
@@ -45,6 +46,7 @@
 
 /* Begin PBXFileReference section */
 		65B2A27984C255B7C483E047 /* AppSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppSettings.swift; sourceTree = "<group>"; };
+		F26B18EEDBBAC2D21DB1389B /* BackupManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackupManager.swift; sourceTree = "<group>"; };
 		01DEF721423275B1A7F6323A /* DualCamRecorderApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DualCamRecorderApp.swift; sourceTree = "<group>"; };
 		CD5109A5E98FE81FDE5290F5 /* ProjectStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProjectStore.swift; sourceTree = "<group>"; };
 		A11E4BF0364B81E5DAC6AAD8 /* DLCapture.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = DLCapture.h; sourceTree = "<group>"; };
@@ -118,6 +120,7 @@
 			isa = PBXGroup;
 			children = (
 				65B2A27984C255B7C483E047 /* AppSettings.swift */,
+				F26B18EEDBBAC2D21DB1389B /* BackupManager.swift */,
 				01DEF721423275B1A7F6323A /* DualCamRecorderApp.swift */,
 				CD5109A5E98FE81FDE5290F5 /* ProjectStore.swift */,
 			);
@@ -294,6 +297,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				0EB300BCE1A456A16C129D71 /* AppSettings.swift in Sources */,
+				48FCDAA4CAF4337EB0D7D93D /* BackupManager.swift in Sources */,
 				3D6B891F11CC0CE302C654E7 /* DualCamRecorderApp.swift in Sources */,
 				2C588EFFB2A5C116880E0887 /* ProjectStore.swift in Sources */,
 				9702D5C78A7731A21798CE69 /* DLCapture.mm in Sources */,

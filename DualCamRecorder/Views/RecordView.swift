@@ -9,6 +9,7 @@ import AppKit
 struct RecordView: View {
     @ObservedObject var controller: RecordingController
     @ObservedObject var settings: AppSettings
+    @ObservedObject var backup: BackupManager
     /// Only the two camera pictures, nothing else (toggled with ⌘F).
     var screensOnly = false
 
@@ -131,6 +132,10 @@ struct RecordView: View {
                     .frame(maxWidth: 300)
                 Button("Show in Finder") {
                     NSWorkspace.shared.activateFileViewerSelecting([settings.recordFolderURL])
+                }
+                if let status = backup.shortStatus {
+                    Label(status, systemImage: backup.isProblem ? "externaldrive.badge.xmark" : "externaldrive.badge.checkmark")
+                        .foregroundStyle(backup.isProblem ? Color.red : Color.secondary)
                 }
             }
             .font(.callout)

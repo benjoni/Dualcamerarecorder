@@ -22,6 +22,9 @@ struct ProjectSettings: Codable, Equatable {
     var cameraNameB = "B"
     var deviceA = ""
     var deviceB = ""
+    /// Second copy of all clips on another disk: <backupRootPath>/<project folder name>.
+    var backupEnabled = false
+    var backupRootPath = ""
 }
 
 extension ProjectSettings {
@@ -37,6 +40,8 @@ extension ProjectSettings {
         cameraNameB = try c.decodeIfPresent(String.self, forKey: .cameraNameB) ?? cameraNameB
         deviceA = try c.decodeIfPresent(String.self, forKey: .deviceA) ?? deviceA
         deviceB = try c.decodeIfPresent(String.self, forKey: .deviceB) ?? deviceB
+        backupEnabled = try c.decodeIfPresent(Bool.self, forKey: .backupEnabled) ?? backupEnabled
+        backupRootPath = try c.decodeIfPresent(String.self, forKey: .backupRootPath) ?? backupRootPath
     }
 }
 

@@ -13,6 +13,7 @@ final class AppModel: ObservableObject {
     let projects: ProjectStore
     let library = TakeLibrary()
     let player = SyncPlaybackController()
+    let backup = BackupManager()
     private var cancellables = Set<AnyCancellable>()
 
     init() {
@@ -26,6 +27,23 @@ final class AppModel: ObservableObject {
         settings.$slate
             .debounce(for: .seconds(1), scheduler: RunLoop.main)
             .sink { [weak self] slate in self?.projects.saveSlate(slate) }
+            .store(in: &cancellables)
+        // Never copy the files of the take that is being recorded.
+        backup.isExcluded = { [weak recorder = self.recorder, weak settings = self.settings] name in
+            guard let take = recorder?.activeTake, let settings else { return false }
+            if let parsed = TakeNaming.parse(name, names: settings.cameraNames) { return parsed.take == take }
+            return false
+        }
+        // Back up after every take (and once more when CLIPLOG.CSV has been rewritten).
+        NotificationCenter.default.publisher(for: .takeFinished)
+            .sink { [weak self] _ in
+                self?.backup.sync()
+                DispatchQueue.main.asyncAfter(deadline: .now() + 3) { self?.backup.sync() }
+            }
+            .store(in: &cancellables)
+        settings.$backupEnabled.combineLatest(settings.$backupRootPath)
+            .debounce(for: .milliseconds(300), scheduler: RunLoop.main)
+            .sink { [weak self] _, _ in self?.configureBackup() }
             .store(in: &cancellables)
         // …and its settings (cameras, codec, audio, names, devices).
         settings.objectWillChange
@@ -60,6 +78,7 @@ final class AppModel: ObservableObject {
         player.load(nil)
         library.cueLatestOnShow = true
         recorder.refreshNextTake()
+        configureBackup()
         let folder = opened.folder
         let names = settings.cameraNames
         DispatchQueue.global(qos: .utility).async { ClipLog.rebuild(folder: folder, names: names) }
@@ -71,6 +90,18 @@ final class AppModel: ObservableObject {
         guard !recorder.isRecording else { return }
         player.load(nil)
         projects.closeCurrent(saving: settings.slate)
+        backup.configure(source: nil, destination: nil)
+    }
+
+    /// Backup of the open project to <backup root>/<project folder name>, if enabled.
+    func configureBackup() {
+        guard let project = projects.current, settings.backupEnabled,
+              let destination = BackupManager.destination(root: settings.backupRootPath, projectFolder: project.folder)
+        else {
+            backup.configure(source: nil, destination: nil)
+            return
+        }
+        backup.configure(source: project.folder, destination: destination)
     }
 
     /// Keeps the open project's details in step after editing it on the welcome page.
@@ -139,7 +170,7 @@ struct ContentView: View {
             if screensOnly {
                 Group {
                     if tab == 0 {
-                        RecordView(controller: model.recorder, settings: model.settings, screensOnly: true)
+                        RecordView(controller: model.recorder, settings: model.settings, backup: model.backup, screensOnly: true)
                     } else {
                         PlaybackView(library: model.library, player: model.player, settings: model.settings,
                                      screensOnly: true)
@@ -154,7 +185,7 @@ struct ContentView: View {
                 }
             } else {
                 TabView(selection: $tab) {
-                    RecordView(controller: model.recorder, settings: model.settings)
+                    RecordView(controller: model.recorder, settings: model.settings, backup: model.backup)
                         .tabItem { Label("Record", systemImage: "record.circle") }
                         .tag(0)
                     PlaybackView(library: model.library, player: model.player, settings: model.settings)
@@ -165,7 +196,7 @@ struct ContentView: View {
             }
         }
         .sheet(isPresented: $showProjectSettings) {
-            ProjectSettingsView(model: model, settings: settings, recorder: model.recorder)
+            ProjectSettingsView(model: model, settings: settings, recorder: model.recorder, backup: model.backup)
         }
         .toolbar {
             ToolbarItem(placement: .navigation) {
