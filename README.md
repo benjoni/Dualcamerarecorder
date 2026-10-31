@@ -129,6 +129,18 @@ Rozhranie aplikácie je **v angličtine** (Record / Playback / Slate …); tento
 - Synchronizácia cez `setRate(_:time:atHostTime:)` so spoločným časom hostiteľských hodín;
   seek a krokovanie sú presné na snímku (nulová tolerancia) na oboch prehrávačoch.
 
+### Živý náhľad na telefónoch (Phones)
+- Tlačidlo **Phones** v lište projektu → zapni **Live view on phones**. Zobrazí sa **QR kód**
+  a adresa (napr. `http://192.168.1.23:8090/?k=ab12cd34`) a počet pripojených telefónov.
+- Telefóny v **rovnakej Wi-Fi** (iPhone aj Android, aj viac naraz) naskenujú QR kód a v prehliadači
+  vidia obe kamery naživo (~5 obr./s, 960×540 JPEG), ● REC s časom, súbory a klapku; na výšku pod
+  sebou, na šírku vedľa seba. Netreba žiadnu aplikáciu.
+- Adresa obsahuje náhodný prístupový kód – bez neho server odpovie 403. **New access code** zneplatní
+  staré odkazy.
+- JPEG sa robí zo zmenšeného náhľadu a len vtedy, keď sa nejaký telefón pozerá → nahrávanie to
+  nezaťaží. Pri prvom spustení macOS môže žiadať povolenie prichádzajúcich spojení / lokálnej siete.
+- Telefóny vidia vstupy kamier (aj keď je na Macu otvorený Playback), nie prehrávané klipy.
+
 ### Export PDF (⇧⌘P)
 - V Playback tlačidlo **Export PDF…**: report klipov **podľa natáčacích dní** (všetky dni alebo
   jeden deň, voliteľne len ★ dobré pokusy, s obrázkami alebo bez).

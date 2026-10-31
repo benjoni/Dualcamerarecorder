@@ -9,6 +9,7 @@
 		0EB300BCE1A456A16C129D71 /* AppSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 65B2A27984C255B7C483E047 /* AppSettings.swift */; };
 		48FCDAA4CAF4337EB0D7D93D /* BackupManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = F26B18EEDBBAC2D21DB1389B /* BackupManager.swift */; };
 		3D6B891F11CC0CE302C654E7 /* DualCamRecorderApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 01DEF721423275B1A7F6323A /* DualCamRecorderApp.swift */; };
+		4069D153DC8A41A0EBB19E6A /* LiveViewServer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 12488A3A64E60A6C38A73F10 /* LiveViewServer.swift */; };
 		2C588EFFB2A5C116880E0887 /* ProjectStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = CD5109A5E98FE81FDE5290F5 /* ProjectStore.swift */; };
 		9702D5C78A7731A21798CE69 /* DLCapture.mm in Sources */ = {isa = PBXBuildFile; fileRef = A4CED7CFCAAD74CB7DEA1EED /* DLCapture.mm */; };
 		630F330E84A6D4165DB8AAD0 /* DeckLinkSource.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6117E90CD68D5B390594AEB6 /* DeckLinkSource.swift */; };
@@ -31,6 +32,7 @@
 		D2A9926782FDBFA23DEEE2E4 /* TakeMarks.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7A408E4C54F910DBE9D01BE7 /* TakeMarks.swift */; };
 		D774852BBEEBB78BDD7E7FCC /* TakeNaming.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4044731AE50F056638B1C5A0 /* TakeNaming.swift */; };
 		E72739D66FB84EAFDDDD40FB /* Components.swift in Sources */ = {isa = PBXBuildFile; fileRef = D904E764B33B5961920C3080 /* Components.swift */; };
+		59B929AD0BB2C2524815AD72 /* LiveViewSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 59059D1009F5895844435E92 /* LiveViewSheet.swift */; };
 		9C38C3FC26E697763DF1A65B /* PlaybackView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 912ECBEF9548220CA52C8564 /* PlaybackView.swift */; };
 		D40ED900BFEB9F13FDCE0BB9 /* ProjectSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A642370AD4E4A6A95DDFAF6B /* ProjectSettingsView.swift */; };
 		50A9FEC0F6D9E21C7BAFB20F /* RecordView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7BD5BC128CE4428835DAFD64 /* RecordView.swift */; };
@@ -48,6 +50,7 @@
 		65B2A27984C255B7C483E047 /* AppSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppSettings.swift; sourceTree = "<group>"; };
 		F26B18EEDBBAC2D21DB1389B /* BackupManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackupManager.swift; sourceTree = "<group>"; };
 		01DEF721423275B1A7F6323A /* DualCamRecorderApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DualCamRecorderApp.swift; sourceTree = "<group>"; };
+		12488A3A64E60A6C38A73F10 /* LiveViewServer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveViewServer.swift; sourceTree = "<group>"; };
 		CD5109A5E98FE81FDE5290F5 /* ProjectStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProjectStore.swift; sourceTree = "<group>"; };
 		A11E4BF0364B81E5DAC6AAD8 /* DLCapture.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = DLCapture.h; sourceTree = "<group>"; };
 		A4CED7CFCAAD74CB7DEA1EED /* DLCapture.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = DLCapture.mm; sourceTree = "<group>"; };
@@ -72,6 +75,7 @@
 		7A408E4C54F910DBE9D01BE7 /* TakeMarks.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TakeMarks.swift; sourceTree = "<group>"; };
 		4044731AE50F056638B1C5A0 /* TakeNaming.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TakeNaming.swift; sourceTree = "<group>"; };
 		D904E764B33B5961920C3080 /* Components.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Components.swift; sourceTree = "<group>"; };
+		59059D1009F5895844435E92 /* LiveViewSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveViewSheet.swift; sourceTree = "<group>"; };
 		912ECBEF9548220CA52C8564 /* PlaybackView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaybackView.swift; sourceTree = "<group>"; };
 		A642370AD4E4A6A95DDFAF6B /* ProjectSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProjectSettingsView.swift; sourceTree = "<group>"; };
 		7BD5BC128CE4428835DAFD64 /* RecordView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordView.swift; sourceTree = "<group>"; };
@@ -122,6 +126,7 @@
 				65B2A27984C255B7C483E047 /* AppSettings.swift */,
 				F26B18EEDBBAC2D21DB1389B /* BackupManager.swift */,
 				01DEF721423275B1A7F6323A /* DualCamRecorderApp.swift */,
+				12488A3A64E60A6C38A73F10 /* LiveViewServer.swift */,
 				CD5109A5E98FE81FDE5290F5 /* ProjectStore.swift */,
 			);
 			path = App;
@@ -188,6 +193,7 @@
 			isa = PBXGroup;
 			children = (
 				D904E764B33B5961920C3080 /* Components.swift */,
+				59059D1009F5895844435E92 /* LiveViewSheet.swift */,
 				912ECBEF9548220CA52C8564 /* PlaybackView.swift */,
 				A642370AD4E4A6A95DDFAF6B /* ProjectSettingsView.swift */,
 				7BD5BC128CE4428835DAFD64 /* RecordView.swift */,
@@ -299,6 +305,7 @@
 				0EB300BCE1A456A16C129D71 /* AppSettings.swift in Sources */,
 				48FCDAA4CAF4337EB0D7D93D /* BackupManager.swift in Sources */,
 				3D6B891F11CC0CE302C654E7 /* DualCamRecorderApp.swift in Sources */,
+				4069D153DC8A41A0EBB19E6A /* LiveViewServer.swift in Sources */,
 				2C588EFFB2A5C116880E0887 /* ProjectStore.swift in Sources */,
 				9702D5C78A7731A21798CE69 /* DLCapture.mm in Sources */,
 				630F330E84A6D4165DB8AAD0 /* DeckLinkSource.swift in Sources */,
@@ -321,6 +328,7 @@
 				D2A9926782FDBFA23DEEE2E4 /* TakeMarks.swift in Sources */,
 				D774852BBEEBB78BDD7E7FCC /* TakeNaming.swift in Sources */,
 				E72739D66FB84EAFDDDD40FB /* Components.swift in Sources */,
+				59B929AD0BB2C2524815AD72 /* LiveViewSheet.swift in Sources */,
 				9C38C3FC26E697763DF1A65B /* PlaybackView.swift in Sources */,
 				D40ED900BFEB9F13FDCE0BB9 /* ProjectSettingsView.swift in Sources */,
 				50A9FEC0F6D9E21C7BAFB20F /* RecordView.swift in Sources */,
@@ -409,6 +417,7 @@
 				INFOPLIST_KEY_CFBundleDisplayName = DualCamRecorder;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.video";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				INFOPLIST_KEY_NSLocalNetworkUsageDescription = "Phones on the same Wi-Fi can watch the cameras live.";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
@@ -440,6 +449,7 @@
 				INFOPLIST_KEY_CFBundleDisplayName = DualCamRecorder;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.video";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				INFOPLIST_KEY_NSLocalNetworkUsageDescription = "Phones on the same Wi-Fi can watch the cameras live.";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",

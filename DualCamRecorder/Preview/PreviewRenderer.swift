@@ -12,6 +12,8 @@ import AVFoundation
 import VideoToolbox
 import CoreMedia
 import os
+import ImageIO
+import UniformTypeIdentifiers
 
 final class PreviewRenderer {
     let displayLayer: AVSampleBufferDisplayLayer = {
@@ -37,8 +39,18 @@ final class PreviewRenderer {
         }
     }
 
-    private struct State { var busy = false; var active = true; var waveform = false }
+    private struct State { var busy = false; var active = true; var waveform = false; var stream = false }
     private var lastWaveformNanos: UInt64 = 0   // preview queue only
+    private var lastJPEGNanos: UInt64 = 0       // preview queue only
+
+    /// Live view for phones: JPEGs (~5 per second) are produced while this is on, even when the
+    /// picture itself is not on screen (e.g. Playback tab).
+    var streamEnabled: Bool {
+        get { state.withLock { $0.stream } }
+        set { state.withLock { $0.stream = newValue } }
+    }
+    /// Receives the JPEGs (called on the preview queue).
+    var onJPEG: ((Data) -> Void)?
     private let state = OSAllocatedUnfairLock(initialState: State())
     private let queue = DispatchQueue(label: "preview", qos: .userInitiated)
     private var transferSession: VTPixelTransferSession?
@@ -63,12 +75,13 @@ final class PreviewRenderer {
 
     /// Thread-safe; drops the frame if the previous one is still being processed.
     func enqueue(_ pixelBuffer: CVPixelBuffer) {
-        let accepted = state.withLock { s -> Bool in
-            guard s.active, !s.busy else { return false }
+        let flags = state.withLock { s -> (accepted: Bool, display: Bool) in
+            guard s.active || s.stream, !s.busy else { return (false, false) }
             s.busy = true
-            return true
+            return (true, s.active)
         }
-        guard accepted else { return }
+        guard flags.accepted else { return }
+        let display = flags.display
         queue.async { [weak self] in
             guard let self else { return }
             defer { self.state.withLock { $0.busy = false } }
@@ -82,6 +95,12 @@ final class PreviewRenderer {
                 let image = WaveformRenderer.image(from: small)
                 DispatchQueue.main.async { self.waveform.image = image }
             }
+            // JPEG for phones, ~5 Hz.
+            if self.streamEnabled, now - self.lastJPEGNanos > 190_000_000, let onJPEG = self.onJPEG {
+                self.lastJPEGNanos = now
+                if let jpeg = Self.jpeg(from: small) { onJPEG(jpeg) }
+            }
+            guard display else { return }
             DispatchQueue.main.async {
                 let renderer = self.displayLayer.sampleBufferRenderer
                 if renderer.status == .failed { renderer.flush() }
@@ -94,6 +113,18 @@ final class PreviewRenderer {
         DispatchQueue.main.async {
             self.displayLayer.sampleBufferRenderer.flush(removingDisplayedImage: true, completionHandler: nil)
         }
+    }
+
+    /// 960×540 BGRA → JPEG (quality 0.6, ~60–90 kB).
+    private static func jpeg(from pixelBuffer: CVPixelBuffer) -> Data? {
+        var image: CGImage?
+        VTCreateCGImageFromCVPixelBuffer(pixelBuffer, options: nil, imageOut: &image)
+        guard let image else { return nil }
+        let data = NSMutableData()
+        guard let dest = CGImageDestinationCreateWithData(data, UTType.jpeg.identifier as CFString, 1, nil) else { return nil }
+        CGImageDestinationAddImage(dest, image, [kCGImageDestinationLossyCompressionQuality: 0.6] as CFDictionary)
+        guard CGImageDestinationFinalize(dest) else { return nil }
+        return data as Data
     }
 
     private func makePreviewSample(from source: CVPixelBuffer) -> (CMSampleBuffer, CVPixelBuffer)? {

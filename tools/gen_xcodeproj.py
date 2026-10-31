@@ -182,6 +182,7 @@ def main():
         "INFOPLIST_KEY_CFBundleDisplayName": "DualCamRecorder",
         "INFOPLIST_KEY_LSApplicationCategoryType": "public.app-category.video",
         "INFOPLIST_KEY_NSHumanReadableCopyright": "",
+        "INFOPLIST_KEY_NSLocalNetworkUsageDescription": "Phones on the same Wi-Fi can watch the cameras live.",
         "COMBINE_HIDPI_IMAGES": "YES",
         "CODE_SIGN_STYLE": "Automatic",
         "CODE_SIGN_IDENTITY": "-",

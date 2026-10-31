@@ -14,6 +14,8 @@ final class AppModel: ObservableObject {
     let library = TakeLibrary()
     let player = SyncPlaybackController()
     let backup = BackupManager()
+    let liveView = LiveViewServer()
+    private var liveViewTimer: Timer?
     private var cancellables = Set<AnyCancellable>()
 
     init() {
@@ -28,6 +30,10 @@ final class AppModel: ObservableObject {
             .debounce(for: .seconds(1), scheduler: RunLoop.main)
             .sink { [weak self] slate in self?.projects.saveSlate(slate) }
             .store(in: &cancellables)
+        // Live view for phones: camera JPEGs go straight from the preview queue to the server.
+        recorder.channelA.preview.onJPEG = { [weak liveView = self.liveView] jpeg in liveView?.updateFrame(camera: "A", jpeg: jpeg) }
+        recorder.channelB.preview.onJPEG = { [weak liveView = self.liveView] jpeg in liveView?.updateFrame(camera: "B", jpeg: jpeg) }
+
         // Never copy the files of the take that is being recorded.
         backup.isExcluded = { [weak recorder = self.recorder, weak settings = self.settings] name in
             guard let take = recorder?.activeTake, let settings else { return false }
@@ -93,6 +99,57 @@ final class AppModel: ObservableObject {
         backup.configure(source: nil, destination: nil)
     }
 
+    // MARK: - Live view for phones
+
+    func setLiveView(_ on: Bool) {
+        if on {
+            liveView.start()
+            liveViewTimer?.invalidate()
+            liveViewTimer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { [weak self] _ in
+                self?.updateLiveView()
+            }
+        } else {
+            liveView.stop()
+            liveViewTimer?.invalidate()
+            liveViewTimer = nil
+            recorder.channelA.preview.streamEnabled = false
+            recorder.channelB.preview.streamEnabled = false
+        }
+    }
+
+    /// Status for the phone page; JPEGs are only produced while a phone is watching.
+    private func updateLiveView() {
+        let watching = liveView.hasViewers
+        recorder.channelA.preview.streamEnabled = watching
+        recorder.channelB.preview.streamEnabled = watching && settings.twoCameras
+        guard watching else { return }
+
+        let names = settings.cameraNames
+        var files = ""
+        if let take = recorder.activeTake {
+            files = TakeNaming.fileName(take: take, role: .a, slate: recorder.recordingSlate, names: names)
+            if settings.twoCameras {
+                files += "  ·  " + TakeNaming.fileName(take: take, role: .b, slate: recorder.recordingSlate, names: names)
+            }
+        } else {
+            files = "Next: " + TakeNaming.fileName(take: recorder.nextTake, role: .a, slate: settings.slate, names: names)
+        }
+        let slate = recorder.recordingSlate ?? settings.slate
+        let status: [String: Any] = [
+            "project": projects.current?.project.name ?? "DualCamRecorder",
+            "recording": recorder.isRecording,
+            "elapsed": DisplayFormat.duration(recorder.elapsed),
+            "files": files,
+            "slate": slate.shortLabel + (slate.good ? "  ★" : "") + (slate.mos ? "  MOS" : ""),
+            "nameA": names.a,
+            "nameB": names.b,
+            "twoCameras": settings.twoCameras,
+        ]
+        if let json = try? JSONSerialization.data(withJSONObject: status) {
+            liveView.updateStatus(json)
+        }
+    }
+
     /// Backup of the open project to <backup root>/<project folder name>, if enabled.
     func configureBackup() {
         guard let project = projects.current, settings.backupEnabled,
@@ -140,6 +197,7 @@ struct ContentView: View {
     /// Hide everything except the camera pictures / players (⌘F).
     @State private var screensOnly = false
     @State private var showProjectSettings = false
+    @State private var showLiveView = false
 
     var body: some View {
         Group {
@@ -195,6 +253,9 @@ struct ContentView: View {
                 .padding(.top, 4)
             }
         }
+        .sheet(isPresented: $showLiveView) {
+            LiveViewSheet(model: model, server: model.liveView)
+        }
         .sheet(isPresented: $showProjectSettings) {
             ProjectSettingsView(model: model, settings: settings, recorder: model.recorder, backup: model.backup)
         }
@@ -207,6 +268,9 @@ struct ContentView: View {
                 }
                 .disabled(model.recorder.isRecording)
                 .help(model.recorder.isRecording ? "Stop recording first" : "Back to the project list")
+            }
+            ToolbarItem(placement: .primaryAction) {
+                LiveViewToolbarButton(server: model.liveView) { showLiveView = true }
             }
             ToolbarItem(placement: .primaryAction) {
                 Button {
@@ -248,5 +312,19 @@ struct ContentView: View {
         model.recorder.channelA.preview.waveformEnabled = settings.showWaveform && recordVisible
         model.recorder.channelB.preview.waveformEnabled = settings.showWaveform && recordVisible
         model.player.waveformEnabled = settings.showWaveform && playbackVisible
+    }
+}
+
+/// Toolbar button that shows how many phones are watching.
+struct LiveViewToolbarButton: View {
+    @ObservedObject var server: LiveViewServer
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            Label(server.isRunning ? "Phones (\(server.clientCount))" : "Phones",
+                  systemImage: server.isRunning ? "iphone.radiowaves.left.and.right" : "iphone")
+        }
+        .help("Live view on phones over Wi-Fi")
     }
 }
