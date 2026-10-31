@@ -355,7 +355,7 @@ struct PlaybackView: View {
             VStack(spacing: 10) {
                 transportRow
                 markRow
-                audioButtons
+                audioRow
             }
             .buttonStyle(BigButtonStyle())
             .font(.title2)
@@ -517,25 +517,46 @@ struct PlaybackView: View {
         }
     }
 
-    /// IN/OUT buttons centered, play / loop modes at the right edge under the speed.
+    /// IN/OUT buttons centered, loop at the right edge under the speed.
     private var markRow: some View {
         HStack(spacing: 0) {
-            playModes.hidden()
+            loopControl.hidden()
             Spacer(minLength: 24)
             markButtons
             Spacer(minLength: 24)
-            playModes
+            loopControl
         }
     }
 
-    private var playModes: some View {
+    /// Audio A/B centered, "Play IN–OUT only" at the right edge under the loop.
+    private var audioRow: some View {
+        HStack(spacing: 0) {
+            playInOutOnly.hidden()
+            Spacer(minLength: 24)
+            audioButtons
+            Spacer(minLength: 24)
+            playInOutOnly
+        }
+    }
+
+    /// "Loop" + IN/OUT | Clip, like the speed control (click the lit one again to stop looping).
+    private var loopControl: some View {
+        HStack(spacing: 8) {
+            Text("Loop").foregroundStyle(.secondary)
+            SegmentGroup {
+                Toggle("IN/OUT", isOn: $player.loopInOut)
+                    .help("Repeat IN → OUT continuously (without OUT: to the end of the clip)")
+                Toggle("Clip", isOn: $player.loopClip)
+                    .help("Repeat the whole clip from start to end (IN / OUT ignored)")
+            }
+            .toggleStyle(SegmentToggleStyle(width: 120, minHeight: 40))
+        }
+    }
+
+    private var playInOutOnly: some View {
         SegmentGroup {
             Toggle("Play IN–OUT only", isOn: $player.limitToRange)
                 .help("Start at IN and stop at OUT")
-            Toggle("Loop IN/OUT", isOn: $player.loopInOut)
-                .help("Repeat IN → OUT continuously (without OUT: to the end of the clip)")
-            Toggle("Loop clip", isOn: $player.loopClip)
-                .help("Repeat the whole clip from start to end (IN / OUT ignored)")
         }
         .toggleStyle(SegmentToggleStyle(minHeight: 40))
     }
