@@ -300,7 +300,7 @@ struct PlaybackView: View {
                 .keyboardShortcut(.leftArrow, modifiers: [])
                 .help("One frame back (←)")
             Button { player.togglePlay() } label: {
-                Image(systemName: player.isPlaying ? "pause.fill" : "play.fill").frame(width: 56)
+                Image(systemName: player.isPlaying ? "pause.fill" : "play.fill").frame(width: 120)
             }
             .keyboardShortcut(.space, modifiers: [])
             .help("Play / pause (space)")
