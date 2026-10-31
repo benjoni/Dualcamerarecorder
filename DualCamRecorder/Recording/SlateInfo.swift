@@ -40,7 +40,6 @@ struct SlateInfo: Codable, Hashable {
     var scene = ""           // scene
     var shot = ""            // shot
     var take = 1             // take
-    var roll = ""            // roll / card
     var location: Location = .none
     var timeOfDay: TimeOfDay = .none
     var mos = false          // without sound
@@ -74,7 +73,6 @@ struct SlateInfo: Codable, Hashable {
         if !production.isEmpty { lines.append("Production: \(production)") }
         if !shootingDay.isEmpty { lines.append("Shooting day: \(shootingDay)") }
         lines.append(shortLabel)
-        if !roll.isEmpty { lines.append("Roll: \(roll)") }
         let flags = [location.rawValue, timeOfDay.rawValue, mos ? "MOS" : ""].filter { !$0.isEmpty }
         if !flags.isEmpty { lines.append(flags.joined(separator: " · ")) }
         if !director.isEmpty { lines.append("Director: \(director)") }
@@ -138,7 +136,6 @@ extension SlateInfo {
         scene = try c.decodeIfPresent(String.self, forKey: .scene) ?? scene
         shot = try c.decodeIfPresent(String.self, forKey: .shot) ?? shot
         take = try c.decodeIfPresent(Int.self, forKey: .take) ?? take
-        roll = try c.decodeIfPresent(String.self, forKey: .roll) ?? roll
         location = try c.decodeIfPresent(Location.self, forKey: .location) ?? location
         timeOfDay = try c.decodeIfPresent(TimeOfDay.self, forKey: .timeOfDay) ?? timeOfDay
         mos = try c.decodeIfPresent(Bool.self, forKey: .mos) ?? mos

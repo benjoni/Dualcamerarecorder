@@ -239,7 +239,7 @@ private struct ReportRow: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text("\(s?.scene.isEmpty == false ? s!.scene : "–") / \(s?.shot.isEmpty == false ? s!.shot : "–") / \(s.map { String($0.take) } ?? "–")")
                     .font(.system(size: 13, weight: .semibold))
-                Text([s?.location.rawValue ?? "", s?.timeOfDay.rawValue ?? "", s?.roll.isEmpty == false ? "Roll \(s!.roll)" : ""]
+                Text([s?.location.rawValue ?? "", s?.timeOfDay.rawValue ?? ""]
                         .filter { !$0.isEmpty }.joined(separator: " · "))
                     .font(.system(size: 8))
             }

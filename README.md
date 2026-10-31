@@ -80,7 +80,7 @@ Rozhranie aplikácie je **v angličtine** (Record / Playback / Slate …); tento
 - Počítadlá: zachytené / zapísané / **vynechané snímky (vstup)** / **vynechané (zápis)**,
   audio meter, odznak „Bez signálu“.
 - **Voľné miesto** na cieľovom disku + odhad zostávajúceho času nahrávania.
-- **Klapka** pod nahrávaním: projekt, **shooting day** (natáčací deň), réžia, DoP, rola, **obraz**, **záber**, **pokus**,
+- **Klapka** pod nahrávaním: projekt, **shooting day** (natáčací deň), réžia, DoP, **obraz**, **záber**, **pokus**,
   INT/EXT, DAY/NIGHT/DUSK, MOS, poznámka a „dobrý pokus“ (★). Pokus sa po každom zábere sám zvýši
   o 1, zmena obrazu alebo záberu ho nastaví na 1. Počas nahrávania sú obraz/záber/pokus zamknuté,
   poznámku a ★ možno meniť. Údaje sa uložia do `C001_SLATE.JSON` a zapíšu sa aj ako
@@ -117,7 +117,7 @@ Rozhranie aplikácie je **v angličtine** (Record / Playback / Slate …); tento
   jeden deň, voliteľne len ★ dobré pokusy, s obrázkami alebo bez).
 - A4 na šírku, každý deň začína novou stranou (projekt, deň, dátum, počet klipov); na strane
   6 klipov. Riadok: obrázok zo stredu klipu z kamery A aj B, číslo klipu, ★ / MOS,
-  Scene / Shot / Take, INT/EXT · DAY/NIGHT · Roll, súbory + Cam clip, dĺžka, IN / OUT / DUR,
+  Scene / Shot / Take, INT/EXT · DAY/NIGHT, súbory + Cam clip, dĺžka, IN / OUT / DUR,
   čas nahrávania, poznámka. Ukážka: `docs/preview/sample_clip_report.pdf`.
 - PDF sa uloží (predvolene do priečinka projektu) a hneď otvorí.
 

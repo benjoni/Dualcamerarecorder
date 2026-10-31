@@ -37,7 +37,6 @@ struct SlateBoard: View {
                 if slate.location != .none { Text(slate.location.rawValue) }
                 if slate.timeOfDay != .none { Text(slate.timeOfDay.rawValue) }
                 if slate.mos { Text("MOS") }
-                if !slate.roll.isEmpty { Text("ROLL \(slate.roll)") }
                 if slate.good { Image(systemName: "star.fill").foregroundStyle(.yellow) }
             }
             .font(.caption.weight(.semibold))
@@ -74,10 +73,7 @@ struct SlateFields: View {
                 field("Production", text: $slate.production)
                 field("Director", text: $slate.director)
                 field("DoP", text: $slate.cameraOperator)
-                HStack(spacing: 10) {
-                    field("Shooting day", text: $slate.shootingDay).frame(maxWidth: 100)
-                    field("Roll", text: $slate.roll).frame(maxWidth: 110)
-                }
+                field("Shooting day", text: $slate.shootingDay).frame(maxWidth: 140)
             }
             .disabled(locked)
             GridRow {
