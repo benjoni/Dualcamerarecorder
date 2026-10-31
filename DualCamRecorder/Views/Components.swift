@@ -83,11 +83,15 @@ struct ShortcutButton: View {
 
 /// Toggle drawn like a segment of a segmented control: light gray when on, dark when off.
 struct SegmentToggleStyle: ToggleStyle {
+    /// Fixed width so several toggles can share the same size (nil = fit the label).
+    var width: CGFloat? = nil
+
     func makeBody(configuration: Configuration) -> some View {
         Button {
             configuration.isOn.toggle()
         } label: {
             configuration.label
+                .frame(width: width.map { $0 - 32 })
                 .padding(.horizontal, 16)
                 .padding(.vertical, 5)
                 .frame(minHeight: 30)

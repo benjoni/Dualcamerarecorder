@@ -105,7 +105,13 @@ struct SlateFields: View {
                         ForEach(SlateInfo.TimeOfDay.allCases) { Text($0.title).tag($0) }
                     }
                     .labelsHidden().frame(width: 80)
-                    Toggle("MOS", isOn: $slate.mos).help("Without sound")
+                    SegmentGroup {
+                        Toggle(isOn: $slate.mos) {
+                            Label("MOS", systemImage: "speaker.slash")
+                        }
+                        .help("Without sound")
+                    }
+                    .toggleStyle(SegmentToggleStyle(width: 150))
                 }
                 .padding(.top, 14)
             }
@@ -113,11 +119,13 @@ struct SlateFields: View {
             GridRow {
                 field("Note", text: $slate.note)
                     .gridCellColumns(3)
-                Toggle(isOn: $slate.good) {
-                    Label("Good take", systemImage: slate.good ? "star.fill" : "star")
+                SegmentGroup {
+                    Toggle(isOn: $slate.good) {
+                        Label("Good take", systemImage: slate.good ? "star.fill" : "star")
+                    }
+                    .help("Good (circled) take")
                 }
-                .toggleStyle(.button)
-                .tint(.yellow)
+                .toggleStyle(SegmentToggleStyle(width: 150))
                 .padding(.top, 14)
             }
         }
