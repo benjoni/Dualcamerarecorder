@@ -339,7 +339,12 @@ struct PlaybackView: View {
                 }
                 .pickerStyle(.segmented)
                 .frame(width: 140)
+            }
+            .frame(maxWidth: .infinity)
+            .disabled(player.take == nil)
 
+            // Audio on its own row.
+            HStack(spacing: 14) {
                 Toggle("Audio A", isOn: $player.audioA)
                 Toggle("Audio B", isOn: $player.audioB)
 
