@@ -373,10 +373,11 @@ struct PlaybackView: View {
             } else if player.take != nil {
                 Text("This clip has no slate data.")
             }
-            if let offset = player.abOffsetMs {
-                Text(String(format: "Offset B−A: %+.1f ms", offset))
+            // Shown only when A and B drift apart by more than one frame.
+            if let offset = player.abOffsetMs, abs(offset) > 1000 * player.frameDuration.seconds {
+                Label(String(format: "A/B out of sync: B−A %+.1f ms", offset), systemImage: "exclamationmark.triangle.fill")
                     .font(.callout.monospacedDigit())
-                    .foregroundStyle(abs(offset) > 1000 * player.frameDuration.seconds ? Color.red : Color.secondary)
+                    .foregroundStyle(Color.red)
             }
         }
         .foregroundStyle(.secondary)
