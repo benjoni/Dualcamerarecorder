@@ -476,10 +476,6 @@ struct PlaybackView: View {
             Button("Set OUT") { player.setOut() }
                 .keyboardShortcut(shortcut("o"))
                 .help("OUT at the current frame (O)")
-            Button { player.goToIn() } label: { Label("Go to IN", systemImage: "arrow.left.to.line") }
-                .disabled(player.marks.inPoint == nil)
-            Button { player.goToOut() } label: { Label("Go to OUT", systemImage: "arrow.right.to.line") }
-                .disabled(player.marks.outPoint == nil)
             Button("Clear") { player.clearMarks() }
                 .disabled(player.marks.isEmpty)
             SegmentGroup {
@@ -489,6 +485,7 @@ struct PlaybackView: View {
                     .help("Repeat IN → OUT continuously (without OUT: to the end of the clip)")
             }
             .toggleStyle(SegmentToggleStyle(minHeight: 40))
+            .padding(.leading, 36)   // set apart from the IN/OUT buttons
         }
     }
 
