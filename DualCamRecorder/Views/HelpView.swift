@@ -59,7 +59,7 @@ struct HelpView: View {
                     term("Start offset B−A", "After STOP: how much later camera B started than camera A, in milliseconds")
                     term("A/B out of sync", "Playback: the two clips drifted apart by more than one frame")
                     term("IN · OUT · DUR", "Marked points and the length between them")
-                    term("Loop  NO · IN/OUT · Clip", "Playback: play once / repeat IN → OUT / repeat the whole clip")
+                    term("Loop  NO · IN/OUT · CLIP", "Playback: play once / repeat IN → OUT / repeat the whole clip")
                     term("Recording time left", "Estimate from the free disk space and the current codec")
                 }
 
