@@ -535,11 +535,7 @@ struct PlaybackView: View {
                     Text(msg).font(.callout).foregroundStyle(.red)
                 }
             }
-            if let slate = player.slate {
-                Text(slate.longDescription.replacingOccurrences(of: "\n", with: "  ·  "))
-                    .font(.body).lineLimit(2)
-                    .multilineTextAlignment(.center)
-            } else if player.take != nil {
+            if player.slate == nil && player.take != nil {
                 Text("This clip has no slate data.")
             }
             // Shown only when A and B drift apart by more than one frame.
