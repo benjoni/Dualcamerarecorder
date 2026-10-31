@@ -343,6 +343,14 @@ struct PlaybackView: View {
             }
             rangeBar
 
+            // Scene · shot · take in big letters above the transport buttons.
+            if let slate = player.slate {
+                Text(slate.shortLabel)
+                    .font(.system(size: 34, weight: .bold))
+                    .lineLimit(1).minimumScaleFactor(0.6)
+                    .padding(.top, 6)
+            }
+
             // Buttons, one group under another; audio last.
             VStack(spacing: 10) {
                 transportRow
@@ -530,10 +538,6 @@ struct PlaybackView: View {
                 }
             }
             if let slate = player.slate {
-                HStack(spacing: 6) {
-                    Image(systemName: "film.stack")
-                    Text(slate.shortLabel).font(.title2.weight(.semibold))
-                }
                 Text(slate.longDescription.replacingOccurrences(of: "\n", with: "  ·  "))
                     .font(.body).lineLimit(2)
                     .multilineTextAlignment(.center)
