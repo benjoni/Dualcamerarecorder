@@ -47,19 +47,22 @@ struct RecordView: View {
 
     private var normalBody: some View {
         VStack(spacing: 12) {
-            if settings.twoCameras {
-                cameraSwitches
-            }
             HStack(alignment: .top, spacing: 12) {
                 if settings.isCameraOn(.a) {
-                    CameraPanel(controller: controller, channel: controller.channelA, showWaveform: settings.showWaveform)
+                    CameraPanel(controller: controller, channel: controller.channelA, settings: settings, showWaveform: settings.showWaveform)
                 }
                 if settings.isCameraOn(.b) {
-                    CameraPanel(controller: controller, channel: controller.channelB, showWaveform: settings.showWaveform)
+                    CameraPanel(controller: controller, channel: controller.channelB, settings: settings, showWaveform: settings.showWaveform)
                 }
             }
             .animation(.easeInOut(duration: 0.2), value: settings.cameraAOn)
             .animation(.easeInOut(duration: 0.2), value: settings.cameraBOn)
+            .background {
+                ZStack {
+                    ShortcutButton(key: "1", modifiers: [.option]) { controller.toggleCamera(.a) }
+                    ShortcutButton(key: "2", modifiers: [.option]) { controller.toggleCamera(.b) }
+                }
+            }
             Divider()
             transportBar
             Divider()
@@ -168,35 +171,6 @@ struct RecordView: View {
     }
 
     /// Two-camera projects: switch camera A or B off for a while – the other fills the screen and records alone.
-    /// Big ON / OFF buttons for camera A and B (two-camera projects). Turning one camera off makes the
-    /// other fill the screen and record alone – only until it is turned on again or the project is reopened.
-    private var cameraSwitches: some View {
-        HStack(spacing: 14) {
-            ForEach(CameraRole.allCases) { role in
-                CameraSwitchButton(name: role == .a ? settings.cameraNameA : settings.cameraNameB, role: role,
-                                   isOn: settings.isCameraOn(role)) {
-                    controller.toggleCamera(role)
-                }
-                .help("Camera \(role.rawValue) on / off (⌥\(role == .a ? 1 : 2))")
-            }
-            if settings.activeRoles.count == 1 {
-                Label("Only camera \(settings.activeRoles[0].rawValue) records", systemImage: "exclamationmark.triangle.fill")
-                    .font(.title3.weight(.semibold))
-                    .foregroundStyle(.orange)
-            } else {
-                Text("⌥1 / ⌥2").font(.callout).foregroundStyle(.secondary)
-            }
-        }
-        .disabled(controller.isRecording)
-        .background {
-            ZStack {
-                ShortcutButton(key: "1", modifiers: [.option]) { controller.toggleCamera(.a) }
-                ShortcutButton(key: "2", modifiers: [.option]) { controller.toggleCamera(.b) }
-            }
-        }
-        .frame(maxWidth: .infinity)
-    }
-
     private var takeLabel: String {
         var parts: [String] = []
         let names = settings.cameraNames
@@ -222,13 +196,33 @@ struct RecordView: View {
 struct CameraPanel: View {
     @ObservedObject var controller: RecordingController
     @ObservedObject var channel: CameraChannel
+    @ObservedObject var settings: AppSettings
     var showWaveform = false
+
+    /// "Camera A" title. With two cameras it is an ON / OFF button; a camera that is off has no panel,
+    /// so its OFF button is shown next to the title of the camera that is still on.
+    @ViewBuilder
+    private var cameraTitles: some View {
+        let role = channel.role
+        if settings.twoCameras {
+            let other: CameraRole = role == .a ? .b : .a
+            HStack(spacing: 8) {
+                if other == .a && !settings.isCameraOn(.a) { CameraTitleButton(controller: controller, settings: settings, role: .a) }
+                CameraTitleButton(controller: controller, settings: settings, role: role)
+                if other == .b && !settings.isCameraOn(.b) { CameraTitleButton(controller: controller, settings: settings, role: .b) }
+                if !settings.isCameraOn(other) {
+                    Text("Only \(role.rawValue) records").font(.callout).foregroundStyle(.orange)
+                }
+            }
+        } else {
+            Text("Camera \(role.rawValue)").font(.title3.weight(.bold))
+        }
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
-                Text("Camera \(channel.role.rawValue)")
-                    .font(.title3.weight(.bold))
+                cameraTitles
                 // Input device is chosen in Project settings.
                 Spacer(minLength: 12)
                 Text("Name").font(.caption).foregroundStyle(.secondary)
@@ -330,43 +324,31 @@ struct CameraScreen: View {
     }
 }
 
-/// Large coloured ON / OFF button for one camera (green = on, red outline = off).
-struct CameraSwitchButton: View {
-    let name: String
+/// Camera title that switches the camera on / off (two-camera projects, ⌥1 / ⌥2).
+struct CameraTitleButton: View {
+    @ObservedObject var controller: RecordingController
+    @ObservedObject var settings: AppSettings
     let role: CameraRole
-    let isOn: Bool
-    let action: () -> Void
-    @Environment(\.isEnabled) private var isEnabled
 
     var body: some View {
-        Button(action: action) {
-            HStack(spacing: 10) {
-                Image(systemName: isOn ? "video.fill" : "video.slash.fill")
-                    .font(.system(size: 20, weight: .semibold))
-                Text("Camera \(role.rawValue)" + (name != role.rawValue && !name.isEmpty ? " (\(name))" : ""))
-                    .font(.title3.weight(.semibold))
-                    .lineLimit(1)
-                Spacer(minLength: 6)
-                Text(isOn ? "ON" : "OFF")
-                    .font(.headline.weight(.heavy))
-                    .padding(.horizontal, 8).padding(.vertical, 3)
-                    .background(RoundedRectangle(cornerRadius: 5)
-                        .fill(isOn ? Color.white.opacity(0.25) : Color.red.opacity(0.25)))
+        let on = settings.isCameraOn(role)
+        Button { controller.toggleCamera(role) } label: {
+            HStack(spacing: 6) {
+                Text("Camera \(role.rawValue)")
+                    .font(.title3.weight(.bold))
+                    .foregroundStyle(on ? Color.primary : Color.secondary)
+                Text(on ? "ON" : "OFF")
+                    .font(.caption.weight(.heavy))
+                    .foregroundStyle(on ? Color.green : Color.red)
+                    .padding(.horizontal, 5).padding(.vertical, 1)
+                    .overlay(RoundedRectangle(cornerRadius: 4).strokeBorder(on ? Color.green : Color.red, lineWidth: 1))
             }
-            .padding(.horizontal, 14)
-            .frame(width: 230, height: 44)
-            .foregroundStyle(isOn ? Color.white : Color.red)
-            .background(
-                RoundedRectangle(cornerRadius: 8)
-                    .fill(isOn ? Color.green.opacity(0.55) : Color.black.opacity(0.35))
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: 8)
-                    .strokeBorder(isOn ? Color.green : Color.red, lineWidth: 2)
-            )
-            .opacity(isEnabled ? 1 : 0.55)
-            .contentShape(RoundedRectangle(cornerRadius: 8))
+            .padding(.horizontal, 6).padding(.vertical, 2)
+            .background(RoundedRectangle(cornerRadius: 6).fill(Color.gray.opacity(0.18)))
+            .contentShape(RoundedRectangle(cornerRadius: 6))
         }
         .buttonStyle(.plain)
+        .disabled(controller.isRecording)
+        .help("Camera \(role.rawValue) on / off (⌥\(role == .a ? 1 : 2)) – the other camera fills the screen and records alone")
     }
 }

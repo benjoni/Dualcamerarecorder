@@ -59,8 +59,9 @@ Rozhranie aplikácie je **v angličtine** (Record / Playback / Slate …); tento
 - V Playback → **Edit slate…** sa dajú hodnoty dodatočne opraviť.
 
 ### Dočasné vypnutie jednej kamery (Record, ⌥1 / ⌥2)
-- V projekte s dvoma kamerami sú nad obrazmi veľké tlačidlá **Camera A ON / Camera B ON** (zelené = zapnutá, červené OFF = vypnutá). Vypnutá kamera
+- V projekte s dvoma kamerami je nadpis **Camera A / Camera B** nad obrazom tlačidlo so značkou **ON / OFF**. Vypnutá kamera
   zmizne, druhá sa roztiahne na celú šírku a **nahráva sa len ona** (aj Cam clip sa zvýši len jej).
+  Tlačidlo vypnutej kamery (**Camera B OFF**) ostane v nadpise vedľa zapnutej, kliknutím ju znova zapneš.
 - Aspoň jedna kamera ostáva zapnutá; počas nahrávania sa prepínať nedá. Vypnutá kamera beží ďalej
   na pozadí, takže sa zapne okamžite. Platí aj v Screens only a pre živý náhľad na telefóny.
 - Je to len dočasné – nastavenie projektu sa nemení a pri otvorení projektu sú obe kamery zapnuté.
