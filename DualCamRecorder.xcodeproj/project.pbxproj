@@ -32,7 +32,7 @@
 		D2A9926782FDBFA23DEEE2E4 /* TakeMarks.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7A408E4C54F910DBE9D01BE7 /* TakeMarks.swift */; };
 		D774852BBEEBB78BDD7E7FCC /* TakeNaming.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4044731AE50F056638B1C5A0 /* TakeNaming.swift */; };
 		E72739D66FB84EAFDDDD40FB /* Components.swift in Sources */ = {isa = PBXBuildFile; fileRef = D904E764B33B5961920C3080 /* Components.swift */; };
-		59B929AD0BB2C2524815AD72 /* LiveViewSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 59059D1009F5895844435E92 /* LiveViewSheet.swift */; };
+		EE89B967555C804E880097C6 /* LiveViewSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1681762CBB9D0175B77FDC8E /* LiveViewSettings.swift */; };
 		9C38C3FC26E697763DF1A65B /* PlaybackView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 912ECBEF9548220CA52C8564 /* PlaybackView.swift */; };
 		D40ED900BFEB9F13FDCE0BB9 /* ProjectSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A642370AD4E4A6A95DDFAF6B /* ProjectSettingsView.swift */; };
 		50A9FEC0F6D9E21C7BAFB20F /* RecordView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7BD5BC128CE4428835DAFD64 /* RecordView.swift */; };
@@ -75,7 +75,7 @@
 		7A408E4C54F910DBE9D01BE7 /* TakeMarks.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TakeMarks.swift; sourceTree = "<group>"; };
 		4044731AE50F056638B1C5A0 /* TakeNaming.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TakeNaming.swift; sourceTree = "<group>"; };
 		D904E764B33B5961920C3080 /* Components.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Components.swift; sourceTree = "<group>"; };
-		59059D1009F5895844435E92 /* LiveViewSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveViewSheet.swift; sourceTree = "<group>"; };
+		1681762CBB9D0175B77FDC8E /* LiveViewSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveViewSettings.swift; sourceTree = "<group>"; };
 		912ECBEF9548220CA52C8564 /* PlaybackView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaybackView.swift; sourceTree = "<group>"; };
 		A642370AD4E4A6A95DDFAF6B /* ProjectSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProjectSettingsView.swift; sourceTree = "<group>"; };
 		7BD5BC128CE4428835DAFD64 /* RecordView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordView.swift; sourceTree = "<group>"; };
@@ -193,7 +193,7 @@
 			isa = PBXGroup;
 			children = (
 				D904E764B33B5961920C3080 /* Components.swift */,
-				59059D1009F5895844435E92 /* LiveViewSheet.swift */,
+				1681762CBB9D0175B77FDC8E /* LiveViewSettings.swift */,
 				912ECBEF9548220CA52C8564 /* PlaybackView.swift */,
 				A642370AD4E4A6A95DDFAF6B /* ProjectSettingsView.swift */,
 				7BD5BC128CE4428835DAFD64 /* RecordView.swift */,
@@ -328,7 +328,7 @@
 				D2A9926782FDBFA23DEEE2E4 /* TakeMarks.swift in Sources */,
 				D774852BBEEBB78BDD7E7FCC /* TakeNaming.swift in Sources */,
 				E72739D66FB84EAFDDDD40FB /* Components.swift in Sources */,
-				59B929AD0BB2C2524815AD72 /* LiveViewSheet.swift in Sources */,
+				EE89B967555C804E880097C6 /* LiveViewSettings.swift in Sources */,
 				9C38C3FC26E697763DF1A65B /* PlaybackView.swift in Sources */,
 				D40ED900BFEB9F13FDCE0BB9 /* ProjectSettingsView.swift in Sources */,
 				50A9FEC0F6D9E21C7BAFB20F /* RecordView.swift in Sources */,

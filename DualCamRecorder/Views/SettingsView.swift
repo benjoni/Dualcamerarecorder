@@ -9,6 +9,7 @@ import AppKit
 struct SettingsView: View {
     @ObservedObject var settings: AppSettings
     @ObservedObject var controller: RecordingController
+    @ObservedObject var model: AppModel
 
     var body: some View {
         Form {
@@ -24,6 +25,8 @@ struct SettingsView: View {
                 Text("Cameras (1 or 2), devices, camera names, codec, audio and bit depth are set per project – use “Project settings” (⚙, ⌥⌘,) in the project window.")
                     .font(.callout).foregroundStyle(.secondary)
             }
+
+            LiveViewSettingsSection(model: model, server: model.liveView)
 
             Section("DeckLink") {
                 Text(controller.sdkStatus).font(.callout)

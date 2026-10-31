@@ -184,7 +184,7 @@ struct DualCamRecorderApp: App {
         .defaultSize(width: 1500, height: 950)
 
         Settings {
-            SettingsView(settings: model.settings, controller: model.recorder)
+            SettingsView(settings: model.settings, controller: model.recorder, model: model)
         }
     }
 }
@@ -197,7 +197,6 @@ struct ContentView: View {
     /// Hide everything except the camera pictures / players (⌘F).
     @State private var screensOnly = false
     @State private var showProjectSettings = false
-    @State private var showLiveView = false
 
     var body: some View {
         Group {
@@ -253,9 +252,6 @@ struct ContentView: View {
                 .padding(.top, 4)
             }
         }
-        .sheet(isPresented: $showLiveView) {
-            LiveViewSheet(model: model, server: model.liveView)
-        }
         .sheet(isPresented: $showProjectSettings) {
             ProjectSettingsView(model: model, settings: settings, recorder: model.recorder, backup: model.backup)
         }
@@ -268,9 +264,6 @@ struct ContentView: View {
                 }
                 .disabled(model.recorder.isRecording)
                 .help(model.recorder.isRecording ? "Stop recording first" : "Back to the project list")
-            }
-            ToolbarItem(placement: .primaryAction) {
-                LiveViewToolbarButton(server: model.liveView) { showLiveView = true }
             }
             ToolbarItem(placement: .primaryAction) {
                 Button {
@@ -315,16 +308,3 @@ struct ContentView: View {
     }
 }
 
-/// Toolbar button that shows how many phones are watching.
-struct LiveViewToolbarButton: View {
-    @ObservedObject var server: LiveViewServer
-    let action: () -> Void
-
-    var body: some View {
-        Button(action: action) {
-            Label(server.isRunning ? "Phones (\(server.clientCount))" : "Phones",
-                  systemImage: server.isRunning ? "iphone.radiowaves.left.and.right" : "iphone")
-        }
-        .help("Live view on phones over Wi-Fi")
-    }
-}
