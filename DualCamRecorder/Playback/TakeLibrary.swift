@@ -20,7 +20,15 @@ struct Take: Identifiable, Hashable {
     var folder: URL? { (camA ?? camB)?.deletingLastPathComponent() }
 
     var id: Int { number }
+    var shootingDay: String { slate?.shootingDay.trimmingCharacters(in: .whitespaces) ?? "" }
     var name: String { TakeNaming.displayName(take: number) }
+}
+
+struct TakeDayGroup: Identifiable {
+    let day: String
+    var takes: [Take]
+    var id: String { day }
+    var title: String { day.isEmpty ? "No shooting day" : "Shooting day \(day)" }
 }
 
 final class TakeLibrary: ObservableObject {
@@ -77,8 +85,38 @@ final class TakeLibrary: ObservableObject {
             byNumber[number]?.marks = TakeMarksStore.load(folder: folder, take: take.number)
             byNumber[number]?.slate = TakeSlateStore.load(folder: folder, take: take.number)
         }
-        return byNumber.values.sorted { $0.number > $1.number }
+        return sortedByShootingDay(Array(byNumber.values))
     }
+
+    /// Newest shooting day first (natural order: "10" after "9", "D03" after "D02"),
+    /// clips without a shooting day last; inside a day newest clip first.
+    static func sortedByShootingDay(_ takes: [Take]) -> [Take] {
+        takes.sorted { a, b in
+            let da = a.shootingDay, db = b.shootingDay
+            if da != db {
+                if da.isEmpty { return false }
+                if db.isEmpty { return true }
+                return da.localizedStandardCompare(db) == .orderedDescending
+            }
+            return a.number > b.number
+        }
+    }
+
+    /// Clips grouped by shooting day, in list order.
+    var groupedByShootingDay: [TakeDayGroup] {
+        var groups: [TakeDayGroup] = []
+        for take in takes {
+            if let last = groups.last, last.day == take.shootingDay {
+                groups[groups.count - 1].takes.append(take)
+            } else {
+                groups.append(TakeDayGroup(day: take.shootingDay, takes: [take]))
+            }
+        }
+        return groups
+    }
+
+    /// Most recently recorded clip (highest clip number), regardless of the sort order.
+    var latestTake: Take? { takes.max { $0.number < $1.number } }
 
     private func startWatching(_ url: URL) {
         watcher?.cancel()

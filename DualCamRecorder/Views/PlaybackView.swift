@@ -114,7 +114,7 @@ struct PlaybackView: View {
 
     /// Newest clip = first in the list (sorted by clip number, descending).
     private func selectLatest() {
-        guard let latest = library.takes.first else { return }
+        guard let latest = library.latestTake else { return }
         if selection != latest.id {
             selection = latest.id
         } else if player.take?.id != latest.id {
@@ -138,7 +138,7 @@ struct PlaybackView: View {
                 if let slate = take.slate {
                     Text(slate.shortLabel).foregroundStyle(.secondary)
                 }
-                if take.id == library.takes.first?.id {
+                if take.id == library.latestTake?.id {
                     Badge(text: "LATEST", color: .blue)
                 }
             } else {
@@ -163,36 +163,42 @@ struct PlaybackView: View {
                 .font(.caption2).foregroundStyle(.secondary)
                 .lineLimit(1).truncationMode(.middle)
                 .padding(.horizontal, 8)
-            List(library.takes, selection: $selection) { take in
-                HStack(spacing: 8) {
-                    TakeThumbnail(take: take)
-                    VStack(alignment: .leading, spacing: 2) {
-                        HStack(spacing: 6) {
-                            Text(take.name).font(.body.weight(.semibold)).foregroundStyle(.primary)
-                            if take.slate?.good == true {
-                                Image(systemName: "star.fill").foregroundStyle(.yellow).help("Good take")
+            List(selection: $selection) {
+                ForEach(library.groupedByShootingDay) { group in
+                    Section(group.title) {
+                        ForEach(group.takes) { take in
+                            HStack(spacing: 8) {
+                                TakeThumbnail(take: take)
+                                VStack(alignment: .leading, spacing: 2) {
+                                    HStack(spacing: 6) {
+                                        Text(take.name).font(.body.weight(.semibold)).foregroundStyle(.primary)
+                                        if take.slate?.good == true {
+                                            Image(systemName: "star.fill").foregroundStyle(.yellow).help("Good take")
+                                        }
+                                        if let m = take.marks, !m.isEmpty {
+                                            Image(systemName: "flag.fill").foregroundStyle(.yellow).help("Has IN/OUT")
+                                        }
+                                    }
+                                    if let slate = take.slate {
+                                        Text(slate.sceneShotTake).foregroundStyle(.primary)
+                                    }
+                                    HStack(spacing: 6) {
+                                        Text(take.camA != nil ? "A" : "–").foregroundStyle(take.camA != nil ? Color.green : Color.secondary)
+                                        Text(take.camB != nil ? "B" : "–").foregroundStyle(take.camB != nil ? Color.green : Color.secondary)
+                                        Text(DisplayFormat.bytes(take.sizeBytes))
+                                    }
+                                    HStack(spacing: 4) {
+                                        Text(take.modified, style: .date)
+                                        Text(take.modified, style: .time)
+                                    }
+                                }
+                                .font(.caption).foregroundStyle(.secondary)
                             }
-                            if let m = take.marks, !m.isEmpty {
-                                Image(systemName: "flag.fill").foregroundStyle(.yellow).help("Has IN/OUT")
-                            }
-                        }
-                        if let slate = take.slate {
-                            Text(slate.shortLabel).foregroundStyle(.primary)
-                        }
-                        HStack(spacing: 6) {
-                            Text(take.camA != nil ? "A" : "–").foregroundStyle(take.camA != nil ? Color.green : Color.secondary)
-                            Text(take.camB != nil ? "B" : "–").foregroundStyle(take.camB != nil ? Color.green : Color.secondary)
-                            Text(DisplayFormat.bytes(take.sizeBytes))
-                        }
-                        HStack(spacing: 4) {
-                            Text(take.modified, style: .date)
-                            Text(take.modified, style: .time)
+                            .padding(.vertical, 2)
+                            .tag(take.id)
                         }
                     }
-                    .font(.caption).foregroundStyle(.secondary)
                 }
-                .padding(.vertical, 2)
-                .tag(take.id)
             }
         }
     }

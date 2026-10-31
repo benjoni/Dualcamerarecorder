@@ -21,8 +21,13 @@ struct SlateBoard: View {
             }
             .frame(height: 10)
             .rotationEffect(.degrees(-2))
-            Text(slate.production.isEmpty ? "PRODUCTION" : slate.production.uppercased())
-                .font(.caption.weight(.bold)).lineLimit(1)
+            HStack {
+                Text(slate.production.isEmpty ? "PRODUCTION" : slate.production.uppercased())
+                    .lineLimit(1)
+                Spacer(minLength: 6)
+                if !slate.shootingDay.isEmpty { Text("DAY \(slate.shootingDay)") }
+            }
+            .font(.caption.weight(.bold))
             HStack(alignment: .top, spacing: 14) {
                 cell("SCENE", slate.scene.isEmpty ? "–" : slate.scene)
                 cell("SHOT", slate.shot.isEmpty ? "–" : slate.shot)
@@ -69,7 +74,10 @@ struct SlateFields: View {
                 field("Production", text: $slate.production)
                 field("Director", text: $slate.director)
                 field("DoP", text: $slate.cameraOperator)
-                field("Roll", text: $slate.roll).frame(maxWidth: 110)
+                HStack(spacing: 10) {
+                    field("Shooting day", text: $slate.shootingDay).frame(maxWidth: 100)
+                    field("Roll", text: $slate.roll).frame(maxWidth: 110)
+                }
             }
             .disabled(locked)
             GridRow {

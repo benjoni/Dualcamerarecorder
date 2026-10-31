@@ -41,7 +41,7 @@ Rozhranie aplikácie je **v angličtine** (Record / Playback / Slate …); tento
 - Počítadlá: zachytené / zapísané / **vynechané snímky (vstup)** / **vynechané (zápis)**,
   audio meter, odznak „Bez signálu“.
 - **Voľné miesto** na cieľovom disku + odhad zostávajúceho času nahrávania.
-- **Klapka** pod nahrávaním: projekt, réžia, kamera, rola, **obraz**, **záber**, **pokus**,
+- **Klapka** pod nahrávaním: projekt, **shooting day** (natáčací deň), réžia, DoP, rola, **obraz**, **záber**, **pokus**,
   INT/EXT, DAY/NIGHT/DUSK, MOS, poznámka a „dobrý pokus“ (★). Pokus sa po každom zábere sám zvýši
   o 1, zmena obrazu alebo záberu ho nastaví na 1. Počas nahrávania sú obraz/záber/pokus zamknuté,
   poznámku a ★ možno meniť. Údaje sa uložia do `C001_SLATE.JSON` a zapíšu sa aj ako
@@ -55,6 +55,9 @@ Rozhranie aplikácie je **v angličtine** (Record / Playback / Slate …); tento
 ### Záložka PREHRÁVANIE
 - Pri zábere v zozname je aj „Obraz · Záber · Pokus“ a ★ pri dobrom pokuse; pod prehrávačmi
   je súhrn klapky a tlačidlo **Klapka…** na dodatočnú úpravu (uloží sa do `C###_SLATE.JSON`).
+- Zoznam klipov je **zoradený podľa shooting day** (najnovší deň hore, prirodzené poradie
+  „9 < 10“, „D02 < D03“), každý deň má vlastný nadpis; v rámci dňa najnovší klip hore.
+  Klipy bez shooting day sú na konci.
 - **Zoznam klipov je predvolene skrytý** – otvorí/skryje ho tlačidlo **Clips** (⌘L), takže
   prehrávače majú celú šírku okna. Pri prepnutí na Playback sa **automaticky načíta posledný
   nahraný klip** (označený LATEST); iný klip vyberieš v zozname a zoznam potom skryješ.

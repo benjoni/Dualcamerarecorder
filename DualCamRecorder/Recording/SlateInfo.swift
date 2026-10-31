@@ -34,6 +34,7 @@ struct SlateInfo: Codable, Hashable {
     }
 
     var production = ""      // production / film title
+    var shootingDay = ""     // shooting day (e.g. "3" or "D03")
     var director = ""        // director
     var cameraOperator = ""  // camera operator (DoP)
     var scene = ""           // scene
@@ -47,8 +48,13 @@ struct SlateInfo: Codable, Hashable {
     var good = false         // good (circled) take
     var recordedAt: Date?    // set at REC
 
-    /// "Scene 12 · Shot 3 · Take 2"
+    /// "Day 3 · Scene 12 · Shot 3 · Take 2"
     var shortLabel: String {
+        shootingDay.isEmpty ? sceneShotTake : "Day \(shootingDay) · " + sceneShotTake
+    }
+
+    /// "Scene 12 · Shot 3 · Take 2"
+    var sceneShotTake: String {
         var parts: [String] = []
         if !scene.isEmpty { parts.append("Scene \(scene)") }
         if !shot.isEmpty { parts.append("Shot \(shot)") }
@@ -60,6 +66,7 @@ struct SlateInfo: Codable, Hashable {
     var longDescription: String {
         var lines: [String] = []
         if !production.isEmpty { lines.append("Production: \(production)") }
+        if !shootingDay.isEmpty { lines.append("Shooting day: \(shootingDay)") }
         lines.append(shortLabel)
         if !roll.isEmpty { lines.append("Roll: \(roll)") }
         let flags = [location.rawValue, timeOfDay.rawValue, mos ? "MOS" : ""].filter { !$0.isEmpty }
@@ -92,6 +99,28 @@ struct SlateInfo: Codable, Hashable {
             item(.quickTimeMetadataCameraIdentifier, names.name(camera)),
             item(.quickTimeMetadataCreationDate, date),
         ].compactMap { $0 }
+    }
+}
+
+extension SlateInfo {
+    /// Tolerant decoding: fields missing in slates saved by older versions get their defaults.
+    init(from decoder: Decoder) throws {
+        self.init()
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        production = try c.decodeIfPresent(String.self, forKey: .production) ?? production
+        shootingDay = try c.decodeIfPresent(String.self, forKey: .shootingDay) ?? shootingDay
+        director = try c.decodeIfPresent(String.self, forKey: .director) ?? director
+        cameraOperator = try c.decodeIfPresent(String.self, forKey: .cameraOperator) ?? cameraOperator
+        scene = try c.decodeIfPresent(String.self, forKey: .scene) ?? scene
+        shot = try c.decodeIfPresent(String.self, forKey: .shot) ?? shot
+        take = try c.decodeIfPresent(Int.self, forKey: .take) ?? take
+        roll = try c.decodeIfPresent(String.self, forKey: .roll) ?? roll
+        location = try c.decodeIfPresent(Location.self, forKey: .location) ?? location
+        timeOfDay = try c.decodeIfPresent(TimeOfDay.self, forKey: .timeOfDay) ?? timeOfDay
+        mos = try c.decodeIfPresent(Bool.self, forKey: .mos) ?? mos
+        note = try c.decodeIfPresent(String.self, forKey: .note) ?? note
+        good = try c.decodeIfPresent(Bool.self, forKey: .good) ?? good
+        recordedAt = try c.decodeIfPresent(Date.self, forKey: .recordedAt)
     }
 }
 
