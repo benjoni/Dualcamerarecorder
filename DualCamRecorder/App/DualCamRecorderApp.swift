@@ -194,6 +194,15 @@ struct DualCamRecorderApp: App {
                 .preferredColorScheme(.dark)
         }
         .defaultSize(width: 1500, height: 950)
+        .commands {
+            CommandGroup(replacing: .help) { HelpMenuButton() }
+        }
+
+        Window("DualCamRecorder Help", id: "help") {
+            HelpView()
+                .preferredColorScheme(.dark)
+        }
+        .defaultSize(width: 720, height: 760)
 
         Settings {
             SettingsView(settings: model.settings, controller: model.recorder, model: model)
@@ -210,6 +219,7 @@ struct ContentView: View {
     /// Hide everything except the camera pictures / players (⌘F).
     @State private var screensOnly = false
     @State private var showProjectSettings = false
+    @Environment(\.openWindow) private var openWindow
 
     var body: some View {
         Group {
@@ -311,6 +321,15 @@ struct ContentView: View {
             }
             ToolbarItem(placement: .primaryAction) {
                 Button {
+                    openWindow(id: "help")
+                } label: {
+                    Label("Help", systemImage: "questionmark.circle")
+                        .labelStyle(.titleAndIcon)
+                }
+                .help("Keyboard shortcuts, symbols and file names (⌘?)")
+            }
+            ToolbarItem(placement: .primaryAction) {
+                Button {
                     screensOnly.toggle()
                 } label: {
                     Label(screensOnly ? "Show controls" : "Screens only",
@@ -345,5 +364,15 @@ private struct HiddenToolbarTitle: ViewModifier {
         } else {
             content
         }
+    }
+}
+
+/// Help menu → DualCamRecorder Help (⌘?).
+private struct HelpMenuButton: View {
+    @Environment(\.openWindow) private var openWindow
+
+    var body: some View {
+        Button("DualCamRecorder Help") { openWindow(id: "help") }
+            .keyboardShortcut("?", modifiers: [.command])
     }
 }
