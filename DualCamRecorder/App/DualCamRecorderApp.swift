@@ -183,11 +183,13 @@ struct DualCamRecorderApp: App {
         WindowGroup("DualCamRecorder") {
             ContentView(model: model, settings: model.settings, projects: model.projects)
                 .frame(minWidth: 1100, minHeight: 700)
+                .preferredColorScheme(.dark)
         }
         .defaultSize(width: 1500, height: 950)
 
         Settings {
             SettingsView(settings: model.settings, controller: model.recorder, model: model)
+                .preferredColorScheme(.dark)
         }
     }
 }
@@ -206,6 +208,7 @@ struct ContentView: View {
             if let project = projects.current {
                 workspace
                     .navigationTitle(project.project.name)
+                    .modifier(HiddenToolbarTitle())
             } else {
                 WelcomeView(model: model, projects: projects, settings: settings)
                     .navigationTitle("DualCamRecorder")
@@ -244,26 +247,37 @@ struct ContentView: View {
                     }
                 }
             } else {
-                TabView(selection: $tab) {
-                    RecordView(controller: model.recorder, settings: model.settings, backup: model.backup)
-                        .tabItem { Label("Record", systemImage: "record.circle") }
-                        .tag(0)
-                    PlaybackView(library: model.library, player: model.player, settings: model.settings)
-                        .tabItem { Label("Playback", systemImage: "play.rectangle") }
-                        .tag(1)
+                // Record / Playback switch under the toolbar (TabView puts it into the title bar on macOS 26).
+                VStack(spacing: 0) {
+                    Picker("", selection: $tab) {
+                        Label("Record", systemImage: "record.circle").tag(0)
+                        Label("Playback", systemImage: "play.fill").tag(1)
+                    }
+                    .pickerStyle(.segmented)
+                    .labelsHidden()
+                    .fixedSize()
+                    .padding(.top, 8)
+                    if tab == 0 {
+                        RecordView(controller: model.recorder, settings: model.settings, backup: model.backup)
+                    } else {
+                        PlaybackView(library: model.library, player: model.player, settings: model.settings)
+                    }
                 }
-                .padding(.top, 4)
             }
         }
         .sheet(isPresented: $showProjectSettings) {
             ProjectSettingsView(model: model, settings: settings, recorder: model.recorder, backup: model.backup)
         }
         .toolbar {
+            ToolbarItem(placement: .principal) {
+                Text(projects.current?.project.name ?? "").font(.headline)
+            }
             ToolbarItem(placement: .navigation) {
                 Button {
                     model.closeProject()
                 } label: {
                     Label("Projects", systemImage: "square.grid.2x2")
+                        .labelStyle(.titleAndIcon)
                 }
                 .disabled(model.recorder.isRecording)
                 .help(model.recorder.isRecording ? "Stop recording first" : "Back to the project list")
@@ -273,6 +287,7 @@ struct ContentView: View {
                     showProjectSettings = true
                 } label: {
                     Label("Project settings", systemImage: "gearshape")
+                        .labelStyle(.titleAndIcon)
                 }
                 .keyboardShortcut(",", modifiers: [.command, .option])
                 .help("Cameras, codec, audio of this project (⌥⌘,)")
@@ -280,6 +295,7 @@ struct ContentView: View {
             ToolbarItem(placement: .primaryAction) {
                 Toggle(isOn: $settings.showWaveform) {
                     Label("Waveform", systemImage: "waveform.path.ecg")
+                        .labelStyle(.titleAndIcon)
                 }
                 .toggleStyle(.button)
                 .keyboardShortcut("w", modifiers: [.command, .shift])
@@ -291,6 +307,7 @@ struct ContentView: View {
                 } label: {
                     Label(screensOnly ? "Show controls" : "Screens only",
                           systemImage: screensOnly ? "slider.horizontal.3" : "rectangle.split.2x1")
+                        .labelStyle(.titleAndIcon)
                 }
                 .keyboardShortcut("f", modifiers: [.command])
                 .help(screensOnly ? "Show all controls (⌘F)" : "Hide everything except the pictures (⌘F)")
@@ -311,3 +328,14 @@ struct ContentView: View {
     }
 }
 
+
+/// The project name is shown centered in the toolbar; hide the default title on the left (macOS 15+).
+private struct HiddenToolbarTitle: ViewModifier {
+    func body(content: Content) -> some View {
+        if #available(macOS 15.0, *) {
+            content.toolbar(removing: .title)
+        } else {
+            content
+        }
+    }
+}
