@@ -32,8 +32,6 @@ final class SyncPlaybackController: ObservableObject {
     var isScrubbing = false
     /// IN / OUT of the loaded take (seconds).
     @Published private(set) var marks = TakeMarks()
-    /// Play only between IN and OUT (start at IN, stop at OUT).
-    @Published var limitToRange = true
     /// Loop: at OUT (or the end of the clip) jump back to IN (or the start) and keep playing.
     @Published var loopInOut = false {
         didSet {
@@ -48,8 +46,8 @@ final class SyncPlaybackController: ObservableObject {
             if isPlaying && oldValue != loopClip { play() }
         }
     }
-    /// The IN–OUT range is used when "Play IN–OUT only" or "Loop IN/OUT" is on (not while looping the whole clip).
-    private var useRange: Bool { !loopClip && (limitToRange || loopInOut) }
+    /// The IN–OUT range is used only by "Loop IN/OUT"; "No" and "Clip" play the whole clip.
+    private var useRange: Bool { loopInOut }
     @Published private(set) var marksMessage: String?
     /// Slate of the loaded take (nil for takes recorded without one).
     @Published private(set) var slate: SlateInfo?

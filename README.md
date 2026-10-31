@@ -133,8 +133,9 @@ Rozhranie aplikácie je **v angličtine** (Record / Playback / Slate …); tento
 - Po výbere sa načíta CamA a CamB vedľa seba v dvoch `AVPlayer`-och.
 - Spoločné **play/pause** (medzerník), **posuvník**, **krokovanie po snímkach** (← / →),
   **rýchlosť 0,5× / 1× / 2×**, výber zvuku A/B, zobrazenie rozdielu pozícií B−A.
-- **IN / OUT:** záber sa po načítaní nastaví na IN; pri zapnutom „Hrať len IN–OUT“ prehrávanie
-  štartuje na IN a zastaví presne na OUT (oba prehrávače). **Loop: IN/OUT** prehráva úsek IN → OUT dokola (bez OUT až do konca klipu), **Loop: Clip** (predvolene zapnutý) prehráva dokola celý klip a IN/OUT ignoruje (vpravo pod Speed; opätovné kliknutie loop vypne). IN/OUT sa dá v prehrávaní upraviť
+- **IN / OUT:** záber sa po načítaní nastaví na IN. **Loop** (vpravo pod Speed): **No** prehrá klip raz do konca,
+  **IN/OUT** prehráva úsek IN → OUT dokola (bez OUT až do konca klipu, oba prehrávače zastavia presne na OUT),
+  **Clip** (predvolene) prehráva dokola celý klip a IN/OUT ignoruje. IN/OUT sa dá v prehrávaní upraviť
   (I / O na aktuálnej snímke), skočiť na IN/OUT alebo zrušiť – zmeny sa hneď uložia do
   `C###_MARKS.JSON`. Zábery so značkami majú v zozname žltú vlajku.
 - Synchronizácia cez `setRate(_:time:atHostTime:)` so spoločným časom hostiteľských hodín;
