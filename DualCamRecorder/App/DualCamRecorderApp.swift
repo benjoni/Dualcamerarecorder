@@ -124,6 +124,8 @@ final class AppModel: ObservableObject {
         let watching = liveView.hasViewers
         recorder.channelA.preview.streamEnabled = watching && settings.isCameraOn(.a)
         recorder.channelB.preview.streamEnabled = watching && settings.isCameraOn(.b)
+        recorder.channelA.preview.streamQuality = liveView.quality
+        recorder.channelB.preview.streamQuality = liveView.quality
         guard watching else { return }
 
         let names = settings.cameraNames

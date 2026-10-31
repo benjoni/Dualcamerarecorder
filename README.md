@@ -142,12 +142,16 @@ Rozhranie aplikácie je **v angličtine** (Record / Playback / Slate …); tento
 - **Settings (⌘,) → Live view on phones** – zapni prepínač. Zobrazí sa **QR kód**
   a adresa (napr. `http://192.168.1.23:8090/?k=ab12cd34`) a počet pripojených telefónov.
 - Telefóny v **rovnakej Wi-Fi** (iPhone aj Android, aj viac naraz) naskenujú QR kód a v prehliadači
-  vidia obe kamery naživo (~5 obr./s, 960×540 JPEG), ● REC s časom, súbory a klapku; na výšku pod
-  sebou, na šírku vedľa seba. Netreba žiadnu aplikáciu.
+  vidia obe kamery naživo, ● REC s časom, súbory a klapku; na výšku pod sebou, na šírku vedľa seba.
+  Netreba žiadnu aplikáciu.
+- Obraz sa posiela ako **MJPEG stream** (Mac posiela každý nový obrázok po jednom otvorenom spojení).
+  **Picture quality**: **Low** 640×360 ~6 obr./s · **Standard** 960×540 ~12 obr./s ·
+  **High** 1280×720 ~12–15 obr./s (pri 25p zdroji 12,5; treba dobrú Wi-Fi, ~5–15 Mbit/s na kameru podľa obrazu).
+  Pomalý telefón obrázky preskakuje, oneskorenie sa nenahromadí.
 - Adresa obsahuje náhodný prístupový kód – bez neho server odpovie 403. **New access code** zneplatní
   staré odkazy.
-- JPEG sa robí zo zmenšeného náhľadu a len vtedy, keď sa nejaký telefón pozerá → nahrávanie to
-  nezaťaží. Pri prvom spustení macOS môže žiadať povolenie prichádzajúcich spojení / lokálnej siete.
+- JPEG sa robí len vtedy, keď sa nejaký telefón pozerá, na samostatnej fronte (nespomalí náhľad
+  na Macu) → nahrávanie to nezaťaží. Pri prvom spustení macOS môže žiadať povolenie prichádzajúcich spojení / lokálnej siete.
 - Telefóny vidia vstupy kamier (aj keď je na Macu otvorený Playback), nie prehrávané klipy.
 
 ### Export PDF (⇧⌘P)

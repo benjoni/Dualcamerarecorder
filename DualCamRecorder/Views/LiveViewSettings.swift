@@ -3,7 +3,7 @@
 //  DualCamRecorder
 //
 //  "Live view on phones" section of the app Settings (⌘,): on/off, QR code / address,
-//  number of phones watching, new access code.
+//  number of phones watching, picture quality, new access code.
 //
 
 import SwiftUI
@@ -48,10 +48,17 @@ struct LiveViewSettingsSection: View {
                 Text("The Mac is not connected to a network (Wi-Fi or Ethernet).").foregroundStyle(.red)
             }
 
+            Picker("Picture quality", selection: $server.quality) {
+                ForEach(LiveViewQuality.allCases) { Text($0.title).tag($0) }
+            }
+            .pickerStyle(.segmented)
+            Text(server.quality.summary + (server.quality == .high ? " – needs a good Wi-Fi" : ""))
+                .font(.caption).foregroundStyle(.secondary)
+
             if let error = server.error {
                 Text(error).foregroundStyle(.red)
             }
-            Text("Phones open the page in their web browser – no app needed. About 5 pictures per second, made from the preview only while a phone is watching, so recording is not affected. The first time, allow incoming connections when macOS asks.")
+            Text("Phones open the page in their web browser – no app needed. Pictures are streamed only while a phone is watching and never slow down recording. The first time, allow incoming connections when macOS asks.")
                 .font(.caption).foregroundStyle(.secondary)
         }
     }

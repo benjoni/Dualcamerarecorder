@@ -39,20 +39,32 @@ final class PreviewRenderer {
         }
     }
 
-    private struct State { var busy = false; var active = true; var waveform = false; var stream = false }
+    private struct State {
+        var busy = false; var active = true; var waveform = false; var stream = false
+        var streamQuality = LiveViewQuality.standard; var jpegBusy = false
+    }
     private var lastWaveformNanos: UInt64 = 0   // preview queue only
     private var lastJPEGNanos: UInt64 = 0       // preview queue only
 
-    /// Live view for phones: JPEGs (~5 per second) are produced while this is on, even when the
+    /// Live view for phones: JPEGs are produced while this is on, even when the
     /// picture itself is not on screen (e.g. Playback tab).
     var streamEnabled: Bool {
         get { state.withLock { $0.stream } }
         set { state.withLock { $0.stream = newValue } }
     }
-    /// Receives the JPEGs (called on the preview queue).
+    /// Size, rate and JPEG quality of the pictures for phones.
+    var streamQuality: LiveViewQuality {
+        get { state.withLock { $0.streamQuality } }
+        set { state.withLock { $0.streamQuality = newValue } }
+    }
+    /// Receives the JPEGs (called on the JPEG queue).
     var onJPEG: ((Data) -> Void)?
     private let state = OSAllocatedUnfairLock(initialState: State())
     private let queue = DispatchQueue(label: "preview", qos: .userInitiated)
+    /// JPEG encoding runs here so it never delays the on-screen preview.
+    private let jpegQueue = DispatchQueue(label: "preview-jpeg", qos: .utility)
+    private var streamPool: CVPixelBufferPool?    // preview queue only
+    private var streamPoolWidth = 0               // preview queue only
     private var transferSession: VTPixelTransferSession?
     private var pool: CVPixelBufferPool?
     private let outWidth = 960
@@ -95,10 +107,20 @@ final class PreviewRenderer {
                 let image = WaveformRenderer.image(from: small)
                 DispatchQueue.main.async { self.waveform.image = image }
             }
-            // JPEG for phones, ~5 Hz.
-            if self.streamEnabled, now - self.lastJPEGNanos > 190_000_000, let onJPEG = self.onJPEG {
+            // JPEG for phones; skipped while the previous one is still being encoded.
+            let quality = self.streamQuality
+            if self.streamEnabled, now - self.lastJPEGNanos > quality.frameIntervalNanos, let onJPEG = self.onJPEG,
+               self.beginJPEG() {
                 self.lastJPEGNanos = now
-                if let jpeg = Self.jpeg(from: small) { onJPEG(jpeg) }
+                let picture = quality.width == self.outWidth ? small : self.streamPicture(from: pixelBuffer, quality: quality)
+                if let picture {
+                    self.jpegQueue.async {
+                        defer { self.state.withLock { $0.jpegBusy = false } }
+                        if let jpeg = Self.jpeg(from: picture, quality: quality.jpegQuality) { onJPEG(jpeg) }
+                    }
+                } else {
+                    self.state.withLock { $0.jpegBusy = false }
+                }
             }
             guard display else { return }
             DispatchQueue.main.async {
@@ -115,14 +137,44 @@ final class PreviewRenderer {
         }
     }
 
-    /// 960×540 BGRA → JPEG (quality 0.6, ~60–90 kB).
-    private static func jpeg(from pixelBuffer: CVPixelBuffer) -> Data? {
+    private func beginJPEG() -> Bool {
+        state.withLock { s in
+            if s.jpegBusy { return false }
+            s.jpegBusy = true
+            return true
+        }
+    }
+
+    /// Source frame scaled to the live view size when it differs from the 960×540 preview.
+    private func streamPicture(from source: CVPixelBuffer, quality: LiveViewQuality) -> CVPixelBuffer? {
+        guard let transferSession else { return nil }
+        if streamPool == nil || streamPoolWidth != quality.width {
+            let attrs: [String: Any] = [
+                kCVPixelBufferWidthKey as String: quality.width,
+                kCVPixelBufferHeightKey as String: quality.height,
+                kCVPixelBufferPixelFormatTypeKey as String: kCVPixelFormatType_32BGRA,
+                kCVPixelBufferIOSurfacePropertiesKey as String: [String: Any](),
+            ]
+            var p: CVPixelBufferPool?
+            CVPixelBufferPoolCreate(kCFAllocatorDefault, nil, attrs as CFDictionary, &p)
+            streamPool = p
+            streamPoolWidth = quality.width
+        }
+        guard let streamPool else { return nil }
+        var out: CVPixelBuffer?
+        guard CVPixelBufferPoolCreatePixelBuffer(kCFAllocatorDefault, streamPool, &out) == kCVReturnSuccess, let dst = out,
+              VTPixelTransferSessionTransferImage(transferSession, from: source, to: dst) == noErr else { return nil }
+        return dst
+    }
+
+    /// BGRA → JPEG (640×360 … 1280×720, ~40–200 kB).
+    private static func jpeg(from pixelBuffer: CVPixelBuffer, quality: Double) -> Data? {
         var image: CGImage?
         VTCreateCGImageFromCVPixelBuffer(pixelBuffer, options: nil, imageOut: &image)
         guard let image else { return nil }
         let data = NSMutableData()
         guard let dest = CGImageDestinationCreateWithData(data, UTType.jpeg.identifier as CFString, 1, nil) else { return nil }
-        CGImageDestinationAddImage(dest, image, [kCGImageDestinationLossyCompressionQuality: 0.6] as CFDictionary)
+        CGImageDestinationAddImage(dest, image, [kCGImageDestinationLossyCompressionQuality: quality] as CFDictionary)
         guard CGImageDestinationFinalize(dest) else { return nil }
         return data as Data
     }

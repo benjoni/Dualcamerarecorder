@@ -4,7 +4,8 @@
 //
 //  Live view for phones on the local network: a tiny HTTP server (Network.framework) that serves
 //    /                 mobile web page (both cameras, REC state, slate)
-//    /frame/A.jpg      latest JPEG of camera A (B likewise) – the page reloads them ~5× per second
+//    /stream/A.mjpg    MJPEG stream of camera A (B likewise) – every new JPEG is pushed to the phone
+//    /frame/A.jpg      latest JPEG of camera A (B likewise), single picture
 //    /status.json      recording state, timer, files, slate
 //  Every request must carry the access key (?k=…) that is part of the URL / QR code.
 //  Frames are produced by the PreviewRenderers only while a phone has asked for them recently.
@@ -22,6 +23,10 @@ final class LiveViewServer: ObservableObject {
     @Published private(set) var error: String?
     @Published private(set) var clientCount = 0
     @Published private(set) var accessKey: String
+    /// Size / rate / JPEG quality of the pictures sent to phones (app-wide setting).
+    @Published var quality: LiveViewQuality {
+        didSet { UserDefaults.standard.set(quality.rawValue, forKey: "liveViewQuality") }
+    }
 
     private var listener: NWListener?
     private let queue = DispatchQueue(label: "liveview-server", qos: .utility)
@@ -33,7 +38,21 @@ final class LiveViewServer: ObservableObject {
     private let shared = OSAllocatedUnfairLock(initialState: Shared())
     private var clientTimer: Timer?
 
+    /// Open MJPEG connections (server queue only). A phone that is still receiving the previous
+    /// picture skips the next one, so a slow Wi-Fi never piles up delay.
+    private final class StreamClient {
+        let connection: NWConnection
+        let camera: String
+        let host: String?
+        var sending = false
+        init(connection: NWConnection, camera: String, host: String?) {
+            self.connection = connection; self.camera = camera; self.host = host
+        }
+    }
+    private var streams: [ObjectIdentifier: StreamClient] = [:]
+
     init() {
+        quality = LiveViewQuality(rawValue: UserDefaults.standard.string(forKey: "liveViewQuality") ?? "") ?? .standard
         if let key = UserDefaults.standard.string(forKey: "liveViewKey"), !key.isEmpty {
             accessKey = key
         } else {
@@ -82,6 +101,10 @@ final class LiveViewServer: ObservableObject {
         isRunning = false
         clientCount = 0
         shared.withLock { $0.clients = [:]; $0.frames = [:] }
+        queue.async { [weak self] in
+            self?.streams.values.forEach { $0.connection.cancel() }
+            self?.streams = [:]
+        }
     }
 
     /// New key: links / QR codes given out before stop working.
@@ -107,6 +130,7 @@ final class LiveViewServer: ObservableObject {
 
     func updateFrame(camera: String, jpeg: Data) {
         shared.withLock { $0.frames[camera] = jpeg }
+        queue.async { [weak self] in self?.push(jpeg, camera: camera) }
     }
 
     func updateStatus(_ json: Data) {
@@ -122,12 +146,80 @@ final class LiveViewServer: ObservableObject {
                 connection.cancel()
                 return
             }
-            let response = self.respond(to: request, from: connection.endpoint)
-            connection.send(content: response, completion: .contentProcessed { _ in connection.cancel() })
+            let (response, streamCamera) = self.respond(to: request, from: connection.endpoint)
+            if let camera = streamCamera {
+                self.openStream(connection, camera: camera, header: response)
+            } else {
+                connection.send(content: response, completion: .contentProcessed { _ in connection.cancel() })
+            }
         }
     }
 
-    private func respond(to request: String, from endpoint: NWEndpoint) -> Data {
+    // MARK: - MJPEG (server queue)
+
+    private static let boundary = "dualcamframe"
+
+    private func openStream(_ connection: NWConnection, camera: String, header: Data) {
+        var host: String?
+        if case .hostPort(let h, _) = connection.endpoint { host = "\(h)" }
+        let client = StreamClient(connection: connection, camera: camera, host: host)
+        let id = ObjectIdentifier(client)
+        streams[id] = client
+        connection.stateUpdateHandler = { [weak self] state in
+            switch state {
+            case .failed, .cancelled: self?.queue.async { self?.streams[id] = nil }
+            default: break
+            }
+        }
+        client.sending = true
+        connection.send(content: header, completion: .contentProcessed { [weak self] error in
+            self?.queue.async {
+                client.sending = false
+                if error != nil { connection.cancel(); return }
+                // Start with the latest picture instead of waiting for the next one.
+                if let jpeg = self?.shared.withLock({ $0.frames[camera] }) { self?.send(jpeg, to: client) }
+            }
+        })
+    }
+
+    private func push(_ jpeg: Data, camera: String) {
+        for client in streams.values where client.camera == camera && !client.sending {
+            send(jpeg, to: client)
+        }
+    }
+
+    private func send(_ jpeg: Data, to client: StreamClient) {
+        if let host = client.host { shared.withLock { $0.clients[host] = Date() } }
+        var part = Data("--\(Self.boundary)\r\nContent-Type: image/jpeg\r\nContent-Length: \(jpeg.count)\r\n\r\n".utf8)
+        part.append(jpeg)
+        part.append(Data("\r\n".utf8))
+        client.sending = true
+        client.connection.send(content: part, completion: .contentProcessed { [weak self] error in
+            self?.queue.async {
+                client.sending = false
+                if error != nil { client.connection.cancel() }
+            }
+        })
+    }
+
+    private func respond(to request: String, from endpoint: NWEndpoint) -> (Data, streamCamera: String?) {
+        (respondData(to: request, from: endpoint), streamCamera(in: request))
+    }
+
+    /// Camera of a valid "/stream/A.mjpg?k=…" request.
+    private func streamCamera(in request: String) -> String? {
+        let firstLine = request.split(separator: "\r\n", maxSplits: 1).first.map(String.init) ?? ""
+        let parts = firstLine.split(separator: " ")
+        guard parts.count >= 2, parts[0] == "GET", let components = URLComponents(string: String(parts[1])),
+              components.queryItems?.first(where: { $0.name == "k" })?.value == accessKey else { return nil }
+        switch components.path {
+        case "/stream/A.mjpg": return "A"
+        case "/stream/B.mjpg": return "B"
+        default: return nil
+        }
+    }
+
+    private func respondData(to request: String, from endpoint: NWEndpoint) -> Data {
         // "GET /frame/A.jpg?k=abc&t=123 HTTP/1.1"
         let firstLine = request.split(separator: "\r\n", maxSplits: 1).first.map(String.init) ?? ""
         let parts = firstLine.split(separator: " ")
@@ -157,6 +249,12 @@ final class LiveViewServer: ObservableObject {
                 return Self.http(200, "image/jpeg", jpeg)
             }
             return Self.http(204, "text/plain", Data())
+        case "/stream/A.mjpg", "/stream/B.mjpg":
+            var head = "HTTP/1.1 200 OK\r\n"
+            head += "Content-Type: multipart/x-mixed-replace; boundary=\(Self.boundary)\r\n"
+            head += "Cache-Control: no-store\r\n"
+            head += "Connection: close\r\n\r\n"
+            return Data(head.utf8)
         default:
             return Self.http(404, "text/plain", Data("Not found".utf8))
         }
@@ -211,6 +309,27 @@ final class LiveViewServer: ObservableObject {
     }
 }
 
+/// Pictures for phones: size, rate and JPEG quality. Higher settings need a faster Wi-Fi.
+enum LiveViewQuality: String, CaseIterable, Identifiable {
+    case low, standard, high
+
+    var id: String { rawValue }
+    var title: String {
+        switch self {
+        case .low: return "Low"
+        case .standard: return "Standard"
+        case .high: return "High"
+        }
+    }
+    var width: Int { switch self { case .low: return 640; case .standard: return 960; case .high: return 1280 } }
+    var height: Int { width * 9 / 16 }
+    var jpegQuality: Double { switch self { case .low: return 0.6; case .standard: return 0.75; case .high: return 0.8 } }
+    var fps: Int { switch self { case .low: return 6; case .standard: return 12; case .high: return 15 } }
+    /// Slightly shorter than 1/fps so a 25p source still gives every second frame.
+    var frameIntervalNanos: UInt64 { UInt64(0.9e9 / Double(fps)) }
+    var summary: String { "\(width)×\(height), up to \(fps) pictures per second" }
+}
+
 /// The phone web page (self-contained HTML + JS).
 enum LiveViewPage {
     static let html = #"""
@@ -250,17 +369,20 @@ enum LiveViewPage {
 </main>
 <script>
 const k = new URLSearchParams(location.search).get('k');
-function frame(cam){
+// MJPEG: the Mac pushes every new picture over one open connection.
+function stream(cam){
   const img = document.getElementById('cam'+cam);
-  const next = new Image();
-  next.onload = () => { img.src = next.src; setTimeout(() => frame(cam), 200); };
-  next.onerror = () => setTimeout(() => frame(cam), 1000);
-  next.src = '/frame/' + cam + '.jpg?k=' + k + '&t=' + Date.now();
+  img.onerror = () => setTimeout(() => stream(cam), 1000);
+  img.src = '/stream/' + cam + '.mjpg?k=' + k + '&t=' + Date.now();
 }
+function restartStreams(){ stream('A'); stream('B'); }
+document.addEventListener('visibilitychange', () => { if (!document.hidden) restartStreams(); });
+let offline = false;
 async function status(){
   try {
     const r = await fetch('/status.json?k=' + k + '&t=' + Date.now(), {cache:'no-store'});
     const s = await r.json();
+    if (offline) { offline = false; restartStreams(); }
     document.getElementById('offline').style.display = 'none';
     document.getElementById('rec').classList.toggle('on', !!s.recording);
     document.getElementById('timer').textContent = s.elapsed || '00:00:00';
@@ -274,11 +396,12 @@ async function status(){
     document.getElementById('boxA').classList.toggle('rec', !!s.recording);
     document.getElementById('boxB').classList.toggle('rec', !!s.recording);
   } catch (e) {
+    offline = true;
     document.getElementById('offline').style.display = 'block';
   }
   setTimeout(status, 1000);
 }
-frame('A'); frame('B'); status();
+restartStreams(); status();
 </script>
 </body></html>
 """#
