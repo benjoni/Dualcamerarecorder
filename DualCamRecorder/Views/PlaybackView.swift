@@ -16,7 +16,7 @@ struct PlaybackView: View {
     var body: some View {
         HSplitView {
             takeList
-                .frame(minWidth: 220, idealWidth: 260, maxWidth: 360)
+                .frame(minWidth: 300, idealWidth: 340, maxWidth: 440)
             VStack(spacing: 12) {
                 HStack(spacing: 12) {
                     playerPane(title: "Kamera A", available: player.take?.camA != nil, content: PlayerView(player: player.playerA))
@@ -54,18 +54,28 @@ struct PlaybackView: View {
                 .lineLimit(1).truncationMode(.middle)
                 .padding(.horizontal, 8)
             List(library.takes, selection: $selection) { take in
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(take.name).font(.body.weight(.semibold))
-                    HStack(spacing: 6) {
-                        Text(take.camA != nil ? "A" : "–").foregroundStyle(take.camA != nil ? Color.green : Color.secondary)
-                        Text(take.camB != nil ? "B" : "–").foregroundStyle(take.camB != nil ? Color.green : Color.secondary)
-                        Text(DisplayFormat.bytes(take.sizeBytes))
-                        if let m = take.marks, !m.isEmpty { Image(systemName: "flag.fill").foregroundStyle(.yellow) }
-                        Text(take.modified, style: .date)
-                        Text(take.modified, style: .time)
+                HStack(spacing: 8) {
+                    TakeThumbnail(take: take)
+                    VStack(alignment: .leading, spacing: 2) {
+                        HStack(spacing: 6) {
+                            Text(take.name).font(.body.weight(.semibold)).foregroundStyle(.primary)
+                            if let m = take.marks, !m.isEmpty {
+                                Image(systemName: "flag.fill").foregroundStyle(.yellow).help("Má IN/OUT")
+                            }
+                        }
+                        HStack(spacing: 6) {
+                            Text(take.camA != nil ? "A" : "–").foregroundStyle(take.camA != nil ? Color.green : Color.secondary)
+                            Text(take.camB != nil ? "B" : "–").foregroundStyle(take.camB != nil ? Color.green : Color.secondary)
+                            Text(DisplayFormat.bytes(take.sizeBytes))
+                        }
+                        HStack(spacing: 4) {
+                            Text(take.modified, style: .date)
+                            Text(take.modified, style: .time)
+                        }
                     }
                     .font(.caption).foregroundStyle(.secondary)
                 }
+                .padding(.vertical, 2)
                 .tag(take.id)
             }
         }

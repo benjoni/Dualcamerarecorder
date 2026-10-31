@@ -16,6 +16,7 @@
 		0B27B44163033F8362D89767 /* PlayerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0B9E5830569A82B806F54A7F /* PlayerView.swift */; };
 		F7ECB134D22BCFEAA2004CFD /* SyncPlaybackController.swift in Sources */ = {isa = PBXBuildFile; fileRef = A57B1970A4CECEE2CD3EACA6 /* SyncPlaybackController.swift */; };
 		0CE80DEB4C70FF63E18D842E /* TakeLibrary.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6524525F456E0CA9FC7AE712 /* TakeLibrary.swift */; };
+		AF4F7E6721D69D5EC7B56450 /* ThumbnailCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36C17967F6FDC1F863F17DDF /* ThumbnailCache.swift */; };
 		9168DEFF5C8ACED2D8579F70 /* PreviewRenderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 86EE76A2E0DF03A995D87568 /* PreviewRenderer.swift */; };
 		0D2CA9BB78FD0035D5D36DF6 /* PreviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54A98420FFEC2C998E26B947 /* PreviewView.swift */; };
 		8A95CF0EB055A53010FE371A /* CameraChannel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9C6E675FB14A7235CFCF3850 /* CameraChannel.swift */; };
@@ -47,6 +48,7 @@
 		0B9E5830569A82B806F54A7F /* PlayerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlayerView.swift; sourceTree = "<group>"; };
 		A57B1970A4CECEE2CD3EACA6 /* SyncPlaybackController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SyncPlaybackController.swift; sourceTree = "<group>"; };
 		6524525F456E0CA9FC7AE712 /* TakeLibrary.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TakeLibrary.swift; sourceTree = "<group>"; };
+		36C17967F6FDC1F863F17DDF /* ThumbnailCache.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThumbnailCache.swift; sourceTree = "<group>"; };
 		86EE76A2E0DF03A995D87568 /* PreviewRenderer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PreviewRenderer.swift; sourceTree = "<group>"; };
 		54A98420FFEC2C998E26B947 /* PreviewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PreviewView.swift; sourceTree = "<group>"; };
 		9C6E675FB14A7235CFCF3850 /* CameraChannel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraChannel.swift; sourceTree = "<group>"; };
@@ -132,6 +134,7 @@
 				0B9E5830569A82B806F54A7F /* PlayerView.swift */,
 				A57B1970A4CECEE2CD3EACA6 /* SyncPlaybackController.swift */,
 				6524525F456E0CA9FC7AE712 /* TakeLibrary.swift */,
+				36C17967F6FDC1F863F17DDF /* ThumbnailCache.swift */,
 			);
 			path = Playback;
 			sourceTree = "<group>";
@@ -276,6 +279,7 @@
 				0B27B44163033F8362D89767 /* PlayerView.swift in Sources */,
 				F7ECB134D22BCFEAA2004CFD /* SyncPlaybackController.swift in Sources */,
 				0CE80DEB4C70FF63E18D842E /* TakeLibrary.swift in Sources */,
+				AF4F7E6721D69D5EC7B56450 /* ThumbnailCache.swift in Sources */,
 				9168DEFF5C8ACED2D8579F70 /* PreviewRenderer.swift in Sources */,
 				0D2CA9BB78FD0035D5D36DF6 /* PreviewView.swift in Sources */,
 				8A95CF0EB055A53010FE371A /* CameraChannel.swift in Sources */,

@@ -35,7 +35,8 @@ Plán a architektúra: [`docs/PLAN.md`](docs/PLAN.md).
   (čas v sekundách od začiatku záberu, platí pre CamA aj CamB) a použije ich prehrávanie.
 
 ### Záložka PREHRÁVANIE
-- Zoznam záberov v priečinku (sleduje zmeny v priečinku; práve nahrávaný záber je skrytý).
+- Zoznam záberov v priečinku (sleduje zmeny v priečinku; práve nahrávaný záber je skrytý),
+  pri každom zábere **náhľadový obrázok zo stredu záznamu** (z CamA, ak chýba tak z CamB).
 - Po výbere sa načíta CamA a CamB vedľa seba v dvoch `AVPlayer`-och.
 - Spoločné **play/pause** (medzerník), **posuvník**, **krokovanie po snímkach** (← / →),
   **rýchlosť 0,5× / 1×**, výber zvuku A/B, zobrazenie rozdielu pozícií B−A.
@@ -133,7 +134,8 @@ DualCamRecorder/
               RecordingController (zariadenia, REC/STOP, IN/OUT, disk), TakeNaming,
               TakeMarks (IN/OUT, Take_###_marks.json)
   Preview/    PreviewRenderer (VTPixelTransfer → AVSampleBufferDisplayLayer), PreviewView
-  Playback/   TakeLibrary, SyncPlaybackController (2× AVPlayer), PlayerView
+  Playback/   TakeLibrary, ThumbnailCache (náhľady zo stredu záberu),
+              SyncPlaybackController (2× AVPlayer), PlayerView
   Views/      RecordView, PlaybackView, SettingsView, Components
 docs/PLAN.md                      plán a architektúra
 tools/gen_xcodeproj.py            generátor project.pbxproj + zdieľanej schémy
