@@ -191,7 +191,7 @@ struct SlatePanel: View {
                     .font(.title2)
             }
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
+        .frame(maxWidth: .infinity)   // slate block centered
     }
 }
 
