@@ -240,8 +240,8 @@ private struct ReportRow: View {
         let s = clip.slate
         HStack(alignment: .top, spacing: 10) {
             if pictures {
-                picture(clip.pictureA)
-                if showB { picture(clip.pictureB) }
+                picture(clip.pictureA, recorded: clip.take.camA != nil)
+                if showB { picture(clip.pictureB, recorded: clip.take.camB != nil) }
             }
             VStack(alignment: .leading, spacing: 3) {
                 Text(String(format: "%03d", clip.take.number)).font(.system(size: 14, weight: .bold))
@@ -261,7 +261,7 @@ private struct ReportRow: View {
 
             VStack(alignment: .leading, spacing: 2) {
                 fileLine("A", clip.take.camA?.lastPathComponent, s?.cameraClipA)
-                if clip.take.camB != nil || !(s?.cameraClipB ?? "").isEmpty {
+                if showB {
                     fileLine("B", clip.take.camB?.lastPathComponent, s?.cameraClipB)
                 }
             }
@@ -292,13 +292,15 @@ private struct ReportRow: View {
         .frame(height: 74, alignment: .top)
     }
 
-    private func picture(_ image: CGImage?) -> some View {
+    private func picture(_ image: CGImage?, recorded: Bool) -> some View {
         ZStack {
-            Rectangle().fill(Color(white: 0.9))
+            Rectangle().fill(Color(white: recorded ? 0.9 : 0.96))
             if let image {
                 Image(decorative: image, scale: 1).resizable().aspectRatio(contentMode: .fit)
             } else {
-                Text("—").font(.system(size: 9)).foregroundStyle(Color(white: 0.5))
+                // Camera switched off for this take (only the other camera recorded).
+                Text(recorded ? "—" : "CAM OFF").font(.system(size: 8, weight: .semibold))
+                    .foregroundStyle(Color(white: 0.55))
             }
         }
         .frame(width: 104, height: 58.5)
@@ -307,7 +309,8 @@ private struct ReportRow: View {
 
     private func fileLine(_ cam: String, _ file: String?, _ cameraClip: String?) -> some View {
         VStack(alignment: .leading, spacing: 0) {
-            Text("\(cam): \(file ?? "—")").font(.system(size: 8, design: .monospaced)).lineLimit(1)
+            Text("\(cam): \(file ?? "— camera off")").font(.system(size: 8, design: .monospaced)).lineLimit(1)
+                .foregroundStyle(file == nil ? Color(white: 0.5) : Color.black)
             if let cameraClip, !cameraClip.isEmpty {
                 Text("  cam clip \(cameraClip)").font(.system(size: 8, weight: .semibold, design: .monospaced)).lineLimit(1)
             }
@@ -333,8 +336,8 @@ private struct ReportRowPortrait: View {
         let s = clip.slate
         HStack(alignment: .top, spacing: 10) {
             if pictures {
-                picture(clip.pictureA)
-                if showB { picture(clip.pictureB) }
+                picture(clip.pictureA, recorded: clip.take.camA != nil)
+                if showB { picture(clip.pictureB, recorded: clip.take.camB != nil) }
             }
             VStack(alignment: .leading, spacing: 3) {
                 HStack(alignment: .firstTextBaseline, spacing: 8) {
@@ -354,7 +357,7 @@ private struct ReportRowPortrait: View {
                     Text(marks).font(.system(size: 8, design: .monospaced))
                 }
                 line("A", clip.take.camA?.lastPathComponent, s?.cameraClipA)
-                if clip.take.camB != nil || !(s?.cameraClipB ?? "").isEmpty {
+                if showB {
                     line("B", clip.take.camB?.lastPathComponent, s?.cameraClipB)
                 }
                 if let note = s?.note, !note.isEmpty {
@@ -377,13 +380,15 @@ private struct ReportRowPortrait: View {
                 "DUR " + PDFReport.timecode(max(0, hi - lo), fps: clip.fps)].joined(separator: "  ·  ")
     }
 
-    private func picture(_ image: CGImage?) -> some View {
+    private func picture(_ image: CGImage?, recorded: Bool) -> some View {
         ZStack {
-            Rectangle().fill(Color(white: 0.9))
+            Rectangle().fill(Color(white: recorded ? 0.9 : 0.96))
             if let image {
                 Image(decorative: image, scale: 1).resizable().aspectRatio(contentMode: .fit)
             } else {
-                Text("—").font(.system(size: 9)).foregroundStyle(Color(white: 0.5))
+                // Camera switched off for this take (only the other camera recorded).
+                Text(recorded ? "—" : "CAM OFF").font(.system(size: 8, weight: .semibold))
+                    .foregroundStyle(Color(white: 0.55))
             }
         }
         .frame(width: 96, height: 54)
@@ -392,7 +397,8 @@ private struct ReportRowPortrait: View {
 
     private func line(_ cam: String, _ file: String?, _ cameraClip: String?) -> some View {
         HStack(spacing: 8) {
-            Text("\(cam): \(file ?? "—")").lineLimit(1)
+            Text("\(cam): \(file ?? "— camera off")").lineLimit(1)
+                .foregroundStyle(file == nil ? Color(white: 0.5) : Color.black)
             if let cameraClip, !cameraClip.isEmpty {
                 Text("cam clip \(cameraClip)").fontWeight(.semibold).lineLimit(1)
             }
