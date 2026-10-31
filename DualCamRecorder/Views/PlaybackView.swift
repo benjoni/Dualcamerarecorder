@@ -354,7 +354,7 @@ struct PlaybackView: View {
             // Buttons, one group under another; audio last.
             VStack(spacing: 10) {
                 transportRow
-                markButtons
+                markRow
                 audioButtons
             }
             .buttonStyle(BigButtonStyle())
@@ -514,17 +514,30 @@ struct PlaybackView: View {
                 .help("OUT at the current frame (O)")
             Button("Clear") { player.clearMarks() }
                 .disabled(player.marks.isEmpty)
-            SegmentGroup {
-                Toggle("Play IN–OUT only", isOn: $player.limitToRange)
-                    .help("Start at IN and stop at OUT")
-                Toggle("Loop IN/OUT", isOn: $player.loopInOut)
-                    .help("Repeat IN → OUT continuously (without OUT: to the end of the clip)")
-                Toggle("Loop clip", isOn: $player.loopClip)
-                    .help("Repeat the whole clip from start to end (IN / OUT ignored)")
-            }
-            .toggleStyle(SegmentToggleStyle(minHeight: 40))
-            .padding(.leading, 36)   // set apart from the IN/OUT buttons
         }
+    }
+
+    /// IN/OUT buttons centered, play / loop modes at the right edge under the speed.
+    private var markRow: some View {
+        HStack(spacing: 0) {
+            playModes.hidden()
+            Spacer(minLength: 24)
+            markButtons
+            Spacer(minLength: 24)
+            playModes
+        }
+    }
+
+    private var playModes: some View {
+        SegmentGroup {
+            Toggle("Play IN–OUT only", isOn: $player.limitToRange)
+                .help("Start at IN and stop at OUT")
+            Toggle("Loop IN/OUT", isOn: $player.loopInOut)
+                .help("Repeat IN → OUT continuously (without OUT: to the end of the clip)")
+            Toggle("Loop clip", isOn: $player.loopClip)
+                .help("Repeat the whole clip from start to end (IN / OUT ignored)")
+        }
+        .toggleStyle(SegmentToggleStyle(minHeight: 40))
     }
 
     /// IN → OUT length; without IN from the start, without OUT to the end of the clip.
