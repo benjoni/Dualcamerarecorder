@@ -65,7 +65,7 @@ enum TakeNaming {
     }
 
     static func displayName(take: Int) -> String {
-        String(format: "Klip %03d", take)
+        String(format: "Clip %03d", take)
     }
 
     static func sidecarName(take: Int, kind: String) -> String {

@@ -45,10 +45,10 @@ struct ContentView: View {
     var body: some View {
         TabView(selection: $tab) {
             RecordView(controller: model.recorder, settings: model.settings)
-                .tabItem { Label("Nahrávanie", systemImage: "record.circle") }
+                .tabItem { Label("Record", systemImage: "record.circle") }
                 .tag(0)
             PlaybackView(library: model.library, player: model.player, settings: model.settings)
-                .tabItem { Label("Prehrávanie", systemImage: "play.rectangle") }
+                .tabItem { Label("Playback", systemImage: "play.rectangle") }
                 .tag(1)
         }
         .padding(.top, 4)

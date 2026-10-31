@@ -425,7 +425,7 @@ public:
         mForceEightBit = forceEightBit;
 
         if (mDeckLink->QueryInterface(DL_IID_INPUT, (void **)&mInput) != S_OK || !mInput) {
-            if (error) *error = DLMakeError(1, @"Zariadenie nepodporuje vstup (IDeckLinkInput).");
+            if (error) *error = DLMakeError(1, @"The device does not support input (IDeckLinkInput).");
             return false;
         }
 
@@ -456,7 +456,7 @@ public:
             hr = mInput->EnableVideoInput(mode, pf, flags);
         }
         if (hr != S_OK) {
-            if (error) *error = DLMakeError(2, @"EnableVideoInput zlyhalo (zariadenie môže byť používané inou aplikáciou).");
+            if (error) *error = DLMakeError(2, @"EnableVideoInput failed (the device may be in use by another application).");
             Teardown();
             return false;
         }
@@ -476,7 +476,7 @@ public:
 
         mInput->SetCallback(this);
         if (mInput->StartStreams() != S_OK) {
-            if (error) *error = DLMakeError(3, @"StartStreams zlyhalo.");
+            if (error) *error = DLMakeError(3, @"StartStreams failed.");
             Teardown();
             return false;
         }
@@ -515,7 +515,7 @@ public:
             }
             if (hr != S_OK) {
                 DLCaptureDevice *owner = mOwner;
-                dispatch_async(dispatch_get_main_queue(), ^{ [owner _fail:@"Nepodarilo sa prepnúť na detegovaný formát."]; });
+                dispatch_async(dispatch_get_main_queue(), ^{ [owner _fail:@"Could not switch to the detected format."]; });
                 return S_OK;
             }
             mPixelFormat = next;
@@ -826,7 +826,7 @@ private:
     _engine = engine;
     return YES;
 #else
-    if (error) *error = DLMakeError(100, @"Aplikácia bola zostavená bez DeckLink SDK.");
+    if (error) *error = DLMakeError(100, @"The app was built without the DeckLink SDK.");
     return NO;
 #endif
 }

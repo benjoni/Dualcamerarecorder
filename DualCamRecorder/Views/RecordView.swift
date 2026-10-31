@@ -59,21 +59,21 @@ struct RecordView: View {
             VStack(alignment: .trailing, spacing: 4) {
                 HStack {
                     Image(systemName: "internaldrive")
-                    Text("Voľné: \(DisplayFormat.bytes(controller.freeBytes)) z \(DisplayFormat.bytes(controller.totalBytes))")
+                    Text("Free: \(DisplayFormat.bytes(controller.freeBytes)) of \(DisplayFormat.bytes(controller.totalBytes))")
                 }
                 if let free = controller.freeBytes, let total = controller.totalBytes, total > 0 {
                     ProgressView(value: Double(total - free), total: Double(total))
                         .frame(width: 260)
                         .tint(Double(free) / Double(total) < 0.1 ? .red : .accentColor)
                 }
-                Text("Zostáva nahrávania: \(DisplayFormat.remaining(controller.estimatedRemaining))")
+                Text("Recording time left: \(DisplayFormat.remaining(controller.estimatedRemaining))")
                     .font(.caption).foregroundStyle(.secondary)
                 HStack(spacing: 6) {
                     Text(settings.recordFolderPath)
                         .font(.caption).foregroundStyle(.secondary)
                         .lineLimit(1).truncationMode(.middle)
                         .frame(maxWidth: 300, alignment: .trailing)
-                    Button("Zmeniť…") { controller.chooseRecordFolder() }
+                    Button("Change…") { controller.chooseRecordFolder() }
                         .controlSize(.small)
                         .disabled(controller.isRecording)
                 }
@@ -93,15 +93,15 @@ struct RecordView: View {
                     Text("IN").font(.headline).frame(width: 44, height: 28)
                 }
                 .keyboardShortcut("i", modifiers: [.command])
-                .help("Nastaviť IN na aktuálny čas záberu (⌘I)")
+                .help("Set IN at the current take time (⌘I)")
                 Button { controller.markOut() } label: {
                     Text("OUT").font(.headline).frame(width: 44, height: 28)
                 }
                 .keyboardShortcut("o", modifiers: [.command])
-                .help("Nastaviť OUT na aktuálny čas záberu (⌘O)")
+                .help("Set OUT at the current take time (⌘O)")
                 Button { controller.clearMarks() } label: { Image(systemName: "xmark.circle") }
                     .buttonStyle(.borderless)
-                    .help("Zrušiť IN/OUT")
+                    .help("Clear IN/OUT")
                     .disabled(controller.marks.isEmpty)
             }
             .disabled(!recording)
@@ -120,7 +120,7 @@ struct RecordView: View {
         switch controller.state {
         case .idle: return "REC"
         case .recording: return "STOP"
-        case .stopping: return "Ukladám…"
+        case .stopping: return "Saving…"
         }
     }
 
@@ -130,14 +130,14 @@ struct RecordView: View {
         if let active = controller.activeTake {
             let a = TakeNaming.fileName(take: active, role: .a, slate: controller.recordingSlate, names: names)
             let b = TakeNaming.fileName(take: active, role: .b, slate: controller.recordingSlate, names: names)
-            parts.append("Nahráva sa \(a) + \(b)")
+            parts.append("Recording \(a) + \(b)")
         } else {
             let a = TakeNaming.fileName(take: controller.nextTake, role: .a, slate: settings.slate, names: names)
             let b = TakeNaming.fileName(take: controller.nextTake, role: .b, slate: settings.slate, names: names)
-            parts.append("Ďalšie súbory: \(a) + \(b)")
+            parts.append("Next files: \(a) + \(b)")
         }
         if let offset = controller.lastStartOffsetMs, !controller.isRecording {
-            parts.append(String(format: "posun štartu B−A: %+.1f ms", offset))
+            parts.append(String(format: "start offset B−A: %+.1f ms", offset))
         }
         if let msg = controller.lastTakeMessage, !controller.isRecording { parts.append(msg) }
         return parts.joined(separator: " · ")
@@ -152,7 +152,7 @@ struct CameraPanel: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
-                Text("Kamera \(channel.role.rawValue)")
+                Text("Camera \(channel.role.rawValue)")
                     .font(.title3.weight(.bold))
                 Picker("", selection: Binding(
                     get: { controller.assignedID(channel.role) },
@@ -163,14 +163,14 @@ struct CameraPanel: View {
                 }
                 .labelsHidden()
                 .disabled(controller.isRecording)
-                Text("Názov").font(.caption).foregroundStyle(.secondary)
+                Text("Name").font(.caption).foregroundStyle(.secondary)
                 TextField("A", text: Binding(
                     get: { channel.role == .a ? controller.settings.cameraNameA : controller.settings.cameraNameB },
                     set: { controller.setCameraName($0, for: channel.role) }))
                     .textFieldStyle(.roundedBorder)
                     .frame(width: 80)
                     .disabled(controller.isRecording)
-                    .help("Názov kamery na začiatku názvu súboru, napr. A → A007_S12_SH3B_T04.MOV")
+                    .help("Camera name at the start of the file name, e.g. A → A007_S12_SH3B_T04.MOV")
             }
 
             ZStack(alignment: .topLeading) {
@@ -180,22 +180,22 @@ struct CameraPanel: View {
                 HStack(spacing: 6) {
                     if channel.isRecording { Badge(text: "● REC", color: .red) }
                     if !channel.hasSource {
-                        Badge(text: "Nepriradené", color: .gray)
+                        Badge(text: "Unassigned", color: .gray)
                     } else if !channel.hasSignal {
-                        Badge(text: "Bez signálu", color: .orange)
+                        Badge(text: "No signal", color: .orange)
                     }
                 }
                 .padding(8)
             }
 
-            Text(channel.format?.displayString ?? "Formát: —")
+            Text(channel.format?.displayString ?? "Format: —")
                 .font(.system(.callout, design: .monospaced))
             AudioMeter(db: channel.audioLevelDB)
             HStack(spacing: 16) {
-                stat("Zachytené", channel.stats.framesCaptured)
-                stat("Zapísané", channel.stats.framesWritten)
-                stat("Vynechané (vstup)", channel.stats.inputDropped, alert: channel.stats.inputDropped > 0)
-                stat("Vynechané (zápis)", channel.stats.writerDropped, alert: channel.stats.writerDropped > 0)
+                stat("Captured", channel.stats.framesCaptured)
+                stat("Written", channel.stats.framesWritten)
+                stat("Dropped (input)", channel.stats.inputDropped, alert: channel.stats.inputDropped > 0)
+                stat("Dropped (write)", channel.stats.writerDropped, alert: channel.stats.writerDropped > 0)
             }
             .font(.caption)
             if let error = channel.lastError {

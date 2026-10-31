@@ -55,11 +55,11 @@ final class RecordingController: NSObject, ObservableObject, DLDeviceBrowserDele
     init(settings: AppSettings) {
         self.settings = settings
         if !DLDeviceBrowser.isSDKCompiledIn {
-            sdkStatus = "Zostavené bez DeckLink SDK – dostupný je len simulovaný vstup."
+            sdkStatus = "Built without the DeckLink SDK – only simulated input is available."
         } else if !DLDeviceBrowser.isDriverInstalled {
-            sdkStatus = "SDK \(DLDeviceBrowser.compiledSDKVersion ?? "?") · Desktop Video ovládač nie je nainštalovaný."
+            sdkStatus = "SDK \(DLDeviceBrowser.compiledSDKVersion ?? "?") · Desktop Video driver is not installed."
         } else {
-            sdkStatus = "SDK \(DLDeviceBrowser.compiledSDKVersion ?? "?") · ovládač \(DLDeviceBrowser.driverVersion ?? "?")"
+            sdkStatus = "SDK \(DLDeviceBrowser.compiledSDKVersion ?? "?") · driver \(DLDeviceBrowser.driverVersion ?? "?")"
         }
         super.init()
 
@@ -110,7 +110,7 @@ final class RecordingController: NSObject, ObservableObject, DLDeviceBrowserDele
     }
 
     var deviceOptions: [DeviceOption] {
-        var options = [DeviceOption(id: "", title: "— žiadne —")]
+        var options = [DeviceOption(id: "", title: "— none —")]
         let nameCounts = Dictionary(grouping: devices, by: \.displayName).mapValues(\.count)
         var seen: [String: Int] = [:]
         for d in devices {
@@ -121,7 +121,7 @@ final class RecordingController: NSObject, ObservableObject, DLDeviceBrowserDele
             }
             options.append(DeviceOption(id: d.identifier, title: title))
         }
-        options.append(DeviceOption(id: AppSettings.simulatedDeviceID, title: "Simulovaný vstup (testovací obraz)"))
+        options.append(DeviceOption(id: AppSettings.simulatedDeviceID, title: "Simulated input (test pattern)"))
         return options
     }
 
@@ -167,7 +167,7 @@ final class RecordingController: NSObject, ObservableObject, DLDeviceBrowserDele
                                     forceEightBit: settings.forceEightBit) {
             ch.setSource(src)
         } else {
-            errorMessage = "Zariadenie \(descriptor.displayName) sa nepodarilo otvoriť."
+            errorMessage = "Could not open device \(descriptor.displayName)."
         }
     }
 
@@ -198,12 +198,12 @@ final class RecordingController: NSObject, ObservableObject, DLDeviceBrowserDele
         do {
             try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
         } catch {
-            errorMessage = "Priečinok na zápis nie je dostupný: \(error.localizedDescription)"
+            errorMessage = "Record folder is not available: \(error.localizedDescription)"
             return
         }
         let active = CameraRole.allCases.filter { channel($0).hasSource }
         guard !active.isEmpty else {
-            errorMessage = "Nie je priradená žiadna kamera."
+            errorMessage = "No camera is assigned."
             return
         }
 
@@ -257,7 +257,7 @@ final class RecordingController: NSObject, ObservableObject, DLDeviceBrowserDele
     func markOut() {
         guard case .recording = state else { return }
         if !marks.setOut(recordPosition) {
-            errorMessage = "OUT nemôže byť pred IN."
+            errorMessage = "OUT cannot be before IN."
         }
     }
 
@@ -306,9 +306,9 @@ final class RecordingController: NSObject, ObservableObject, DLDeviceBrowserDele
         }
         let errors = pendingResults.compactMap { r in r.error.map { "Cam\(r.role.rawValue): \($0)" } }
         let summary = pendingResults.sorted { $0.role.rawValue < $1.role.rawValue }
-            .map { "\($0.url.lastPathComponent) (\($0.framesWritten) sn.)" }
+            .map { "\($0.url.lastPathComponent) (\($0.framesWritten) frames)" }
             .joined(separator: ", ")
-        lastTakeMessage = "Uložené: " + summary
+        lastTakeMessage = "Saved: " + summary
 
         // Save IN/OUT. The file timeline starts at the first written frame, which is within
         // ½ frame of the common start instant – correct for that small difference.
@@ -323,7 +323,7 @@ final class RecordingController: NSObject, ObservableObject, DLDeviceBrowserDele
             do {
                 try TakeMarksStore.save(m, folder: folder, take: take)
             } catch {
-                errorMessage = "IN/OUT sa nepodarilo uložiť: \(error.localizedDescription)"
+                errorMessage = "Could not save IN/OUT: \(error.localizedDescription)"
             }
         }
         // Save the slate (note / "good" may have been edited during the take) and advance the take number.
@@ -334,7 +334,7 @@ final class RecordingController: NSObject, ObservableObject, DLDeviceBrowserDele
             do {
                 try TakeSlateStore.save(slate, folder: folder, take: take)
             } catch {
-                errorMessage = "Klapku sa nepodarilo uložiť: \(error.localizedDescription)"
+                errorMessage = "Could not save the slate: \(error.localizedDescription)"
             }
             var next = settings.slate
             next.take = slate.take + 1
@@ -360,7 +360,7 @@ final class RecordingController: NSObject, ObservableObject, DLDeviceBrowserDele
         panel.canChooseDirectories = true
         panel.canChooseFiles = false
         panel.canCreateDirectories = true
-        panel.prompt = "Vybrať"
+        panel.prompt = "Choose"
         panel.directoryURL = settings.recordFolderURL
         if panel.runModal() == .OK, let url = panel.url {
             settings.recordFolderPath = url.path

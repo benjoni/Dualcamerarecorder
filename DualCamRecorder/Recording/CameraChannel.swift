@@ -136,8 +136,8 @@ final class CameraChannel: ObservableObject, VideoSourceDelegate {
              completion: @escaping (ChannelTakeResult) -> Void) -> String? {
         var failure: String?
         queue.sync {
-            guard take == nil else { failure = "Kamera \(role.rawValue) už nahráva."; return }
-            guard let size = lastFrameSize else { failure = "Kamera \(role.rawValue): žiadny obraz zo vstupu."; return }
+            guard take == nil else { failure = "Camera \(role.rawValue) is already recording."; return }
+            guard let size = lastFrameSize else { failure = "Camera \(role.rawValue): no picture from the input."; return }
             do {
                 let writer = try MovieWriter(url: url, width: size.width, height: size.height,
                                              flavor: flavor, audioChannels: audioChannels,
@@ -145,7 +145,7 @@ final class CameraChannel: ObservableObject, VideoSourceDelegate {
                 take = TakeState(writer: writer, startHostNanos: startHostNanos, completion: completion,
                                  statsAtStart: qStats)
             } catch {
-                failure = "Kamera \(role.rawValue): \(error.localizedDescription)"
+                failure = "Camera \(role.rawValue): \(error.localizedDescription)"
             }
         }
         if failure == nil { isRecording = true }
@@ -262,7 +262,7 @@ final class CameraChannel: ObservableObject, VideoSourceDelegate {
         }
 
         if t.writer.failed {
-            let message = t.writer.errorDescription ?? "Zápis zlyhal"
+            let message = t.writer.errorDescription ?? "Writing failed"
             DispatchQueue.main.async { self.lastError = message }
             take = t
             finishTake()

@@ -13,6 +13,8 @@ Plán a architektúra: [`docs/PLAN.md`](docs/PLAN.md).
 
 ## Funkcie
 
+Rozhranie aplikácie je **v angličtine** (Record / Playback / Slate …); tento README zostáva po slovensky.
+
 ### Záložka NAHRÁVANIE
 - Automatické zistenie DeckLink zariadení (`IDeckLinkDiscovery`, aj hot-plug); priradenie
   *zariadenie → Kamera A / Kamera B* cez výber nad náhľadom (pri prvom spustení 1. → A, 2. → B).
@@ -40,7 +42,7 @@ Plán a architektúra: [`docs/PLAN.md`](docs/PLAN.md).
   audio meter, odznak „Bez signálu“.
 - **Voľné miesto** na cieľovom disku + odhad zostávajúceho času nahrávania.
 - **Klapka** pod nahrávaním: projekt, réžia, kamera, rola, **obraz**, **záber**, **pokus**,
-  INT/EXT, DEŇ/NOC/ŠERO, MOS, poznámka a „dobrý pokus“ (★). Pokus sa po každom zábere sám zvýši
+  INT/EXT, DAY/NIGHT/DUSK, MOS, poznámka a „dobrý pokus“ (★). Pokus sa po každom zábere sám zvýši
   o 1, zmena obrazu alebo záberu ho nastaví na 1. Počas nahrávania sú obraz/záber/pokus zamknuté,
   poznámku a ★ možno meniť. Údaje sa uložia do `C001_SLATE.JSON` a zapíšu sa aj ako
   QuickTime metadáta do oboch `.mov` (názov, popis, komentár, réžia, kamera A/B, dátum) –

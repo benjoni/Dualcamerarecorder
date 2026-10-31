@@ -12,48 +12,48 @@ struct SettingsView: View {
 
     var body: some View {
         Form {
-            Section("Priečinky") {
-                folderRow(title: "Zápis (nahrávanie)", path: settings.recordFolderPath) { settings.recordFolderPath = $0 }
-                Toggle("Prehrávať z iného disku / priečinka", isOn: $settings.separatePlaybackFolder)
+            Section("Folders") {
+                folderRow(title: "Write (recording)", path: settings.recordFolderPath) { settings.recordFolderPath = $0 }
+                Toggle("Play back from another disk / folder", isOn: $settings.separatePlaybackFolder)
                 if settings.separatePlaybackFolder {
-                    folderRow(title: "Čítanie (prehrávanie)", path: settings.playbackFolderPath) { settings.playbackFolderPath = $0 }
+                    folderRow(title: "Read (playback)", path: settings.playbackFolderPath) { settings.playbackFolderPath = $0 }
                 }
-                Text("Pri súčasnom nahrávaní a prehrávaní je najbezpečnejšie čítať z iného disku, než na ktorý sa zapisuje.")
+                Text("When recording and playing back at the same time, it is safest to read from a different disk than the one being written to.")
                     .font(.caption).foregroundStyle(.secondary)
             }
 
-            Section("Názvy kamier (začiatok názvu súboru)") {
+            Section("Camera names (start of the file name)") {
                 HStack {
-                    TextField("Kamera A", text: Binding(get: { settings.cameraNameA },
+                    TextField("Camera A", text: Binding(get: { settings.cameraNameA },
                                                         set: { controller.setCameraName($0, for: .a) }))
-                    TextField("Kamera B", text: Binding(get: { settings.cameraNameB },
+                    TextField("Camera B", text: Binding(get: { settings.cameraNameB },
                                                         set: { controller.setCameraName($0, for: .b) }))
                 }
                 .disabled(controller.isRecording)
-                Text("Príklad: \(TakeNaming.fileName(take: controller.nextTake, role: .a, slate: settings.slate, names: settings.cameraNames))  ·  \(TakeNaming.fileName(take: controller.nextTake, role: .b, slate: settings.slate, names: settings.cameraNames))")
+                Text("Example: \(TakeNaming.fileName(take: controller.nextTake, role: .a, slate: settings.slate, names: settings.cameraNames))  ·  \(TakeNaming.fileName(take: controller.nextTake, role: .b, slate: settings.slate, names: settings.cameraNames))")
                     .font(.caption.monospaced()).foregroundStyle(.secondary)
-                Text("Pri zmene názvu sa staršie súbory s pôvodným názvom v zozname záberov nezobrazia, kým názov nevrátiš späť.")
+                Text("After renaming a camera, older files with the previous name are not listed until the name is changed back.")
                     .font(.caption).foregroundStyle(.secondary)
             }
-            Section("Záznam") {
-                Picker("Kodek", selection: $settings.proResFlavor) {
+            Section("Recording") {
+                Picker("Codec", selection: $settings.proResFlavor) {
                     ForEach(ProResFlavor.allCases) { Text($0.title).tag($0) }
                 }
-                Picker("Zvuk (SDI embedded)", selection: $settings.audioChannels) {
-                    Text("Vypnutý").tag(0)
-                    Text("2 kanály").tag(2)
-                    Text("8 kanálov").tag(8)
-                    Text("16 kanálov").tag(16)
+                Picker("Audio (SDI embedded)", selection: $settings.audioChannels) {
+                    Text("Off").tag(0)
+                    Text("2 channels").tag(2)
+                    Text("8 channels").tag(8)
+                    Text("16 channels").tag(16)
                 }
-                Toggle("Vynútiť 8-bit zachytávanie (inak 10-bit, ak ho zdroj posiela)", isOn: $settings.forceEightBit)
-                Button("Použiť zmeny zvuku / bitovej hĺbky (reštart vstupov)") { controller.restartSources() }
+                Toggle("Force 8-bit capture (otherwise 10-bit when the source sends it)", isOn: $settings.forceEightBit)
+                Button("Apply audio / bit depth changes (restart inputs)") { controller.restartSources() }
                     .disabled(controller.isRecording)
             }
 
             Section("DeckLink") {
                 Text(controller.sdkStatus).font(.callout)
                 if controller.devices.isEmpty {
-                    Text("Nenašlo sa žiadne zariadenie. Použi „Simulovaný vstup“ na test UI.")
+                    Text("No device found. Use “Simulated input” to test the UI.")
                         .font(.caption).foregroundStyle(.secondary)
                 }
                 ForEach(controller.devices, id: \.identifier) { d in
@@ -74,7 +74,7 @@ struct SettingsView: View {
                 Text(path).font(.caption).foregroundStyle(.secondary).lineLimit(1).truncationMode(.middle)
             }
             Spacer()
-            Button("Vybrať…") {
+            Button("Choose…") {
                 let panel = NSOpenPanel()
                 panel.canChooseDirectories = true
                 panel.canChooseFiles = false

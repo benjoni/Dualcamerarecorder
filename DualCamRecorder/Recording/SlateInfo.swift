@@ -17,46 +17,57 @@ struct SlateInfo: Codable, Hashable {
     }
 
     enum TimeOfDay: String, Codable, CaseIterable, Identifiable {
-        case none = "", day = "DEŇ", night = "NOC", dusk = "ŠERO"
+        case none = "", day = "DAY", night = "NIGHT", dusk = "DUSK"
         var id: String { rawValue }
         var title: String { self == .none ? "—" : rawValue }
+
+        /// Also accepts the Slovak values written by earlier versions (DEŇ / NOC / ŠERO).
+        init(from decoder: Decoder) throws {
+            let raw = try decoder.singleValueContainer().decode(String.self)
+            switch raw {
+            case "DEŇ": self = .day
+            case "NOC": self = .night
+            case "ŠERO": self = .dusk
+            default: self = TimeOfDay(rawValue: raw) ?? .none
+            }
+        }
     }
 
-    var production = ""      // Projekt / názov filmu
-    var director = ""        // Réžia
-    var cameraOperator = ""  // Kamera (DoP)
-    var scene = ""           // Obraz
-    var shot = ""            // Záber
-    var take = 1             // Pokus (klapka)
-    var roll = ""            // Rola / karta
+    var production = ""      // production / film title
+    var director = ""        // director
+    var cameraOperator = ""  // camera operator (DoP)
+    var scene = ""           // scene
+    var shot = ""            // shot
+    var take = 1             // take
+    var roll = ""            // roll / card
     var location: Location = .none
     var timeOfDay: TimeOfDay = .none
-    var mos = false          // bez zvuku
-    var note = ""            // Poznámka
-    var good = false         // dobrý pokus (zakrúžkovaný)
-    var recordedAt: Date?    // vyplní sa pri REC
+    var mos = false          // without sound
+    var note = ""            // note
+    var good = false         // good (circled) take
+    var recordedAt: Date?    // set at REC
 
-    /// "OBRAZ 12 · ZÁBER 3 · POKUS 2"
+    /// "Scene 12 · Shot 3 · Take 2"
     var shortLabel: String {
         var parts: [String] = []
-        if !scene.isEmpty { parts.append("Obraz \(scene)") }
-        if !shot.isEmpty { parts.append("Záber \(shot)") }
-        parts.append("Pokus \(take)")
+        if !scene.isEmpty { parts.append("Scene \(scene)") }
+        if !shot.isEmpty { parts.append("Shot \(shot)") }
+        parts.append("Take \(take)")
         return parts.joined(separator: " · ")
     }
 
     /// Multi-line description used in the movie metadata.
     var longDescription: String {
         var lines: [String] = []
-        if !production.isEmpty { lines.append("Projekt: \(production)") }
+        if !production.isEmpty { lines.append("Production: \(production)") }
         lines.append(shortLabel)
-        if !roll.isEmpty { lines.append("Rola: \(roll)") }
+        if !roll.isEmpty { lines.append("Roll: \(roll)") }
         let flags = [location.rawValue, timeOfDay.rawValue, mos ? "MOS" : ""].filter { !$0.isEmpty }
         if !flags.isEmpty { lines.append(flags.joined(separator: " · ")) }
-        if !director.isEmpty { lines.append("Réžia: \(director)") }
-        if !cameraOperator.isEmpty { lines.append("Kamera: \(cameraOperator)") }
-        if good { lines.append("Dobrý pokus") }
-        if !note.isEmpty { lines.append("Poznámka: \(note)") }
+        if !director.isEmpty { lines.append("Director: \(director)") }
+        if !cameraOperator.isEmpty { lines.append("Camera operator: \(cameraOperator)") }
+        if good { lines.append("Good take") }
+        if !note.isEmpty { lines.append("Note: \(note)") }
         return lines.joined(separator: "\n")
     }
 
@@ -75,7 +86,7 @@ struct SlateInfo: Codable, Hashable {
         let date = ISO8601DateFormatter().string(from: recordedAt ?? Date())
         return [
             item(.quickTimeMetadataTitle, title),
-            item(.quickTimeMetadataDescription, longDescription + "\nSúbor: " + TakeNaming.fileName(take: takeNumber, role: camera, slate: self, names: names)),
+            item(.quickTimeMetadataDescription, longDescription + "\nFile: " + TakeNaming.fileName(take: takeNumber, role: camera, slate: self, names: names)),
             item(.quickTimeMetadataComment, note),
             item(.quickTimeMetadataDirector, director),
             item(.quickTimeMetadataCameraIdentifier, names.name(camera)),

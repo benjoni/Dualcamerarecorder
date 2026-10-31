@@ -20,8 +20,8 @@ struct PlaybackView: View {
                 .frame(minWidth: 300, idealWidth: 340, maxWidth: 440)
             VStack(spacing: 12) {
                 HStack(spacing: 12) {
-                    playerPane(title: "Kamera A", file: player.take?.camA, available: player.take?.camA != nil, content: PlayerView(player: player.playerA))
-                    playerPane(title: "Kamera B", file: player.take?.camB, available: player.take?.camB != nil, content: PlayerView(player: player.playerB))
+                    playerPane(title: "Camera A", file: player.take?.camA, available: player.take?.camA != nil, content: PlayerView(player: player.playerA))
+                    playerPane(title: "Camera B", file: player.take?.camB, available: player.take?.camB != nil, content: PlayerView(player: player.playerB))
                 }
                 transport
                 Spacer(minLength: 0)
@@ -43,11 +43,11 @@ struct PlaybackView: View {
     private var takeList: some View {
         VStack(alignment: .leading, spacing: 0) {
             HStack {
-                Text("Zábery").font(.headline)
+                Text("Clips").font(.headline)
                 Spacer()
                 Button { library.refresh() } label: { Image(systemName: "arrow.clockwise") }
                     .buttonStyle(.borderless)
-                    .help("Obnoviť zoznam")
+                    .help("Refresh list")
             }
             .padding(8)
             Text(library.folder?.path ?? "")
@@ -61,10 +61,10 @@ struct PlaybackView: View {
                         HStack(spacing: 6) {
                             Text(take.name).font(.body.weight(.semibold)).foregroundStyle(.primary)
                             if take.slate?.good == true {
-                                Image(systemName: "star.fill").foregroundStyle(.yellow).help("Dobrý pokus")
+                                Image(systemName: "star.fill").foregroundStyle(.yellow).help("Good take")
                             }
                             if let m = take.marks, !m.isEmpty {
-                                Image(systemName: "flag.fill").foregroundStyle(.yellow).help("Má IN/OUT")
+                                Image(systemName: "flag.fill").foregroundStyle(.yellow).help("Has IN/OUT")
                             }
                         }
                         if let slate = take.slate {
@@ -94,7 +94,7 @@ struct PlaybackView: View {
             ZStack {
                 content
                 if !available {
-                    Text(player.take == nil ? "Vyber záber" : "Súbor chýba").foregroundStyle(.secondary)
+                    Text(player.take == nil ? "Select a clip" : "File missing").foregroundStyle(.secondary)
                 }
             }
             .aspectRatio(16.0 / 9.0, contentMode: .fit)
@@ -135,10 +135,10 @@ struct PlaybackView: View {
                 Text(slate.longDescription.replacingOccurrences(of: "\n", with: "  ·  "))
                     .font(.caption).foregroundStyle(.secondary).lineLimit(2)
             } else {
-                Text("Záber nemá údaje z klapky.").foregroundStyle(.secondary)
+                Text("This clip has no slate data.").foregroundStyle(.secondary)
             }
             Spacer()
-            Button("Klapka…") { editingSlate = true }
+            Button("Slate…") { editingSlate = true }
                 .disabled(player.take == nil)
         }
         .sheet(isPresented: $editingSlate) {
@@ -150,19 +150,19 @@ struct PlaybackView: View {
 
     private var markControls: some View {
         HStack(spacing: 10) {
-            Button("Nastaviť IN") { player.setIn() }
+            Button("Set IN") { player.setIn() }
                 .keyboardShortcut("i", modifiers: [])
-                .help("IN na aktuálnu snímku (I)")
-            Button("Nastaviť OUT") { player.setOut() }
+                .help("IN at the current frame (I)")
+            Button("Set OUT") { player.setOut() }
                 .keyboardShortcut("o", modifiers: [])
-                .help("OUT na aktuálnu snímku (O)")
-            Button { player.goToIn() } label: { Label("Na IN", systemImage: "arrow.left.to.line") }
+                .help("OUT at the current frame (O)")
+            Button { player.goToIn() } label: { Label("Go to IN", systemImage: "arrow.left.to.line") }
                 .disabled(player.marks.inPoint == nil)
-            Button { player.goToOut() } label: { Label("Na OUT", systemImage: "arrow.right.to.line") }
+            Button { player.goToOut() } label: { Label("Go to OUT", systemImage: "arrow.right.to.line") }
                 .disabled(player.marks.outPoint == nil)
-            Button("Zrušiť") { player.clearMarks() }
+            Button("Clear") { player.clearMarks() }
                 .disabled(player.marks.isEmpty)
-            Toggle("Hrať len IN–OUT", isOn: $player.limitToRange)
+            Toggle("Play IN–OUT only", isOn: $player.limitToRange)
             Spacer()
             Text("IN \(player.marks.inPoint.map { player.timecode($0) } ?? "—")  ·  OUT \(player.marks.outPoint.map { player.timecode($0) } ?? "—")")
                 .font(.system(.callout, design: .monospaced))
@@ -196,32 +196,32 @@ struct PlaybackView: View {
             slateInfo
             HStack(spacing: 14) {
                 Button { player.goToStart() } label: { Image(systemName: "backward.end.fill") }
-                    .help("Na začiatok")
+                    .help("Go to start")
                 Button { player.step(-1) } label: { Image(systemName: "backward.frame.fill") }
                     .keyboardShortcut(.leftArrow, modifiers: [])
-                    .help("O snímku späť (←)")
+                    .help("One frame back (←)")
                 Button { player.togglePlay() } label: {
                     Image(systemName: player.isPlaying ? "pause.fill" : "play.fill").frame(width: 40)
                 }
                 .keyboardShortcut(.space, modifiers: [])
-                .help("Prehrať / pauza (medzerník)")
+                .help("Play / pause (space)")
                 Button { player.step(1) } label: { Image(systemName: "forward.frame.fill") }
                     .keyboardShortcut(.rightArrow, modifiers: [])
-                    .help("O snímku vpred (→)")
+                    .help("One frame forward (→)")
 
-                Picker("Rýchlosť", selection: $player.rate) {
-                    Text("0,5×").tag(Float(0.5))
+                Picker("Speed", selection: $player.rate) {
+                    Text("0.5×").tag(Float(0.5))
                     Text("1×").tag(Float(1.0))
                 }
                 .pickerStyle(.segmented)
                 .frame(width: 140)
 
-                Toggle("Zvuk A", isOn: $player.audioA)
-                Toggle("Zvuk B", isOn: $player.audioB)
+                Toggle("Audio A", isOn: $player.audioA)
+                Toggle("Audio B", isOn: $player.audioB)
 
                 Spacer()
                 if let offset = player.abOffsetMs {
-                    Text(String(format: "Rozdiel B−A: %+.1f ms", offset))
+                    Text(String(format: "Offset B−A: %+.1f ms", offset))
                         .font(.caption.monospacedDigit())
                         .foregroundStyle(abs(offset) > 1000 * player.frameDuration.seconds ? .red : .secondary)
                 }

@@ -21,7 +21,7 @@ struct AudioMeter: View {
             }
         }
         .frame(height: 6)
-        .help(db <= -119 ? "Bez zvuku" : String(format: "%.1f dBFS", db))
+        .help(db <= -119 ? "No audio" : String(format: "%.1f dBFS", db))
     }
 }
 

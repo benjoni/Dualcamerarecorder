@@ -21,18 +21,18 @@ struct SlateBoard: View {
             }
             .frame(height: 10)
             .rotationEffect(.degrees(-2))
-            Text(slate.production.isEmpty ? "PROJEKT" : slate.production.uppercased())
+            Text(slate.production.isEmpty ? "PRODUCTION" : slate.production.uppercased())
                 .font(.caption.weight(.bold)).lineLimit(1)
             HStack(alignment: .top, spacing: 14) {
-                cell("OBRAZ", slate.scene.isEmpty ? "–" : slate.scene)
-                cell("ZÁBER", slate.shot.isEmpty ? "–" : slate.shot)
-                cell("POKUS", "\(slate.take)")
+                cell("SCENE", slate.scene.isEmpty ? "–" : slate.scene)
+                cell("SHOT", slate.shot.isEmpty ? "–" : slate.shot)
+                cell("TAKE", "\(slate.take)")
             }
             HStack(spacing: 8) {
                 if slate.location != .none { Text(slate.location.rawValue) }
                 if slate.timeOfDay != .none { Text(slate.timeOfDay.rawValue) }
                 if slate.mos { Text("MOS") }
-                if !slate.roll.isEmpty { Text("ROLA \(slate.roll)") }
+                if !slate.roll.isEmpty { Text("ROLL \(slate.roll)") }
                 if slate.good { Image(systemName: "star.fill").foregroundStyle(.yellow) }
             }
             .font(.caption.weight(.semibold))
@@ -66,21 +66,21 @@ struct SlateFields: View {
     var body: some View {
         Grid(alignment: .leading, horizontalSpacing: 10, verticalSpacing: 8) {
             GridRow {
-                field("Projekt", text: $slate.production)
-                field("Réžia", text: $slate.director)
-                field("Kamera", text: $slate.cameraOperator)
-                field("Rola", text: $slate.roll).frame(maxWidth: 110)
+                field("Production", text: $slate.production)
+                field("Director", text: $slate.director)
+                field("Camera operator", text: $slate.cameraOperator)
+                field("Roll", text: $slate.roll).frame(maxWidth: 110)
             }
             .disabled(locked)
             GridRow {
-                field("Obraz", text: Binding(get: { slate.scene },
+                field("Scene", text: Binding(get: { slate.scene },
                                              set: { v in if let setScene { setScene(v) } else { slate.scene = v } }))
                     .frame(maxWidth: 110)
-                field("Záber", text: Binding(get: { slate.shot },
+                field("Shot", text: Binding(get: { slate.shot },
                                              set: { v in if let setShot { setShot(v) } else { slate.shot = v } }))
                     .frame(maxWidth: 110)
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("Pokus").font(.caption).foregroundStyle(.secondary)
+                    Text("Take").font(.caption).foregroundStyle(.secondary)
                     HStack(spacing: 4) {
                         TextField("", value: $slate.take, format: .number)
                             .textFieldStyle(.roundedBorder)
@@ -97,16 +97,16 @@ struct SlateFields: View {
                         ForEach(SlateInfo.TimeOfDay.allCases) { Text($0.title).tag($0) }
                     }
                     .labelsHidden().frame(width: 80)
-                    Toggle("MOS", isOn: $slate.mos).help("Bez zvuku")
+                    Toggle("MOS", isOn: $slate.mos).help("Without sound")
                 }
                 .padding(.top, 14)
             }
             .disabled(locked)
             GridRow {
-                field("Poznámka", text: $slate.note)
+                field("Note", text: $slate.note)
                     .gridCellColumns(3)
                 Toggle(isOn: $slate.good) {
-                    Label("Dobrý pokus", systemImage: slate.good ? "star.fill" : "star")
+                    Label("Good take", systemImage: slate.good ? "star.fill" : "star")
                 }
                 .toggleStyle(.button)
                 .tint(.yellow)
@@ -141,10 +141,10 @@ struct SlatePanel: View {
             SlateBoard(slate: displayedSlate, recording: controller.isRecording)
             VStack(alignment: .leading, spacing: 6) {
                 HStack {
-                    Text("Klapka").font(.headline)
+                    Text("Slate").font(.headline)
                     Text(controller.isRecording
-                         ? "Obraz/záber/pokus sú počas nahrávania zamknuté – poznámku a „dobrý“ môžeš meniť."
-                         : "Pokus sa po každom zábere zvýši o 1; zmena obrazu alebo záberu ho nastaví na 1.")
+                         ? "Scene / shot / take are locked while recording – note and “good take” can still be changed."
+                         : "Take goes up by 1 after each recording; changing scene or shot resets it to 1.")
                         .font(.caption).foregroundStyle(.secondary)
                 }
                 SlateFields(slate: $settings.slate,
@@ -165,15 +165,15 @@ struct SlateEditSheet: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
-            Text("Klapka – \(takeName)").font(.title3.weight(.bold))
+            Text("Slate – \(takeName)").font(.title3.weight(.bold))
             HStack(alignment: .top, spacing: 16) {
                 SlateBoard(slate: slate)
                 SlateFields(slate: $slate)
             }
             HStack {
                 Spacer()
-                Button("Zrušiť") { dismiss() }.keyboardShortcut(.cancelAction)
-                Button("Uložiť") { onSave(slate); dismiss() }.keyboardShortcut(.defaultAction)
+                Button("Cancel") { dismiss() }.keyboardShortcut(.cancelAction)
+                Button("Save") { onSave(slate); dismiss() }.keyboardShortcut(.defaultAction)
             }
         }
         .padding(20)

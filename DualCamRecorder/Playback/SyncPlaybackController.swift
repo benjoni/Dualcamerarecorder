@@ -234,7 +234,7 @@ final class SyncPlaybackController: ObservableObject {
         if m.setOut(currentFrameSeconds) {
             updateMarks(m)
         } else {
-            marksMessage = "OUT nemôže byť pred IN."
+            marksMessage = "OUT cannot be before IN."
         }
     }
 
@@ -251,7 +251,7 @@ final class SyncPlaybackController: ObservableObject {
         do {
             try TakeSlateStore.save(s, folder: folder, take: take.number)
         } catch {
-            marksMessage = "Klapku sa nepodarilo uložiť: \(error.localizedDescription)"
+            marksMessage = "Could not save the slate: \(error.localizedDescription)"
         }
     }
 
@@ -263,7 +263,7 @@ final class SyncPlaybackController: ObservableObject {
         do {
             try TakeMarksStore.save(m, folder: folder, take: take.number)
         } catch {
-            marksMessage = "IN/OUT sa nepodarilo uložiť: \(error.localizedDescription)"
+            marksMessage = "Could not save IN/OUT: \(error.localizedDescription)"
         }
     }
 

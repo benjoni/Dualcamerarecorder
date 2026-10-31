@@ -51,9 +51,9 @@ enum MovieWriterError: LocalizedError {
 
     var errorDescription: String? {
         switch self {
-        case .cannotCreate(let s): return "Nedá sa vytvoriť súbor: \(s)"
-        case .cannotAddInput(let s): return "AVAssetWriter odmietol vstup: \(s)"
-        case .cannotStart(let s): return "Zápis sa nespustil: \(s)"
+        case .cannotCreate(let s): return "Cannot create file: \(s)"
+        case .cannotAddInput(let s): return "AVAssetWriter rejected input: \(s)"
+        case .cannotStart(let s): return "Writing did not start: \(s)"
         }
     }
 }
@@ -75,7 +75,7 @@ final class MovieWriter {
         self.url = url
         self.audioChannels = audioChannels
         if FileManager.default.fileExists(atPath: url.path) {
-            throw MovieWriterError.cannotCreate("\(url.lastPathComponent) už existuje")
+            throw MovieWriterError.cannotCreate("\(url.lastPathComponent) already exists")
         }
         let writer: AVAssetWriter
         do {
@@ -145,7 +145,7 @@ final class MovieWriter {
         }
 
         guard writer.startWriting() else {
-            throw MovieWriterError.cannotStart(writer.error?.localizedDescription ?? "neznáma chyba")
+            throw MovieWriterError.cannotStart(writer.error?.localizedDescription ?? "unknown error")
         }
         self.writer = writer
         self.videoInput = videoInput
@@ -213,7 +213,7 @@ final class MovieWriter {
         guard sessionStarted, writer.status == .writing else {
             writer.cancelWriting()
             try? FileManager.default.removeItem(at: url)
-            completion(writer.error ?? MovieWriterError.cannotStart("žiadne snímky neboli zapísané"))
+            completion(writer.error ?? MovieWriterError.cannotStart("no frames were written"))
             return
         }
         if let endTime { writer.endSession(atSourceTime: endTime) }

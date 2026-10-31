@@ -38,7 +38,7 @@ final class SimulatedSource: VideoSource {
 
     init(label: String, phaseOffset: Double, audioChannels: Int, hue: CGFloat) {
         self.label = label
-        self.displayName = "Simulovaný vstup \(label)"
+        self.displayName = "Simulated input \(label)"
         self.phaseOffset = phaseOffset
         self.audioChannels = audioChannels
         self.hue = hue
@@ -166,7 +166,7 @@ final class SimulatedSource: VideoSource {
         ctx.setFillColor(CGColor(red: 1, green: 0.2, blue: 0.2, alpha: 1))
         ctx.fill(CGRect(x: x, y: 330, width: 40, height: 60))
 
-        draw(text: "CAM \(label)  SIMULÁCIA", at: CGPoint(x: 60, y: 220), size: 72, in: ctx)
+        draw(text: "CAM \(label)  SIMULATED", at: CGPoint(x: 60, y: 220), size: 72, in: ctx)
         draw(text: tc, at: CGPoint(x: 60, y: 90), size: 110, in: ctx)
         draw(text: "frame \(index)", at: CGPoint(x: 900, y: 100), size: 48, in: ctx)
 
