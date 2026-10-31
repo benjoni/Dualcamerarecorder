@@ -34,6 +34,8 @@ final class SyncPlaybackController: ObservableObject {
     /// Play only between IN and OUT (start at IN, stop at OUT).
     @Published var limitToRange = true
     @Published private(set) var marksMessage: String?
+    /// Slate of the loaded take (nil for takes recorded without one).
+    @Published private(set) var slate: SlateInfo?
     private var boundaryObserver: Any?
     private weak var boundaryPlayer: AVPlayer?
 
@@ -69,6 +71,7 @@ final class SyncPlaybackController: ObservableObject {
         pauseImmediately()
         self.take = take
         marks = take?.marks ?? TakeMarks()
+        slate = take?.slate
         marksMessage = nil
         currentTime = 0
         duration = 0
@@ -239,6 +242,18 @@ final class SyncPlaybackController: ObservableObject {
 
     func goToIn() { if let i = marks.inPoint { seek(seconds: i) } }
     func goToOut() { if let o = marks.outPoint { seek(seconds: o) } }
+
+    /// Saves edited slate data of the loaded take (Take_###_slate.json).
+    func updateSlate(_ s: SlateInfo) {
+        slate = s
+        take?.slate = s
+        guard let take, let folder = take.folder else { return }
+        do {
+            try TakeSlateStore.save(s, folder: folder, take: take.number)
+        } catch {
+            marksMessage = "Klapku sa nepodarilo uložiť: \(error.localizedDescription)"
+        }
+    }
 
     private func updateMarks(_ m: TakeMarks) {
         marks = m

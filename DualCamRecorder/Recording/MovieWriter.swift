@@ -70,7 +70,8 @@ final class MovieWriter {
     private(set) var audioSamplesWritten = 0
     private var sessionStarted = false
 
-    init(url: URL, width: Int, height: Int, flavor: ProResFlavor, audioChannels: Int) throws {
+    init(url: URL, width: Int, height: Int, flavor: ProResFlavor, audioChannels: Int,
+         metadata: [AVMetadataItem] = []) throws {
         self.url = url
         self.audioChannels = audioChannels
         if FileManager.default.fileExists(atPath: url.path) {
@@ -82,6 +83,7 @@ final class MovieWriter {
         } catch {
             throw MovieWriterError.cannotCreate(error.localizedDescription)
         }
+        writer.metadata = metadata
         // Fragments keep the file recoverable if the app/computer dies mid-take.
         writer.movieFragmentInterval = CMTime(seconds: 10, preferredTimescale: 600)
 

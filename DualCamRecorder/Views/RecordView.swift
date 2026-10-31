@@ -17,6 +17,8 @@ struct RecordView: View {
             }
             Divider()
             transportBar
+            Divider()
+            SlatePanel(controller: controller, settings: settings)
             if let error = controller.errorMessage {
                 Text(error)
                     .foregroundStyle(.red)
@@ -90,13 +92,13 @@ struct RecordView: View {
                 Button { controller.markIn() } label: {
                     Text("IN").font(.headline).frame(width: 44, height: 28)
                 }
-                .keyboardShortcut("i", modifiers: [])
-                .help("Nastaviť IN na aktuálny čas záberu (I)")
+                .keyboardShortcut("i", modifiers: [.command])
+                .help("Nastaviť IN na aktuálny čas záberu (⌘I)")
                 Button { controller.markOut() } label: {
                     Text("OUT").font(.headline).frame(width: 44, height: 28)
                 }
-                .keyboardShortcut("o", modifiers: [])
-                .help("Nastaviť OUT na aktuálny čas záberu (O)")
+                .keyboardShortcut("o", modifiers: [.command])
+                .help("Nastaviť OUT na aktuálny čas záberu (⌘O)")
                 Button { controller.clearMarks() } label: { Image(systemName: "xmark.circle") }
                     .buttonStyle(.borderless)
                     .help("Zrušiť IN/OUT")

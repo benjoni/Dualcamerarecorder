@@ -12,6 +12,7 @@ struct PlaybackView: View {
     @State private var selection: Take.ID?
     @State private var scrubValue: Double = 0
     @State private var isScrubbing = false
+    @State private var editingSlate = false
 
     var body: some View {
         HSplitView {
@@ -59,9 +60,15 @@ struct PlaybackView: View {
                     VStack(alignment: .leading, spacing: 2) {
                         HStack(spacing: 6) {
                             Text(take.name).font(.body.weight(.semibold)).foregroundStyle(.primary)
+                            if take.slate?.good == true {
+                                Image(systemName: "star.fill").foregroundStyle(.yellow).help("Dobrý pokus")
+                            }
                             if let m = take.marks, !m.isEmpty {
                                 Image(systemName: "flag.fill").foregroundStyle(.yellow).help("Má IN/OUT")
                             }
+                        }
+                        if let slate = take.slate {
+                            Text(slate.shortLabel).foregroundStyle(.primary)
                         }
                         HStack(spacing: 6) {
                             Text(take.camA != nil ? "A" : "–").foregroundStyle(take.camA != nil ? Color.green : Color.secondary)
@@ -115,6 +122,28 @@ struct PlaybackView: View {
         .padding(.horizontal, 110)
     }
 
+    /// Slate summary of the loaded take + edit button.
+    private var slateInfo: some View {
+        HStack(alignment: .firstTextBaseline, spacing: 10) {
+            Image(systemName: "film.stack")
+            if let slate = player.slate {
+                Text(slate.shortLabel).font(.headline)
+                Text(slate.longDescription.replacingOccurrences(of: "\n", with: "  ·  "))
+                    .font(.caption).foregroundStyle(.secondary).lineLimit(2)
+            } else {
+                Text("Záber nemá údaje z klapky.").foregroundStyle(.secondary)
+            }
+            Spacer()
+            Button("Klapka…") { editingSlate = true }
+                .disabled(player.take == nil)
+        }
+        .sheet(isPresented: $editingSlate) {
+            SlateEditSheet(slate: player.slate ?? SlateInfo(),
+                           takeName: player.take?.name ?? "",
+                           onSave: { player.updateSlate($0) })
+        }
+    }
+
     private var markControls: some View {
         HStack(spacing: 10) {
             Button("Nastaviť IN") { player.setIn() }
@@ -160,6 +189,7 @@ struct PlaybackView: View {
             }
             rangeBar
             markControls
+            slateInfo
             HStack(spacing: 14) {
                 Button { player.goToStart() } label: { Image(systemName: "backward.end.fill") }
                     .help("Na začiatok")

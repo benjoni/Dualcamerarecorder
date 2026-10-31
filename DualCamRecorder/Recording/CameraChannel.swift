@@ -13,6 +13,7 @@
 
 import Foundation
 import CoreMedia
+import AVFoundation
 import CoreVideo
 import Combine
 import os
@@ -131,6 +132,7 @@ final class CameraChannel: ObservableObject, VideoSourceDelegate {
 
     /// Creates the writer now (so the first frame does not pay for it) and arms the channel to start at `startHostNanos`.
     func arm(url: URL, startHostNanos: UInt64, flavor: ProResFlavor, audioChannels: Int,
+             metadata: [AVMetadataItem] = [],
              completion: @escaping (ChannelTakeResult) -> Void) -> String? {
         var failure: String?
         queue.sync {
@@ -138,7 +140,8 @@ final class CameraChannel: ObservableObject, VideoSourceDelegate {
             guard let size = lastFrameSize else { failure = "Kamera \(role.rawValue): žiadny obraz zo vstupu."; return }
             do {
                 let writer = try MovieWriter(url: url, width: size.width, height: size.height,
-                                             flavor: flavor, audioChannels: audioChannels)
+                                             flavor: flavor, audioChannels: audioChannels,
+                                             metadata: metadata)
                 take = TakeState(writer: writer, startHostNanos: startHostNanos, completion: completion,
                                  statsAtStart: qStats)
             } catch {

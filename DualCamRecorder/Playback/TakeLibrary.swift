@@ -15,6 +15,7 @@ struct Take: Identifiable, Hashable {
     var modified: Date
     var sizeBytes: Int64
     var marks: TakeMarks?
+    var slate: SlateInfo?
     /// Folder the take lives in (marks are saved there).
     var folder: URL? { (camA ?? camB)?.deletingLastPathComponent() }
 
@@ -69,6 +70,7 @@ final class TakeLibrary: ObservableObject {
         }
         for (number, take) in byNumber {
             byNumber[number]?.marks = TakeMarksStore.load(folder: folder, take: take.number)
+            byNumber[number]?.slate = TakeSlateStore.load(folder: folder, take: take.number)
         }
         return byNumber.values.sorted { $0.number > $1.number }
     }

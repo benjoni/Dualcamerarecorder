@@ -22,12 +22,14 @@
 		8A95CF0EB055A53010FE371A /* CameraChannel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9C6E675FB14A7235CFCF3850 /* CameraChannel.swift */; };
 		801F49D4930640D47F344B2C /* MovieWriter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4AAEE032902641AFB372D5C2 /* MovieWriter.swift */; };
 		847956D8CA68D4BD49F4303C /* RecordingController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9F63A88B3FF58DABCEC4CBC9 /* RecordingController.swift */; };
+		B37B40FD751D227921E4707C /* SlateInfo.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3B7D6187F343325A5C603B5B /* SlateInfo.swift */; };
 		D2A9926782FDBFA23DEEE2E4 /* TakeMarks.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7A408E4C54F910DBE9D01BE7 /* TakeMarks.swift */; };
 		D774852BBEEBB78BDD7E7FCC /* TakeNaming.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4044731AE50F056638B1C5A0 /* TakeNaming.swift */; };
 		E72739D66FB84EAFDDDD40FB /* Components.swift in Sources */ = {isa = PBXBuildFile; fileRef = D904E764B33B5961920C3080 /* Components.swift */; };
 		9C38C3FC26E697763DF1A65B /* PlaybackView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 912ECBEF9548220CA52C8564 /* PlaybackView.swift */; };
 		50A9FEC0F6D9E21C7BAFB20F /* RecordView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7BD5BC128CE4428835DAFD64 /* RecordView.swift */; };
 		AFB0CBBE344EE4627C35B680 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 986E2D84EE22E38CEAA98268 /* SettingsView.swift */; };
+		78731ACF8C9C80C2CA5D1133 /* SlateView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 00CB9D37D4DFB09AF75F5AE8 /* SlateView.swift */; };
 		7445CCBC7A03D5596183C4C3 /* AVFoundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 120A3B9C5DB6AAD59FDAD4C2 /* AVFoundation.framework */; };
 		7F98A92897F334CE0D2B8328 /* CoreMedia.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = B012EC397DCF3D447BBEBEBB /* CoreMedia.framework */; };
 		EA4EA06B847CBFC031421927 /* CoreVideo.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = BFE88E16FFD213DA188450AF /* CoreVideo.framework */; };
@@ -54,12 +56,14 @@
 		9C6E675FB14A7235CFCF3850 /* CameraChannel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraChannel.swift; sourceTree = "<group>"; };
 		4AAEE032902641AFB372D5C2 /* MovieWriter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MovieWriter.swift; sourceTree = "<group>"; };
 		9F63A88B3FF58DABCEC4CBC9 /* RecordingController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordingController.swift; sourceTree = "<group>"; };
+		3B7D6187F343325A5C603B5B /* SlateInfo.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SlateInfo.swift; sourceTree = "<group>"; };
 		7A408E4C54F910DBE9D01BE7 /* TakeMarks.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TakeMarks.swift; sourceTree = "<group>"; };
 		4044731AE50F056638B1C5A0 /* TakeNaming.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TakeNaming.swift; sourceTree = "<group>"; };
 		D904E764B33B5961920C3080 /* Components.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Components.swift; sourceTree = "<group>"; };
 		912ECBEF9548220CA52C8564 /* PlaybackView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaybackView.swift; sourceTree = "<group>"; };
 		7BD5BC128CE4428835DAFD64 /* RecordView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordView.swift; sourceTree = "<group>"; };
 		986E2D84EE22E38CEAA98268 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
+		00CB9D37D4DFB09AF75F5AE8 /* SlateView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SlateView.swift; sourceTree = "<group>"; };
 		120A3B9C5DB6AAD59FDAD4C2 /* AVFoundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AVFoundation.framework; path = System/Library/Frameworks/AVFoundation.framework; sourceTree = SDKROOT; };
 		B012EC397DCF3D447BBEBEBB /* CoreMedia.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreMedia.framework; path = System/Library/Frameworks/CoreMedia.framework; sourceTree = SDKROOT; };
 		BFE88E16FFD213DA188450AF /* CoreVideo.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreVideo.framework; path = System/Library/Frameworks/CoreVideo.framework; sourceTree = SDKROOT; };
@@ -154,6 +158,7 @@
 				9C6E675FB14A7235CFCF3850 /* CameraChannel.swift */,
 				4AAEE032902641AFB372D5C2 /* MovieWriter.swift */,
 				9F63A88B3FF58DABCEC4CBC9 /* RecordingController.swift */,
+				3B7D6187F343325A5C603B5B /* SlateInfo.swift */,
 				7A408E4C54F910DBE9D01BE7 /* TakeMarks.swift */,
 				4044731AE50F056638B1C5A0 /* TakeNaming.swift */,
 			);
@@ -167,6 +172,7 @@
 				912ECBEF9548220CA52C8564 /* PlaybackView.swift */,
 				7BD5BC128CE4428835DAFD64 /* RecordView.swift */,
 				986E2D84EE22E38CEAA98268 /* SettingsView.swift */,
+				00CB9D37D4DFB09AF75F5AE8 /* SlateView.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -285,12 +291,14 @@
 				8A95CF0EB055A53010FE371A /* CameraChannel.swift in Sources */,
 				801F49D4930640D47F344B2C /* MovieWriter.swift in Sources */,
 				847956D8CA68D4BD49F4303C /* RecordingController.swift in Sources */,
+				B37B40FD751D227921E4707C /* SlateInfo.swift in Sources */,
 				D2A9926782FDBFA23DEEE2E4 /* TakeMarks.swift in Sources */,
 				D774852BBEEBB78BDD7E7FCC /* TakeNaming.swift in Sources */,
 				E72739D66FB84EAFDDDD40FB /* Components.swift in Sources */,
 				9C38C3FC26E697763DF1A65B /* PlaybackView.swift in Sources */,
 				50A9FEC0F6D9E21C7BAFB20F /* RecordView.swift in Sources */,
 				AFB0CBBE344EE4627C35B680 /* SettingsView.swift in Sources */,
+				78731ACF8C9C80C2CA5D1133 /* SlateView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

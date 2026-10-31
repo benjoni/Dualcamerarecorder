@@ -38,6 +38,8 @@ final class RecordingController: NSObject, ObservableObject, DLDeviceBrowserDele
     @Published var errorMessage: String?
     /// IN / OUT marks of the take being recorded (seconds from the start of the take).
     @Published private(set) var marks = TakeMarks()
+    /// Slate snapshot of the take being recorded (scene/shot/take frozen at REC).
+    @Published private(set) var recordingSlate: SlateInfo?
 
     let sdkStatus: String
 
@@ -211,6 +213,8 @@ final class RecordingController: NSObject, ObservableObject, DLDeviceBrowserDele
         let audioChannels = settings.audioChannels
         pendingResults = []
         expectedResults = 0
+        var slate = settings.slate
+        slate.recordedAt = Date()
 
         var armed: [CameraChannel] = []
         for role in active {
@@ -219,6 +223,7 @@ final class RecordingController: NSObject, ObservableObject, DLDeviceBrowserDele
             ch.resetCounters()
             if let failure = ch.arm(url: url, startHostNanos: startHost, flavor: settings.proResFlavor,
                                     audioChannels: audioChannels,
+                                    metadata: slate.metadataItems(camera: role, takeNumber: take),
                                     completion: { [weak self] result in self?.channelFinished(result) }) {
                 armed.forEach { $0.cancelArmed() }
                 errorMessage = failure
@@ -230,6 +235,7 @@ final class RecordingController: NSObject, ObservableObject, DLDeviceBrowserDele
         recordStartHost = startHost
         recordFolder = folder
         marks = TakeMarks()
+        recordingSlate = slate
         state = .recording(take: take, started: Date())
         elapsed = 0
         lastTakeMessage = nil
@@ -257,6 +263,24 @@ final class RecordingController: NSObject, ObservableObject, DLDeviceBrowserDele
     func clearMarks() {
         guard case .recording = state else { return }
         marks = TakeMarks()
+    }
+
+    // MARK: - Slate
+
+    /// Fields that identify the take are frozen while recording; note / good stay editable.
+    var slateLocked: Bool { isRecording }
+
+    /// Changing scene or shot starts counting takes from 1 again.
+    func setSlateScene(_ value: String) {
+        guard !slateLocked, value != settings.slate.scene else { return }
+        settings.slate.scene = value
+        settings.slate.take = 1
+    }
+
+    func setSlateShot(_ value: String) {
+        guard !slateLocked, value != settings.slate.shot else { return }
+        settings.slate.shot = value
+        settings.slate.take = 1
     }
 
     func stopRecording() {
@@ -301,6 +325,24 @@ final class RecordingController: NSObject, ObservableObject, DLDeviceBrowserDele
                 errorMessage = "IN/OUT sa nepodarilo uložiť: \(error.localizedDescription)"
             }
         }
+        // Save the slate (note / "good" may have been edited during the take) and advance the take number.
+        if var slate = recordingSlate, let folder = recordFolder, let take = activeTake,
+           pendingResults.contains(where: { $0.error == nil }) {
+            slate.note = settings.slate.note
+            slate.good = settings.slate.good
+            do {
+                try TakeSlateStore.save(slate, folder: folder, take: take)
+            } catch {
+                errorMessage = "Klapku sa nepodarilo uložiť: \(error.localizedDescription)"
+            }
+            var next = settings.slate
+            next.take = slate.take + 1
+            next.note = ""
+            next.good = false
+            next.recordedAt = nil
+            settings.slate = next
+        }
+        recordingSlate = nil
         if !errors.isEmpty { errorMessage = errors.joined(separator: "\n") }
 
         state = .idle
