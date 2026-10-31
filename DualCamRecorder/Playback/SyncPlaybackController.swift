@@ -243,7 +243,7 @@ final class SyncPlaybackController: ObservableObject {
     func goToIn() { if let i = marks.inPoint { seek(seconds: i) } }
     func goToOut() { if let o = marks.outPoint { seek(seconds: o) } }
 
-    /// Saves edited slate data of the loaded take (Take_###_slate.json).
+    /// Saves edited slate data of the loaded take (TAKE_###_SLATE.JSON).
     func updateSlate(_ s: SlateInfo) {
         slate = s
         take?.slate = s

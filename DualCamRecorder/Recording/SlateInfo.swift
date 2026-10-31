@@ -3,7 +3,7 @@
 //  DualCamRecorder
 //
 //  Slate (clapperboard) data: production, scene, shot, take, … Stored per take as
-//  Take_###_slate.json next to the movies and embedded as QuickTime metadata in both .mov files.
+//  TAKE_###_SLATE.JSON next to the movies and embedded as QuickTime metadata in both .mov files.
 //
 
 import Foundation
@@ -75,7 +75,7 @@ struct SlateInfo: Codable, Hashable {
         let date = ISO8601DateFormatter().string(from: recordedAt ?? Date())
         return [
             item(.quickTimeMetadataTitle, title),
-            item(.quickTimeMetadataDescription, longDescription + "\nSúbor: " + TakeNaming.fileName(take: takeNumber, role: camera)),
+            item(.quickTimeMetadataDescription, longDescription + "\nSúbor: " + TakeNaming.fileName(take: takeNumber, role: camera, slate: self)),
             item(.quickTimeMetadataComment, note),
             item(.quickTimeMetadataDirector, director),
             item(.quickTimeMetadataCameraIdentifier, "Cam\(camera.rawValue)"),
@@ -86,11 +86,13 @@ struct SlateInfo: Codable, Hashable {
 
 enum TakeSlateStore {
     static func url(folder: URL, take: Int) -> URL {
-        folder.appendingPathComponent(String(format: "Take_%03d_slate.json", take))
+        folder.appendingPathComponent(TakeNaming.sidecarName(take: take, kind: "slate"))
     }
 
     static func load(folder: URL, take: Int) -> SlateInfo? {
-        guard let data = try? Data(contentsOf: url(folder: folder, take: take)) else { return nil }
+        let legacy = folder.appendingPathComponent(TakeNaming.legacySidecarName(take: take, kind: "slate"))
+        guard let data = (try? Data(contentsOf: url(folder: folder, take: take))) ?? (try? Data(contentsOf: legacy))
+        else { return nil }
         let decoder = JSONDecoder()
         decoder.dateDecodingStrategy = .iso8601
         return try? decoder.decode(SlateInfo.self, from: data)
@@ -100,6 +102,9 @@ enum TakeSlateStore {
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
         encoder.dateEncodingStrategy = .iso8601
-        try encoder.encode(slate).write(to: url(folder: folder, take: take), options: .atomic)
+        let data = try encoder.encode(slate)
+        try? FileManager.default.removeItem(at: folder.appendingPathComponent(
+            TakeNaming.legacySidecarName(take: take, kind: "slate")))
+        try data.write(to: url(folder: folder, take: take), options: .atomic)
     }
 }

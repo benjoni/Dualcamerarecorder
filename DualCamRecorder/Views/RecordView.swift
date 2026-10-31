@@ -127,9 +127,11 @@ struct RecordView: View {
     private var takeLabel: String {
         var parts: [String] = []
         if let active = controller.activeTake {
-            parts.append("Nahráva sa \(TakeNaming.displayName(take: active))")
+            let name = TakeNaming.fileName(take: active, role: .a, slate: controller.recordingSlate)
+            parts.append("Nahráva sa \(name.replacingOccurrences(of: "_CAMA.MOV", with: "_CAMA/B.MOV"))")
         } else {
-            parts.append("Ďalší záber: \(TakeNaming.displayName(take: controller.nextTake))")
+            let name = TakeNaming.fileName(take: controller.nextTake, role: .a, slate: settings.slate)
+            parts.append("Ďalší súbor: \(name.replacingOccurrences(of: "_CAMA.MOV", with: "_CAMA/B.MOV"))")
         }
         if let offset = controller.lastStartOffsetMs, !controller.isRecording {
             parts.append(String(format: "posun štartu B−A: %+.1f ms", offset))

@@ -219,7 +219,7 @@ final class RecordingController: NSObject, ObservableObject, DLDeviceBrowserDele
         var armed: [CameraChannel] = []
         for role in active {
             let ch = channel(role)
-            let url = folder.appendingPathComponent(TakeNaming.fileName(take: take, role: role))
+            let url = folder.appendingPathComponent(TakeNaming.fileName(take: take, role: role, slate: slate))
             ch.resetCounters()
             if let failure = ch.arm(url: url, startHostNanos: startHost, flavor: settings.proResFlavor,
                                     audioChannels: audioChannels,

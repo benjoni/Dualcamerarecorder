@@ -67,7 +67,7 @@ DualCamRecorder/
     MovieWriter.swift               AVAssetWriter ProRes 422 + LPCM audio
     CameraChannel.swift             zdroj → náhľad + zápis, štatistiky, synchronizácia
     RecordingController.swift       zariadenia, priradenie A/B, REC/STOP, disk
-    TakeNaming.swift                Take_###_CamA/B.mov, auto-číslovanie
+    TakeNaming.swift                TAKE_###_OBRAZ_x_ZABER_y_CAMA/B.MOV, auto-číslovanie
   Preview/
     PreviewRenderer.swift           zmenšenie a zobrazenie náhľadu
     PreviewView.swift               NSViewRepresentable s AVSampleBufferDisplayLayer
