@@ -319,10 +319,13 @@ struct PlaybackView: View {
     }
 
     private var audioButtons: some View {
-        HStack(spacing: 14) {
+        SegmentGroup {
             Toggle("Audio A", isOn: $player.audioA)
+                .help("Hear camera A")
             Toggle("Audio B", isOn: $player.audioB)
+                .help("Hear camera B")
         }
+        .toggleStyle(SegmentToggleStyle())
     }
 
     private var markButtons: some View {
