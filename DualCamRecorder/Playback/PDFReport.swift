@@ -174,7 +174,7 @@ private struct ReportPage: View {
                 VStack(alignment: .leading, spacing: 2) {
                     Text(production.isEmpty ? "Clip report" : production)
                         .font(.system(size: 18, weight: .bold))
-                    Text("\(dayTitle)  ·  \(dateRange)  ·  \(dayClipCount) clips"
+                    Text("\(dayTitle)  ·  \(dateRange)  ·  \(dayClipCount) clip\(dayClipCount == 1 ? "" : "s")"
                          + (dayPages > 1 ? "  ·  page \(dayPage)/\(dayPages)" : ""))
                         .font(.system(size: 11))
                         .foregroundStyle(Color(white: 0.3))
@@ -449,7 +449,7 @@ struct ExportPDFSheet: View {
                 Toggle("Include pictures (middle of each clip)", isOn: $includePictures)
                 Toggle("Only good takes (★)", isOn: $onlyGood)
                 LabeledContent("Clips") {
-                    Text("\(selectedCount) clips · \(portrait ? 8 : 6) per page")
+                    Text("\(selectedCount) clip\(selectedCount == 1 ? "" : "s") · \(portrait ? 8 : 6) per page")
                 }
             }
             .formStyle(.grouped)

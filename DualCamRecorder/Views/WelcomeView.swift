@@ -196,7 +196,7 @@ struct ProjectRow: View {
                     .font(.callout).foregroundStyle(.secondary)
                     .lineLimit(1).truncationMode(.middle)
                 HStack(spacing: 12) {
-                    Label("\(clipCount) clips", systemImage: "film")
+                    Label("\(clipCount) clip\(clipCount == 1 ? "" : "s")", systemImage: "film")
                     if let day = entry.project.slate?.shootingDay, !day.isEmpty {
                         Label("Day \(day)", systemImage: "calendar")
                     }

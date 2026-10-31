@@ -184,6 +184,7 @@ struct ProjectSettingsView: View {
                     get: { role == .a ? settings.cameraNameA : settings.cameraNameB },
                     set: { recorder.setCameraName($0, for: role) }))
                     .textFieldStyle(.roundedBorder)
+                    .labelsHidden()
                     .frame(width: 100)
             }
         }
