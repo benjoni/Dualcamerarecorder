@@ -262,17 +262,22 @@ struct PlaybackView: View {
             }
             rangeBar
 
-            // Buttons, one group under another.
+            // Buttons, one group under another; audio last.
             VStack(spacing: 8) {
                 transportButtons
-                audioButtons
                 markButtons
+                audioButtons
             }
             .padding(.top, 4)
             .disabled(player.take == nil)
 
             // Info under the buttons.
             infoBlock
+                .padding(.top, 6)
+
+            // Edit slate at the very bottom.
+            Button("Edit slate…") { editingSlate = true }
+                .disabled(player.take == nil)
                 .padding(.top, 6)
         }
         .frame(maxWidth: .infinity)
@@ -330,8 +335,8 @@ struct PlaybackView: View {
             Button("Clear") { player.clearMarks() }
                 .disabled(player.marks.isEmpty)
             Toggle("Play IN–OUT only", isOn: $player.limitToRange)
-            Divider().frame(height: 18)
-            Button("Edit slate…") { editingSlate = true }
+            Toggle("Loop IN/OUT", isOn: $player.loopInOut)
+                .help("Repeat IN → OUT continuously (without OUT: to the end of the clip)")
         }
     }
 

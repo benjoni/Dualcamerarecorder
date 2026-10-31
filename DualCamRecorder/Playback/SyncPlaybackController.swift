@@ -33,6 +33,12 @@ final class SyncPlaybackController: ObservableObject {
     @Published private(set) var marks = TakeMarks()
     /// Play only between IN and OUT (start at IN, stop at OUT).
     @Published var limitToRange = true
+    /// Loop: at OUT (or the end of the clip) jump back to IN (or the start) and keep playing.
+    @Published var loopInOut = false {
+        didSet { if isPlaying && oldValue != loopInOut { play() } }
+    }
+    /// The IN–OUT range is used when "Play IN–OUT only" or "Loop IN/OUT" is on.
+    private var useRange: Bool { limitToRange || loopInOut }
     @Published private(set) var marksMessage: String?
     /// Slate of the loaded take (nil for takes recorded without one).
     @Published private(set) var slate: SlateInfo?
@@ -87,7 +93,9 @@ final class SyncPlaybackController: ObservableObject {
         if let item = itemA ?? itemB {
             endObserver = NotificationCenter.default.addObserver(forName: .AVPlayerItemDidPlayToEndTime, object: item,
                                                                  queue: .main) { [weak self] _ in
-                self?.isPlaying = false
+                guard let self else { return }
+                self.isPlaying = false
+                if self.loopInOut { self.play() }   // restarts at IN (or the start)
             }
         }
 
@@ -125,7 +133,7 @@ final class SyncPlaybackController: ObservableObject {
         let gen = generation
         var start = master.currentTime()
         let fdSec = frameDuration.seconds > 0 ? frameDuration.seconds : 0.04
-        if limitToRange && !marks.isEmpty {
+        if useRange && !marks.isEmpty {
             let lo = marks.inPoint ?? 0
             let hi = marks.outPoint ?? duration
             if start.seconds < lo - fdSec / 2 || start.seconds >= hi - fdSec / 2 {
@@ -138,7 +146,7 @@ final class SyncPlaybackController: ObservableObject {
         let rate = self.rate
         isPlaying = true
         removeBoundaryObserver()
-        if limitToRange, let out = marks.outPoint, out > start.seconds {
+        if useRange, let out = marks.outPoint, out > start.seconds {
             // Stop exactly at OUT.
             let outTime = frameTime(seconds: out)
             boundaryPlayer = master
@@ -172,6 +180,10 @@ final class SyncPlaybackController: ObservableObject {
         let hostStop = CMTimeAdd(CMClockGetTime(CMClockGetHostTimeClock()), CMTime(value: 5, timescale: 1000))
         for p in activePlayers { p.setRate(0, time: .invalid, atHostTime: hostStop) }
         isPlaying = false
+        if loopInOut {
+            play()   // current time is at OUT → play() restarts both players at IN
+            return
+        }
         seek(to: outTime)
     }
 
