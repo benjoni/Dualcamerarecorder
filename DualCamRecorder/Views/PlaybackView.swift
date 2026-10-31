@@ -525,11 +525,18 @@ struct PlaybackView: View {
         }
     }
 
+    /// IN → OUT length; without IN from the start, without OUT to the end of the clip.
+    private var markedDuration: Double? {
+        let marks = player.marks
+        guard marks.inPoint != nil || marks.outPoint != nil else { return nil }
+        return max(0, (marks.outPoint ?? player.duration) - (marks.inPoint ?? 0))
+    }
+
     /// IN/OUT times, slate summary and the A/B offset.
     private var infoBlock: some View {
         VStack(spacing: 4) {
             HStack(spacing: 10) {
-                Text("IN \(player.marks.inPoint.map { player.timecode($0) } ?? "—")  ·  OUT \(player.marks.outPoint.map { player.timecode($0) } ?? "—")")
+                Text("IN \(player.marks.inPoint.map { player.timecode($0) } ?? "—")  ·  OUT \(player.marks.outPoint.map { player.timecode($0) } ?? "—")  ·  DUR \(markedDuration.map { player.timecode($0) } ?? "—")")
                     .font(.system(.title3, design: .monospaced))
                 if let msg = player.marksMessage {
                     Text(msg).font(.callout).foregroundStyle(.red)
