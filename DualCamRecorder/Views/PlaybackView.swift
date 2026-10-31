@@ -20,8 +20,8 @@ struct PlaybackView: View {
                 .frame(minWidth: 300, idealWidth: 340, maxWidth: 440)
             VStack(spacing: 12) {
                 HStack(spacing: 12) {
-                    playerPane(title: "Kamera A", available: player.take?.camA != nil, content: PlayerView(player: player.playerA))
-                    playerPane(title: "Kamera B", available: player.take?.camB != nil, content: PlayerView(player: player.playerB))
+                    playerPane(title: "Kamera A", file: player.take?.camA, available: player.take?.camA != nil, content: PlayerView(player: player.playerA))
+                    playerPane(title: "Kamera B", file: player.take?.camB, available: player.take?.camB != nil, content: PlayerView(player: player.playerB))
                 }
                 transport
                 Spacer(minLength: 0)
@@ -88,7 +88,7 @@ struct PlaybackView: View {
         }
     }
 
-    private func playerPane(title: String, available: Bool, content: PlayerView) -> some View {
+    private func playerPane(title: String, file: URL?, available: Bool, content: PlayerView) -> some View {
         VStack(alignment: .leading, spacing: 6) {
             Text(title).font(.title3.weight(.bold))
             ZStack {
@@ -99,6 +99,10 @@ struct PlaybackView: View {
             }
             .aspectRatio(16.0 / 9.0, contentMode: .fit)
             .clipShape(RoundedRectangle(cornerRadius: 6))
+            Text(file?.lastPathComponent ?? " ")
+                .font(.caption.monospaced()).foregroundStyle(.secondary)
+                .lineLimit(1).truncationMode(.middle)
+                .textSelection(.enabled)
         }
         .frame(maxWidth: .infinity)
     }
@@ -127,7 +131,7 @@ struct PlaybackView: View {
         HStack(alignment: .firstTextBaseline, spacing: 10) {
             Image(systemName: "film.stack")
             if let slate = player.slate {
-                Text(slate.shortLabel).font(.headline)
+                Text(slate.shortLabel).font(.headline).fixedSize()
                 Text(slate.longDescription.replacingOccurrences(of: "\n", with: "  ·  "))
                     .font(.caption).foregroundStyle(.secondary).lineLimit(2)
             } else {
