@@ -88,7 +88,7 @@ struct SlateFields: View {
                                              set: { v in if let setShot { setShot(v) } else { slate.shot = v } }))
                     .frame(maxWidth: 110)
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("Take").font(.caption).foregroundStyle(.secondary)
+                    Text("Take").font(.callout).foregroundStyle(.secondary)
                     HStack(spacing: 4) {
                         TextField("", value: $slate.take, format: .number)
                             .textFieldStyle(.roundedBorder)
@@ -125,7 +125,7 @@ struct SlateFields: View {
 
     private func field(_ title: String, text: Binding<String>) -> some View {
         VStack(alignment: .leading, spacing: 2) {
-            Text(title).font(.caption).foregroundStyle(.secondary)
+            Text(title).font(.callout).foregroundStyle(.secondary)
             TextField(title, text: text).textFieldStyle(.roundedBorder)
         }
     }
@@ -149,16 +149,18 @@ struct SlatePanel: View {
             SlateBoard(slate: displayedSlate, recording: controller.isRecording)
             VStack(alignment: .leading, spacing: 6) {
                 HStack {
-                    Text("Slate").font(.headline)
+                    Text("Slate").font(.title3.weight(.semibold))
                     Text(controller.isRecording
                          ? "Scene / shot / take are locked while recording – note and “good take” can still be changed."
                          : "Take goes up by 1 after each recording; changing scene or shot resets it to 1.")
-                        .font(.caption).foregroundStyle(.secondary)
+                        .font(.callout).foregroundStyle(.secondary)
                 }
                 SlateFields(slate: $settings.slate,
                             locked: controller.slateLocked,
                             setScene: { controller.setSlateScene($0) },
                             setShot: { controller.setSlateShot($0) })
+                    .controlSize(.large)
+                    .font(.body)
             }
         }
     }

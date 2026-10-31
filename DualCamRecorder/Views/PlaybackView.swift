@@ -215,7 +215,7 @@ struct PlaybackView: View {
             .aspectRatio(16.0 / 9.0, contentMode: .fit)
             .clipShape(RoundedRectangle(cornerRadius: 6))
             Text(file?.lastPathComponent ?? " ")
-                .font(.caption.monospaced()).foregroundStyle(.secondary)
+                .font(.callout.monospaced()).foregroundStyle(.secondary)
                 .lineLimit(1).truncationMode(.middle)
                 .textSelection(.enabled)
         }
@@ -237,8 +237,8 @@ struct PlaybackView: View {
                 }
             }
         }
-        .frame(height: 4)
-        .padding(.horizontal, 110)
+        .frame(height: 5)
+        .padding(.horizontal, 130)
     }
 
     // MARK: - Controls: all buttons stacked, info below
@@ -247,7 +247,7 @@ struct PlaybackView: View {
         VStack(spacing: 8) {
             HStack {
                 Text(player.timecode(isScrubbing ? scrubValue : player.currentTime))
-                    .font(.system(.title3, design: .monospaced))
+                    .font(.system(.title2, design: .monospaced))
                 Slider(value: $scrubValue, in: 0...max(player.duration, 0.001), onEditingChanged: { editing in
                     isScrubbing = editing
                     player.isScrubbing = editing
@@ -257,17 +257,19 @@ struct PlaybackView: View {
                     if isScrubbing { player.seek(seconds: v) }
                 }
                 Text(player.timecode(player.duration))
-                    .font(.system(.title3, design: .monospaced))
+                    .font(.system(.title2, design: .monospaced))
                     .foregroundStyle(.secondary)
             }
             rangeBar
 
             // Buttons, one group under another; audio last.
-            VStack(spacing: 8) {
+            VStack(spacing: 10) {
                 transportButtons
                 markButtons
                 audioButtons
             }
+            .controlSize(.large)
+            .font(.title3)
             .padding(.top, 4)
             .disabled(player.take == nil)
 
@@ -277,6 +279,8 @@ struct PlaybackView: View {
 
             // Edit slate at the very bottom.
             Button("Edit slate…") { editingSlate = true }
+                .controlSize(.large)
+                .font(.title3)
                 .disabled(player.take == nil)
                 .padding(.top, 6)
         }
@@ -296,7 +300,7 @@ struct PlaybackView: View {
                 .keyboardShortcut(.leftArrow, modifiers: [])
                 .help("One frame back (←)")
             Button { player.togglePlay() } label: {
-                Image(systemName: player.isPlaying ? "pause.fill" : "play.fill").frame(width: 40)
+                Image(systemName: player.isPlaying ? "pause.fill" : "play.fill").frame(width: 56)
             }
             .keyboardShortcut(.space, modifiers: [])
             .help("Play / pause (space)")
@@ -309,7 +313,7 @@ struct PlaybackView: View {
                 Text("1×").tag(Float(1.0))
             }
             .pickerStyle(.segmented)
-            .frame(width: 140)
+            .frame(width: 170)
         }
     }
 
@@ -345,25 +349,25 @@ struct PlaybackView: View {
         VStack(spacing: 4) {
             HStack(spacing: 10) {
                 Text("IN \(player.marks.inPoint.map { player.timecode($0) } ?? "—")  ·  OUT \(player.marks.outPoint.map { player.timecode($0) } ?? "—")")
-                    .font(.system(.callout, design: .monospaced))
+                    .font(.system(.title3, design: .monospaced))
                 if let msg = player.marksMessage {
-                    Text(msg).font(.caption).foregroundStyle(.red)
+                    Text(msg).font(.callout).foregroundStyle(.red)
                 }
             }
             if let slate = player.slate {
                 HStack(spacing: 6) {
                     Image(systemName: "film.stack")
-                    Text(slate.shortLabel).font(.headline)
+                    Text(slate.shortLabel).font(.title2.weight(.semibold))
                 }
                 Text(slate.longDescription.replacingOccurrences(of: "\n", with: "  ·  "))
-                    .font(.caption).lineLimit(2)
+                    .font(.body).lineLimit(2)
                     .multilineTextAlignment(.center)
             } else if player.take != nil {
                 Text("This clip has no slate data.")
             }
             if let offset = player.abOffsetMs {
                 Text(String(format: "Offset B−A: %+.1f ms", offset))
-                    .font(.caption.monospacedDigit())
+                    .font(.callout.monospacedDigit())
                     .foregroundStyle(abs(offset) > 1000 * player.frameDuration.seconds ? Color.red : Color.secondary)
             }
         }

@@ -79,7 +79,7 @@ struct RecordView: View {
                     Text(DisplayFormat.duration(controller.elapsed))
                         .font(.system(size: 30, weight: .semibold, design: .monospaced))
                         .foregroundStyle(controller.isRecording ? .red : .primary)
-                    Text(takeLabel).font(.callout).foregroundStyle(.secondary)
+                    Text(takeLabel).font(.body).foregroundStyle(.secondary)
                 }
 
                 markControls
@@ -100,10 +100,9 @@ struct RecordView: View {
                     .lineLimit(1).truncationMode(.middle)
                     .frame(maxWidth: 300)
                 Button("Change…") { controller.chooseRecordFolder() }
-                    .controlSize(.small)
                     .disabled(controller.isRecording)
             }
-            .font(.caption)
+            .font(.callout)
         }
         .frame(maxWidth: .infinity)
     }
@@ -117,12 +116,12 @@ struct RecordView: View {
         return VStack(alignment: .center, spacing: 6) {
             HStack(spacing: 8) {
                 Button { controller.markIn() } label: {
-                    Text("IN").font(.headline).frame(width: 44, height: 28)
+                    Text("IN").font(.title2.weight(.semibold)).frame(width: 64, height: 36)
                 }
                 .keyboardShortcut("i", modifiers: [.command])
                 .help("Set IN at the current take time (⌘I)")
                 Button { controller.markOut() } label: {
-                    Text("OUT").font(.headline).frame(width: 44, height: 28)
+                    Text("OUT").font(.title2.weight(.semibold)).frame(width: 64, height: 36)
                 }
                 .keyboardShortcut("o", modifiers: [.command])
                 .help("Set OUT at the current take time (⌘O)")
@@ -133,7 +132,7 @@ struct RecordView: View {
             }
             .disabled(!recording)
             Text("IN \(DisplayFormat.mark(controller.marks.inPoint))  ·  OUT \(DisplayFormat.mark(controller.marks.outPoint))")
-                .font(.system(.callout, design: .monospaced))
+                .font(.system(.title3, design: .monospaced))
                 .foregroundStyle(.secondary)
         }
     }
@@ -203,7 +202,7 @@ struct CameraPanel: View {
             CameraScreen(channel: channel)
 
             Text(channel.format?.displayString ?? "Format: —")
-                .font(.system(.callout, design: .monospaced))
+                .font(.system(.body, design: .monospaced))
             AudioMeter(db: channel.audioLevelDB)
             HStack(spacing: 16) {
                 stat("Captured", channel.stats.framesCaptured)
@@ -211,9 +210,9 @@ struct CameraPanel: View {
                 stat("Dropped (input)", channel.stats.inputDropped, alert: channel.stats.inputDropped > 0)
                 stat("Dropped (write)", channel.stats.writerDropped, alert: channel.stats.writerDropped > 0)
             }
-            .font(.caption)
+            .font(.callout)
             if let error = channel.lastError {
-                Text(error).font(.caption).foregroundStyle(.red)
+                Text(error).font(.callout).foregroundStyle(.red)
             }
         }
         .frame(maxWidth: .infinity)
@@ -222,7 +221,7 @@ struct CameraPanel: View {
     private func stat(_ title: String, _ value: Int, alert: Bool = false) -> some View {
         VStack(alignment: .leading) {
             Text(title).foregroundStyle(.secondary)
-            Text("\(value)").font(.system(.body, design: .monospaced))
+            Text("\(value)").font(.system(.title3, design: .monospaced))
                 .foregroundStyle(alert ? .red : .primary)
         }
     }
