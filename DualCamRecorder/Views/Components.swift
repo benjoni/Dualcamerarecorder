@@ -85,16 +85,19 @@ struct ShortcutButton: View {
 struct SegmentToggleStyle: ToggleStyle {
     /// Fixed width so several toggles can share the same size (nil = fit the label).
     var width: CGFloat? = nil
+    /// Fixed height (e.g. to match a pop-up button next to it); nil = regular height.
+    var height: CGFloat? = nil
 
     func makeBody(configuration: Configuration) -> some View {
         Button {
             configuration.isOn.toggle()
         } label: {
             configuration.label
-                .frame(width: width.map { $0 - 32 })
-                .padding(.horizontal, 16)
-                .padding(.vertical, 5)
-                .frame(minHeight: 30)
+                .lineLimit(1)
+                .frame(width: width.map { max(0, $0 - (height == nil ? 32 : 12)) })
+                .padding(.horizontal, height == nil ? 16 : 6)
+                .padding(.vertical, height == nil ? 5 : 0)
+                .frame(minHeight: height ?? 30, maxHeight: height)
                 .foregroundStyle(configuration.isOn ? Color.primary : Color.secondary)
                 .background(
                     RoundedRectangle(cornerRadius: 6)

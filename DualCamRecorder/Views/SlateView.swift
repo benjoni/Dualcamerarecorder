@@ -100,14 +100,14 @@ struct SlateFields: View {
                     Picker("", selection: $slate.timeOfDay) {
                         ForEach(SlateInfo.TimeOfDay.allCases) { Text($0.title).tag($0) }
                     }
-                    .labelsHidden().frame(width: 80)
+                    .labelsHidden().frame(width: 90)
                     SegmentGroup {
                         Toggle(isOn: $slate.mos) {
                             Label("MOS", systemImage: "speaker.slash")
                         }
                         .help("Without sound")
                     }
-                    .toggleStyle(SegmentToggleStyle(width: 150))
+                    .toggleStyle(SegmentToggleStyle(width: 86, height: 24))   // + 2 pt group padding = 90 × 28 like EXT / DAY
                 }
                 .padding(.top, 14)
             }
