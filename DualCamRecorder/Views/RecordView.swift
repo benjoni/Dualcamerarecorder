@@ -199,6 +199,15 @@ struct CameraPanel: View {
                     .frame(width: 80)
                     .disabled(controller.isRecording)
                     .help("Camera name at the start of the file name, e.g. A → A007_S12_SH3B_T04.MOV")
+                Text("Cam clip").font(.caption).foregroundStyle(.secondary)
+                TextField("1", value: cameraClipBinding, format: .number.grouping(.never))
+                    .textFieldStyle(.roundedBorder)
+                    .frame(width: 70)
+                    .disabled(controller.isRecording)
+                    .help("Clip number in the camera's own recording – goes up by 1 after every take, saved with the clip")
+                Stepper("", value: cameraClipBinding, in: 0...99_999)
+                    .labelsHidden()
+                    .disabled(controller.isRecording)
             }
 
             CameraScreen(channel: channel, showWaveform: showWaveform)
@@ -218,6 +227,20 @@ struct CameraPanel: View {
             }
         }
         .frame(maxWidth: .infinity)
+    }
+
+    /// Camera's internal clip number (frozen value of the running take while recording).
+    private var cameraClipBinding: Binding<Int> {
+        let role = channel.role
+        return Binding(
+            get: {
+                if let frozen = controller.recordingSlate { return frozen.cameraClip(role) }
+                return controller.settings.slate.cameraClip(role)
+            },
+            set: { value in
+                if role == .a { controller.settings.slate.cameraClipA = max(0, value) }
+                else { controller.settings.slate.cameraClipB = max(0, value) }
+            })
     }
 
     private func stat(_ title: String, _ value: Int, alert: Bool = false) -> some View {

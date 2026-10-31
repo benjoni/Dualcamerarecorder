@@ -47,6 +47,12 @@ struct SlateInfo: Codable, Hashable {
     var note = ""            // note
     var good = false         // good (circled) take
     var recordedAt: Date?    // set at REC
+    /// Clip number in each camera's own (internal) recording – goes up by 1 after every take.
+    /// 0 = that camera did not record this take.
+    var cameraClipA = 1
+    var cameraClipB = 1
+
+    func cameraClip(_ role: CameraRole) -> Int { role == .a ? cameraClipA : cameraClipB }
 
     /// "Day 3 · Scene 12 · Shot 3 · Take 2"
     var shortLabel: String {
@@ -74,6 +80,10 @@ struct SlateInfo: Codable, Hashable {
         if !director.isEmpty { lines.append("Director: \(director)") }
         if !cameraOperator.isEmpty { lines.append("DoP: \(cameraOperator)") }
         if good { lines.append("Good take") }
+        var clips: [String] = []
+        if cameraClipA > 0 { clips.append(String(format: "A %04d", cameraClipA)) }
+        if cameraClipB > 0 { clips.append(String(format: "B %04d", cameraClipB)) }
+        if !clips.isEmpty { lines.append("Camera clip: " + clips.joined(separator: " / ")) }
         if !note.isEmpty { lines.append("Note: \(note)") }
         return lines.joined(separator: "\n")
     }
@@ -91,7 +101,7 @@ struct SlateInfo: Codable, Hashable {
         var title = shortLabel + " · " + names.name(camera)
         if !production.isEmpty { title = production + " – " + title }
         let date = ISO8601DateFormatter().string(from: recordedAt ?? Date())
-        return [
+        var items = [
             item(.quickTimeMetadataTitle, title),
             item(.quickTimeMetadataDescription, longDescription + "\nFile: " + TakeNaming.fileName(take: takeNumber, role: camera, slate: self, names: names)),
             item(.quickTimeMetadataComment, note),
@@ -99,6 +109,20 @@ struct SlateInfo: Codable, Hashable {
             item(.quickTimeMetadataCameraIdentifier, names.name(camera)),
             item(.quickTimeMetadataCreationDate, date),
         ].compactMap { $0 }
+        // Camera's own clip number – a custom key scripts can read
+        // (e.g. `exiftool -Keys:All file.MOV` or `ffprobe -show_format`).
+        let cameraClip = self.cameraClip(camera)
+        if cameraClip > 0 {
+            let custom = AVMutableMetadataItem()
+            custom.keySpace = .quickTimeMetadata
+            custom.key = "sk.dualcam.camera-clip" as NSString
+            custom.value = String(format: "%04d", cameraClip) as NSString
+            items.append(custom)
+            if let comment = item(.quickTimeMetadataInformation, String(format: "Camera clip %04d", cameraClip)) {
+                items.append(comment)
+            }
+        }
+        return items
     }
 }
 
@@ -121,6 +145,8 @@ extension SlateInfo {
         note = try c.decodeIfPresent(String.self, forKey: .note) ?? note
         good = try c.decodeIfPresent(Bool.self, forKey: .good) ?? good
         recordedAt = try c.decodeIfPresent(Date.self, forKey: .recordedAt)
+        cameraClipA = try c.decodeIfPresent(Int.self, forKey: .cameraClipA) ?? cameraClipA
+        cameraClipB = try c.decodeIfPresent(Int.self, forKey: .cameraClipB) ?? cameraClipB
     }
 }
 

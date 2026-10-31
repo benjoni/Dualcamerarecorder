@@ -339,6 +339,13 @@ final class RecordingController: NSObject, ObservableObject, DLDeviceBrowserDele
            pendingResults.contains(where: { $0.error == nil }) {
             slate.note = settings.slate.note
             slate.good = settings.slate.good
+            // Camera clip numbers: a camera that did not record this take is stored as 0.
+            let recordedA = pendingResults.contains { $0.role == .a && $0.error == nil }
+            let recordedB = pendingResults.contains { $0.role == .b && $0.error == nil }
+            let clipA = slate.cameraClipA
+            let clipB = slate.cameraClipB
+            if !recordedA { slate.cameraClipA = 0 }
+            if !recordedB { slate.cameraClipB = 0 }
             do {
                 try TakeSlateStore.save(slate, folder: folder, take: take)
             } catch {
@@ -349,7 +356,14 @@ final class RecordingController: NSObject, ObservableObject, DLDeviceBrowserDele
             next.note = ""
             next.good = false
             next.recordedAt = nil
+            // The cameras start a new internal clip with every take.
+            if recordedA { next.cameraClipA = clipA + 1 }
+            if recordedB { next.cameraClipB = clipB + 1 }
             settings.slate = next
+
+            // Script-friendly log of all clips in the project folder.
+            let names = settings.cameraNames
+            DispatchQueue.global(qos: .utility).async { ClipLog.rebuild(folder: folder, names: names) }
         }
         recordingSlate = nil
         if !errors.isEmpty { errorMessage = errors.joined(separator: "\n") }

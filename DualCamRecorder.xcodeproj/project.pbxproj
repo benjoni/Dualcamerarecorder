@@ -22,6 +22,7 @@
 		0D2CA9BB78FD0035D5D36DF6 /* PreviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54A98420FFEC2C998E26B947 /* PreviewView.swift */; };
 		8B1FD6B4543A40394476CF5E /* Waveform.swift in Sources */ = {isa = PBXBuildFile; fileRef = E2FBE3F8BF993A66AAC34180 /* Waveform.swift */; };
 		8A95CF0EB055A53010FE371A /* CameraChannel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9C6E675FB14A7235CFCF3850 /* CameraChannel.swift */; };
+		D51B819347E68186A70BC23A /* ClipLog.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2118891433C5D8100EADE27 /* ClipLog.swift */; };
 		801F49D4930640D47F344B2C /* MovieWriter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4AAEE032902641AFB372D5C2 /* MovieWriter.swift */; };
 		847956D8CA68D4BD49F4303C /* RecordingController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9F63A88B3FF58DABCEC4CBC9 /* RecordingController.swift */; };
 		B37B40FD751D227921E4707C /* SlateInfo.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3B7D6187F343325A5C603B5B /* SlateInfo.swift */; };
@@ -60,6 +61,7 @@
 		54A98420FFEC2C998E26B947 /* PreviewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PreviewView.swift; sourceTree = "<group>"; };
 		E2FBE3F8BF993A66AAC34180 /* Waveform.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Waveform.swift; sourceTree = "<group>"; };
 		9C6E675FB14A7235CFCF3850 /* CameraChannel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraChannel.swift; sourceTree = "<group>"; };
+		B2118891433C5D8100EADE27 /* ClipLog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClipLog.swift; sourceTree = "<group>"; };
 		4AAEE032902641AFB372D5C2 /* MovieWriter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MovieWriter.swift; sourceTree = "<group>"; };
 		9F63A88B3FF58DABCEC4CBC9 /* RecordingController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordingController.swift; sourceTree = "<group>"; };
 		3B7D6187F343325A5C603B5B /* SlateInfo.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SlateInfo.swift; sourceTree = "<group>"; };
@@ -166,6 +168,7 @@
 			isa = PBXGroup;
 			children = (
 				9C6E675FB14A7235CFCF3850 /* CameraChannel.swift */,
+				B2118891433C5D8100EADE27 /* ClipLog.swift */,
 				4AAEE032902641AFB372D5C2 /* MovieWriter.swift */,
 				9F63A88B3FF58DABCEC4CBC9 /* RecordingController.swift */,
 				3B7D6187F343325A5C603B5B /* SlateInfo.swift */,
@@ -303,6 +306,7 @@
 				0D2CA9BB78FD0035D5D36DF6 /* PreviewView.swift in Sources */,
 				8B1FD6B4543A40394476CF5E /* Waveform.swift in Sources */,
 				8A95CF0EB055A53010FE371A /* CameraChannel.swift in Sources */,
+				D51B819347E68186A70BC23A /* ClipLog.swift in Sources */,
 				801F49D4930640D47F344B2C /* MovieWriter.swift in Sources */,
 				847956D8CA68D4BD49F4303C /* RecordingController.swift in Sources */,
 				B37B40FD751D227921E4707C /* SlateInfo.swift in Sources */,

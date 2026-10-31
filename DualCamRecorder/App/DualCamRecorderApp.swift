@@ -60,6 +60,9 @@ final class AppModel: ObservableObject {
         player.load(nil)
         library.cueLatestOnShow = true
         recorder.refreshNextTake()
+        let folder = opened.folder
+        let names = settings.cameraNames
+        DispatchQueue.global(qos: .utility).async { ClipLog.rebuild(folder: folder, names: names) }
         NotificationCenter.default.post(name: .takeFinished, object: nil)   // re-scan clip list
     }
 

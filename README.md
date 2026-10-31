@@ -29,6 +29,20 @@ Rozhranie aplikácie je **v angličtine** (Record / Playback / Slate …); tento
   skryje (súbory ostanú); 🔍 ho ukáže vo Finderi.
 - Tlačidlo **Projects** v lište sa vráti na úvod (nie počas nahrávania).
 
+### Číslo klipu v kamere (Cam clip)
+- Pri každej kamere v Record je pole **Cam clip** (+ šípky) – číslo klipu, pod ktorým kamera
+  nahráva interne. Po každom zábere sa samo zvýši o 1 (len pri kamere, ktorá nahrávala);
+  dá sa kedykoľvek prepísať, počas nahrávania je zamknuté.
+- Ukladá sa ku klipu:
+  - `C007_SLATE.JSON` → `cameraClipA`, `cameraClipB` (0 = kamera nenahrávala),
+  - metadáta každého `.MOV`: vlastný kľúč `sk.dualcam.camera-clip` (napr. `0023`),
+    `com.apple.quicktime.information` = `Camera clip 0023` a riadok v popise,
+  - **`CLIPLOG.CSV`** v priečinku projektu – riadok na každý súbor:
+    `clip,camera,camera_name,file,camera_clip,shooting_day,scene,shot,take,good,mos,int_ext,day_night,recorded_at,production,note`.
+    Prepíše sa po každom zábere, po úprave klapky a pri otvorení projektu.
+- Čítanie skriptom, napr. `exiftool -Keys:All A007_S12_SH3B_T04.MOV` alebo priamo CSV.
+- V Playback → **Edit slate…** sa dajú čísla dodatočne opraviť.
+
 ### Project settings (⚙ v lište projektu, ⌥⌘,)
 - **1 camera / 2 cameras** – pri jednej kamere sa zobrazuje a nahráva len kamera A (cez celú
   šírku), kamera B sa vôbec nespúšťa; Playback ukáže B len pri záberoch, ktoré ju majú.

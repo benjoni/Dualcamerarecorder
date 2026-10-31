@@ -304,7 +304,13 @@ struct PlaybackView: View {
         .sheet(isPresented: $editingSlate) {
             SlateEditSheet(slate: player.slate ?? SlateInfo(),
                            takeName: player.take?.name ?? "",
-                           onSave: { player.updateSlate($0) })
+                           onSave: { slate in
+                               player.updateSlate(slate)
+                               if let folder = player.take?.folder {
+                                   let names = settings.cameraNames
+                                   DispatchQueue.global(qos: .utility).async { ClipLog.rebuild(folder: folder, names: names) }
+                               }
+                           })
         }
     }
 

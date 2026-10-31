@@ -186,7 +186,19 @@ struct SlateEditSheet: View {
             Text("Slate – \(takeName)").font(.title3.weight(.bold))
             HStack(alignment: .top, spacing: 16) {
                 SlateBoard(slate: slate)
-                SlateFields(slate: $slate)
+                VStack(alignment: .leading, spacing: 10) {
+                    SlateFields(slate: $slate)
+                    HStack(spacing: 16) {
+                        Text("Camera clip #").foregroundStyle(.secondary)
+                        Text("A")
+                        TextField("0", value: $slate.cameraClipA, format: .number.grouping(.never))
+                            .textFieldStyle(.roundedBorder).frame(width: 80)
+                        Text("B")
+                        TextField("0", value: $slate.cameraClipB, format: .number.grouping(.never))
+                            .textFieldStyle(.roundedBorder).frame(width: 80)
+                        Text("(0 = camera did not record)").font(.callout).foregroundStyle(.secondary)
+                    }
+                }
             }
             HStack {
                 Spacer()
