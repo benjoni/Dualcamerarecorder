@@ -13,6 +13,7 @@ struct PlaybackView: View {
     @State private var scrubValue: Double = 0
     @State private var isScrubbing = false
     @State private var editingSlate = false
+    @State private var exportingPDF = false
     /// Clip list is hidden by default – opened with the "Clips" button (⌘L) and hidden again by the user.
     @State private var showClipList = false
     /// Set when the tab appears: select the most recent clip as soon as the list is (re)loaded.
@@ -144,6 +145,18 @@ struct PlaybackView: View {
             }
             .keyboardShortcut("l", modifiers: [.command])
             .help("Show / hide the clip list (⌘L)")
+
+            Button {
+                exportingPDF = true
+            } label: {
+                Label("Export PDF…", systemImage: "doc.richtext")
+            }
+            .keyboardShortcut("p", modifiers: [.command, .shift])
+            .help("Clip report by shooting day, with pictures (⇧⌘P)")
+            .disabled(library.takes.isEmpty)
+            .sheet(isPresented: $exportingPDF) {
+                ExportPDFSheet(library: library, settings: settings)
+            }
 
             if let take = player.take {
                 Text(take.name).font(.headline)

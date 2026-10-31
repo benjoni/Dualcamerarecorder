@@ -14,6 +14,7 @@
 		6600DF44958D153CDA02B31F /* HostClock.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9271C3CCB72AF1A9ABD071F4 /* HostClock.swift */; };
 		A10A2878105CB9C121421B72 /* SimulatedSource.swift in Sources */ = {isa = PBXBuildFile; fileRef = A90675E0408BFEE05A438E81 /* SimulatedSource.swift */; };
 		D574554270A2F11C80647E61 /* VideoSource.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8E2EF906A5821F6AA648C303 /* VideoSource.swift */; };
+		015C8DB7E4CD2DAB8AA60D6A /* PDFReport.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9E647BF4D4C1E3F896460DB8 /* PDFReport.swift */; };
 		0B27B44163033F8362D89767 /* PlayerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0B9E5830569A82B806F54A7F /* PlayerView.swift */; };
 		F7ECB134D22BCFEAA2004CFD /* SyncPlaybackController.swift in Sources */ = {isa = PBXBuildFile; fileRef = A57B1970A4CECEE2CD3EACA6 /* SyncPlaybackController.swift */; };
 		0CE80DEB4C70FF63E18D842E /* TakeLibrary.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6524525F456E0CA9FC7AE712 /* TakeLibrary.swift */; };
@@ -53,6 +54,7 @@
 		9271C3CCB72AF1A9ABD071F4 /* HostClock.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HostClock.swift; sourceTree = "<group>"; };
 		A90675E0408BFEE05A438E81 /* SimulatedSource.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SimulatedSource.swift; sourceTree = "<group>"; };
 		8E2EF906A5821F6AA648C303 /* VideoSource.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VideoSource.swift; sourceTree = "<group>"; };
+		9E647BF4D4C1E3F896460DB8 /* PDFReport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PDFReport.swift; sourceTree = "<group>"; };
 		0B9E5830569A82B806F54A7F /* PlayerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlayerView.swift; sourceTree = "<group>"; };
 		A57B1970A4CECEE2CD3EACA6 /* SyncPlaybackController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SyncPlaybackController.swift; sourceTree = "<group>"; };
 		6524525F456E0CA9FC7AE712 /* TakeLibrary.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TakeLibrary.swift; sourceTree = "<group>"; };
@@ -146,6 +148,7 @@
 		B3B796B27FB682FC3F40B168 /* Playback */ = {
 			isa = PBXGroup;
 			children = (
+				9E647BF4D4C1E3F896460DB8 /* PDFReport.swift */,
 				0B9E5830569A82B806F54A7F /* PlayerView.swift */,
 				A57B1970A4CECEE2CD3EACA6 /* SyncPlaybackController.swift */,
 				6524525F456E0CA9FC7AE712 /* TakeLibrary.swift */,
@@ -298,6 +301,7 @@
 				6600DF44958D153CDA02B31F /* HostClock.swift in Sources */,
 				A10A2878105CB9C121421B72 /* SimulatedSource.swift in Sources */,
 				D574554270A2F11C80647E61 /* VideoSource.swift in Sources */,
+				015C8DB7E4CD2DAB8AA60D6A /* PDFReport.swift in Sources */,
 				0B27B44163033F8362D89767 /* PlayerView.swift in Sources */,
 				F7ECB134D22BCFEAA2004CFD /* SyncPlaybackController.swift in Sources */,
 				0CE80DEB4C70FF63E18D842E /* TakeLibrary.swift in Sources */,

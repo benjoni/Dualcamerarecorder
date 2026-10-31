@@ -112,6 +112,15 @@ Rozhranie aplikácie je **v angličtine** (Record / Playback / Slate …); tento
 - Synchronizácia cez `setRate(_:time:atHostTime:)` so spoločným časom hostiteľských hodín;
   seek a krokovanie sú presné na snímku (nulová tolerancia) na oboch prehrávačoch.
 
+### Export PDF (⇧⌘P)
+- V Playback tlačidlo **Export PDF…**: report klipov **podľa natáčacích dní** (všetky dni alebo
+  jeden deň, voliteľne len ★ dobré pokusy, s obrázkami alebo bez).
+- A4 na šírku, každý deň začína novou stranou (projekt, deň, dátum, počet klipov); na strane
+  6 klipov. Riadok: obrázok zo stredu klipu z kamery A aj B, číslo klipu, ★ / MOS,
+  Scene / Shot / Take, INT/EXT · DAY/NIGHT · Roll, súbory + Cam clip, dĺžka, IN / OUT / DUR,
+  čas nahrávania, poznámka. Ukážka: `docs/preview/sample_clip_report.pdf`.
+- PDF sa uloží (predvolene do priečinka projektu) a hneď otvorí.
+
 ### Waveform (⇧⌘W)
 - Tlačidlo **Waveform** v lište okna zapne **luma waveform (0–100 IRE)** zvlášť pre každú kameru –
   malý panel v pravom dolnom rohu obrazu (Record aj Playback, aj v Screens only).
