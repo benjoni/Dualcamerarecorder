@@ -14,6 +14,9 @@ struct Take: Identifiable, Hashable {
     var camB: URL?
     var modified: Date
     var sizeBytes: Int64
+    var marks: TakeMarks?
+    /// Folder the take lives in (marks are saved there).
+    var folder: URL? { (camA ?? camB)?.deletingLastPathComponent() }
 
     var id: Int { number }
     var name: String { TakeNaming.displayName(take: number) }
@@ -63,6 +66,9 @@ final class TakeLibrary: ObservableObject {
             take.modified = max(take.modified, date)
             take.sizeBytes += size
             byNumber[parsed.take] = take
+        }
+        for (number, take) in byNumber {
+            byNumber[number]?.marks = TakeMarksStore.load(folder: folder, take: take.number)
         }
         return byNumber.values.sorted { $0.number > $1.number }
     }

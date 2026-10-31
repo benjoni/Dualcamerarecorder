@@ -60,6 +60,7 @@ struct PlaybackView: View {
                         Text(take.camA != nil ? "A" : "–").foregroundStyle(take.camA != nil ? Color.green : Color.secondary)
                         Text(take.camB != nil ? "B" : "–").foregroundStyle(take.camB != nil ? Color.green : Color.secondary)
                         Text(DisplayFormat.bytes(take.sizeBytes))
+                        if let m = take.marks, !m.isEmpty { Image(systemName: "flag.fill").foregroundStyle(.yellow) }
                         Text(take.modified, style: .date)
                         Text(take.modified, style: .time)
                     }
@@ -85,6 +86,51 @@ struct PlaybackView: View {
         .frame(maxWidth: .infinity)
     }
 
+    /// Thin bar under the slider showing the IN–OUT range.
+    private var rangeBar: some View {
+        GeometryReader { geo in
+            let d = max(player.duration, 0.001)
+            let lo = CGFloat((player.marks.inPoint ?? 0) / d)
+            let hi = CGFloat((player.marks.outPoint ?? d) / d)
+            ZStack(alignment: .leading) {
+                Capsule().fill(Color.secondary.opacity(0.2))
+                if !player.marks.isEmpty {
+                    Capsule().fill(Color.yellow.opacity(0.8))
+                        .frame(width: max(2, (hi - lo) * geo.size.width))
+                        .offset(x: lo * geo.size.width)
+                }
+            }
+        }
+        .frame(height: 4)
+        .padding(.horizontal, 110)
+    }
+
+    private var markControls: some View {
+        HStack(spacing: 10) {
+            Button("Nastaviť IN") { player.setIn() }
+                .keyboardShortcut("i", modifiers: [])
+                .help("IN na aktuálnu snímku (I)")
+            Button("Nastaviť OUT") { player.setOut() }
+                .keyboardShortcut("o", modifiers: [])
+                .help("OUT na aktuálnu snímku (O)")
+            Button { player.goToIn() } label: { Label("Na IN", systemImage: "arrow.left.to.line") }
+                .disabled(player.marks.inPoint == nil)
+            Button { player.goToOut() } label: { Label("Na OUT", systemImage: "arrow.right.to.line") }
+                .disabled(player.marks.outPoint == nil)
+            Button("Zrušiť") { player.clearMarks() }
+                .disabled(player.marks.isEmpty)
+            Toggle("Hrať len IN–OUT", isOn: $player.limitToRange)
+            Spacer()
+            Text("IN \(player.marks.inPoint.map { player.timecode($0) } ?? "—")  ·  OUT \(player.marks.outPoint.map { player.timecode($0) } ?? "—")")
+                .font(.system(.callout, design: .monospaced))
+                .foregroundStyle(.secondary)
+            if let msg = player.marksMessage {
+                Text(msg).font(.caption).foregroundStyle(.red)
+            }
+        }
+        .disabled(player.take == nil)
+    }
+
     private var transport: some View {
         VStack(spacing: 8) {
             HStack {
@@ -102,6 +148,8 @@ struct PlaybackView: View {
                     .font(.system(.title3, design: .monospaced))
                     .foregroundStyle(.secondary)
             }
+            rangeBar
+            markControls
             HStack(spacing: 14) {
                 Button { player.goToStart() } label: { Image(systemName: "backward.end.fill") }
                     .help("Na začiatok")

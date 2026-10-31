@@ -36,6 +36,8 @@ final class RecordingController: NSObject, ObservableObject, DLDeviceBrowserDele
     /// Measured start offset of the last take: first frame B − first frame A (ms).
     @Published private(set) var lastStartOffsetMs: Double?
     @Published var errorMessage: String?
+    /// IN / OUT marks of the take being recorded (seconds from the start of the take).
+    @Published private(set) var marks = TakeMarks()
 
     let sdkStatus: String
 
@@ -45,6 +47,8 @@ final class RecordingController: NSObject, ObservableObject, DLDeviceBrowserDele
     private var pendingResults: [ChannelTakeResult] = []
     private var expectedResults = 0
     private var activity: NSObjectProtocol?
+    private var recordStartHost: UInt64 = 0
+    private var recordFolder: URL?
 
     init(settings: AppSettings) {
         self.settings = settings
@@ -223,9 +227,36 @@ final class RecordingController: NSObject, ObservableObject, DLDeviceBrowserDele
             armed.append(ch)
         }
         expectedResults = armed.count
+        recordStartHost = startHost
+        recordFolder = folder
+        marks = TakeMarks()
         state = .recording(take: take, started: Date())
         elapsed = 0
         lastTakeMessage = nil
+    }
+
+    // MARK: - IN / OUT during recording
+
+    /// Seconds since the common start instant of the running take.
+    private var recordPosition: Double {
+        Double(Int64(HostClock.nowNanos) - Int64(recordStartHost)) / 1_000_000_000
+    }
+
+    func markIn() {
+        guard case .recording = state else { return }
+        marks.setIn(recordPosition)
+    }
+
+    func markOut() {
+        guard case .recording = state else { return }
+        if !marks.setOut(recordPosition) {
+            errorMessage = "OUT nemôže byť pred IN."
+        }
+    }
+
+    func clearMarks() {
+        guard case .recording = state else { return }
+        marks = TakeMarks()
     }
 
     func stopRecording() {
@@ -253,6 +284,23 @@ final class RecordingController: NSObject, ObservableObject, DLDeviceBrowserDele
             .map { "\($0.url.lastPathComponent) (\($0.framesWritten) sn.)" }
             .joined(separator: ", ")
         lastTakeMessage = "Uložené: " + summary
+
+        // Save IN/OUT. The file timeline starts at the first written frame, which is within
+        // ½ frame of the common start instant – correct for that small difference.
+        if !marks.isEmpty, let folder = recordFolder, let take = activeTake {
+            var m = marks
+            let firsts = pendingResults.compactMap(\.firstFrameHostNanos)
+            if let first = firsts.min() {
+                let shift = Double(Int64(first) - Int64(recordStartHost)) / 1_000_000_000
+                if let i = m.inPoint { m.inPoint = max(0, i - shift) }
+                if let o = m.outPoint { m.outPoint = max(0, o - shift) }
+            }
+            do {
+                try TakeMarksStore.save(m, folder: folder, take: take)
+            } catch {
+                errorMessage = "IN/OUT sa nepodarilo uložiť: \(error.localizedDescription)"
+            }
+        }
         if !errors.isEmpty { errorMessage = errors.joined(separator: "\n") }
 
         state = .idle

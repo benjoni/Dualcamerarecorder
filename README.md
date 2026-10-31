@@ -30,12 +30,19 @@ Plán a architektúra: [`docs/PLAN.md`](docs/PLAN.md).
 - Počítadlá: zachytené / zapísané / **vynechané snímky (vstup)** / **vynechané (zápis)**,
   audio meter, odznak „Bez signálu“.
 - **Voľné miesto** na cieľovom disku + odhad zostávajúceho času nahrávania.
+- **IN / OUT počas nahrávania** – tlačidlá IN / OUT (klávesy **I** / **O**) pri REC označia
+  aktuálny čas záberu. Značky sa po STOP uložia do `Take_001_marks.json` vedľa videí
+  (čas v sekundách od začiatku záberu, platí pre CamA aj CamB) a použije ich prehrávanie.
 
 ### Záložka PREHRÁVANIE
 - Zoznam záberov v priečinku (sleduje zmeny v priečinku; práve nahrávaný záber je skrytý).
 - Po výbere sa načíta CamA a CamB vedľa seba v dvoch `AVPlayer`-och.
 - Spoločné **play/pause** (medzerník), **posuvník**, **krokovanie po snímkach** (← / →),
   **rýchlosť 0,5× / 1×**, výber zvuku A/B, zobrazenie rozdielu pozícií B−A.
+- **IN / OUT:** záber sa po načítaní nastaví na IN; pri zapnutom „Hrať len IN–OUT“ prehrávanie
+  štartuje na IN a zastaví presne na OUT (oba prehrávače). IN/OUT sa dá v prehrávaní upraviť
+  (I / O na aktuálnej snímke), skočiť na IN/OUT alebo zrušiť – zmeny sa hneď uložia do
+  `Take_###_marks.json`. Zábery so značkami majú v zozname žltú vlajku.
 - Synchronizácia cez `setRate(_:time:atHostTime:)` so spoločným časom hostiteľských hodín;
   seek a krokovanie sú presné na snímku (nulová tolerancia) na oboch prehrávačoch.
 
@@ -123,7 +130,8 @@ DualCamRecorder/
   Bridge/     DLCapture.h / DLCapture.mm (Obj-C++ nad DeckLink SDK), bridging header
   Capture/    VideoSource protokol, DeckLinkSource, SimulatedSource, HostClock
   Recording/  CameraChannel (sync štart/stop, štatistiky), MovieWriter (ProRes+LPCM),
-              RecordingController (zariadenia, REC/STOP, disk), TakeNaming
+              RecordingController (zariadenia, REC/STOP, IN/OUT, disk), TakeNaming,
+              TakeMarks (IN/OUT, Take_###_marks.json)
   Preview/    PreviewRenderer (VTPixelTransfer → AVSampleBufferDisplayLayer), PreviewView
   Playback/   TakeLibrary, SyncPlaybackController (2× AVPlayer), PlayerView
   Views/      RecordView, PlaybackView, SettingsView, Components
@@ -169,5 +177,7 @@ tools/gen_xcodeproj.py            generátor project.pbxproj + zdieľanej schém
 - Aplikácia nie je sandboxovaná a nemá hardened runtime (kvôli načítaniu `DeckLinkAPI.framework`
   z `/Library/Frameworks`); je podpísaná ad-hoc („Sign to Run Locally“).
 - Odhad zostávajúceho času vychádza z nominálnych dátových tokov ProRes (Apple white paper).
+- IN/OUT počas nahrávania sa berie podľa času stlačenia (hostiteľské hodiny) – presnosť je
+  ±1 snímka plus reakčný čas obsluhy; jemne sa dajú doladiť v prehrávaní po snímkach.
 - Synchronizácia dvoch `AVPlayer`-ov je na úrovni zobrazovacieho snímku; pri pauze sa oba
   prehrávače dorovnajú presne na rovnakú snímku.

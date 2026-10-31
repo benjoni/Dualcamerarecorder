@@ -50,6 +50,14 @@ enum DisplayFormat {
         return String(format: "%02d:%02d:%02d", s / 3600, (s / 60) % 60, s % 60)
     }
 
+    /// 00:01:23.4 – used for IN/OUT marks.
+    static func mark(_ seconds: Double?) -> String {
+        guard let seconds else { return "—" }
+        let tenths = Int((max(0, seconds) * 10).rounded())
+        let s = tenths / 10
+        return String(format: "%02d:%02d:%02d.%d", s / 3600, (s / 60) % 60, s % 60, tenths % 10)
+    }
+
     static func remaining(_ seconds: TimeInterval?) -> String {
         guard let seconds else { return "—" }
         let m = Int(seconds / 60)

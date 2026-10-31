@@ -50,6 +50,8 @@ struct RecordView: View {
                 Text(takeLabel).font(.callout).foregroundStyle(.secondary)
             }
 
+            markControls
+
             Spacer()
 
             VStack(alignment: .trailing, spacing: 4) {
@@ -74,6 +76,36 @@ struct RecordView: View {
                         .disabled(controller.isRecording)
                 }
             }
+        }
+    }
+
+    /// IN / OUT marks set while recording (saved with the take, used by playback).
+    private var markControls: some View {
+        let recording: Bool = {
+            if case .recording = controller.state { return true }
+            return false
+        }()
+        return VStack(alignment: .leading, spacing: 6) {
+            HStack(spacing: 8) {
+                Button { controller.markIn() } label: {
+                    Text("IN").font(.headline).frame(width: 44, height: 28)
+                }
+                .keyboardShortcut("i", modifiers: [])
+                .help("Nastaviť IN na aktuálny čas záberu (I)")
+                Button { controller.markOut() } label: {
+                    Text("OUT").font(.headline).frame(width: 44, height: 28)
+                }
+                .keyboardShortcut("o", modifiers: [])
+                .help("Nastaviť OUT na aktuálny čas záberu (O)")
+                Button { controller.clearMarks() } label: { Image(systemName: "xmark.circle") }
+                    .buttonStyle(.borderless)
+                    .help("Zrušiť IN/OUT")
+                    .disabled(controller.marks.isEmpty)
+            }
+            .disabled(!recording)
+            Text("IN \(DisplayFormat.mark(controller.marks.inPoint))  ·  OUT \(DisplayFormat.mark(controller.marks.outPoint))")
+                .font(.system(.callout, design: .monospaced))
+                .foregroundStyle(.secondary)
         }
     }
 

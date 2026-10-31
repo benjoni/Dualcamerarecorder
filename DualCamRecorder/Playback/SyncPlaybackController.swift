@@ -29,6 +29,13 @@ final class SyncPlaybackController: ObservableObject {
     @Published var audioB = false { didSet { playerB.isMuted = !audioB } }
     /// While the user drags the slider, periodic updates must not fight the slider.
     var isScrubbing = false
+    /// IN / OUT of the loaded take (seconds).
+    @Published private(set) var marks = TakeMarks()
+    /// Play only between IN and OUT (start at IN, stop at OUT).
+    @Published var limitToRange = true
+    @Published private(set) var marksMessage: String?
+    private var boundaryObserver: Any?
+    private weak var boundaryPlayer: AVPlayer?
 
     private var timeObserver: Any?
     private var endObserver: NSObjectProtocol?
@@ -61,6 +68,8 @@ final class SyncPlaybackController: ObservableObject {
         generation += 1
         pauseImmediately()
         self.take = take
+        marks = take?.marks ?? TakeMarks()
+        marksMessage = nil
         currentTime = 0
         duration = 0
         abOffsetMs = nil
@@ -98,6 +107,8 @@ final class SyncPlaybackController: ObservableObject {
             guard let self, self.generation == gen else { return }
             self.duration = longest
             if let fd { self.frameDuration = fd }
+            // Cue the take at IN.
+            if let i = self.marks.inPoint { self.seek(seconds: i) }
         }
     }
 
@@ -110,10 +121,28 @@ final class SyncPlaybackController: ObservableObject {
         generation += 1
         let gen = generation
         var start = master.currentTime()
-        if duration > 0 && start.seconds >= duration - frameDuration.seconds { start = .zero }
+        let fdSec = frameDuration.seconds > 0 ? frameDuration.seconds : 0.04
+        if limitToRange && !marks.isEmpty {
+            let lo = marks.inPoint ?? 0
+            let hi = marks.outPoint ?? duration
+            if start.seconds < lo - fdSec / 2 || start.seconds >= hi - fdSec / 2 {
+                start = frameTime(seconds: lo)
+            }
+        } else if duration > 0 && start.seconds >= duration - fdSec {
+            start = .zero
+        }
         let players = activePlayers
         let rate = self.rate
         isPlaying = true
+        removeBoundaryObserver()
+        if limitToRange, let out = marks.outPoint, out > start.seconds {
+            // Stop exactly at OUT.
+            let outTime = frameTime(seconds: out)
+            boundaryPlayer = master
+            boundaryObserver = master.addBoundaryTimeObserver(forTimes: [NSValue(time: outTime)], queue: .main) { [weak self] in
+                self?.stopAtOut(outTime)
+            }
+        }
 
         Task { @MainActor [weak self] in
             // Bring both players to exactly the same frame, preroll, then start on one common host time.
@@ -133,7 +162,24 @@ final class SyncPlaybackController: ObservableObject {
         }
     }
 
+    private func stopAtOut(_ outTime: CMTime) {
+        guard isPlaying else { return }
+        generation += 1
+        removeBoundaryObserver()
+        let hostStop = CMTimeAdd(CMClockGetTime(CMClockGetHostTimeClock()), CMTime(value: 5, timescale: 1000))
+        for p in activePlayers { p.setRate(0, time: .invalid, atHostTime: hostStop) }
+        isPlaying = false
+        seek(to: outTime)
+    }
+
+    private func removeBoundaryObserver() {
+        if let boundaryObserver { boundaryPlayer?.removeTimeObserver(boundaryObserver) }
+        boundaryObserver = nil
+        boundaryPlayer = nil
+    }
+
     func pause() {
+        removeBoundaryObserver()
         generation += 1
         let gen = generation
         let players = activePlayers
@@ -150,15 +196,60 @@ final class SyncPlaybackController: ObservableObject {
     }
 
     private func pauseImmediately() {
+        removeBoundaryObserver()
         for p in [playerA, playerB] { p.rate = 0 }
         isPlaying = false
     }
 
     /// Seek both players to `seconds`, snapped to the frame grid.
     func seek(seconds: Double) {
+        seek(to: frameTime(seconds: seconds))
+    }
+
+    /// `seconds` snapped to the frame grid.
+    private func frameTime(seconds: Double) -> CMTime {
         let fd = frameDuration.seconds > 0 ? frameDuration : CMTime(value: 1, timescale: 25)
         let frames = Int64((max(0, seconds) / fd.seconds).rounded())
-        seek(to: CMTimeMultiply(fd, multiplier: Int32(clamping: frames)))
+        return CMTimeMultiply(fd, multiplier: Int32(clamping: frames))
+    }
+
+    // MARK: - IN / OUT
+
+    private var currentFrameSeconds: Double {
+        guard let master else { return 0 }
+        return frameTime(seconds: master.currentTime().seconds).seconds
+    }
+
+    func setIn() {
+        var m = marks
+        m.setIn(currentFrameSeconds)
+        updateMarks(m)
+    }
+
+    func setOut() {
+        var m = marks
+        if m.setOut(currentFrameSeconds) {
+            updateMarks(m)
+        } else {
+            marksMessage = "OUT nemôže byť pred IN."
+        }
+    }
+
+    func clearMarks() { updateMarks(TakeMarks()) }
+
+    func goToIn() { if let i = marks.inPoint { seek(seconds: i) } }
+    func goToOut() { if let o = marks.outPoint { seek(seconds: o) } }
+
+    private func updateMarks(_ m: TakeMarks) {
+        marks = m
+        take?.marks = m
+        marksMessage = nil
+        guard let take, let folder = take.folder else { return }
+        do {
+            try TakeMarksStore.save(m, folder: folder, take: take.number)
+        } catch {
+            marksMessage = "IN/OUT sa nepodarilo uložiť: \(error.localizedDescription)"
+        }
     }
 
     private func seek(to time: CMTime) {
