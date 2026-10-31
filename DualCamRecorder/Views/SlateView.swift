@@ -66,6 +66,8 @@ struct SlateFields: View {
     /// Custom setters (recording resets the take number when scene/shot change).
     var setScene: ((String) -> Void)?
     var setShot: ((String) -> Void)?
+    /// Bigger fields with larger text (recording tab).
+    var large = false
 
     var body: some View {
         Grid(alignment: .leading, horizontalSpacing: 10, verticalSpacing: 8) {
@@ -73,22 +75,21 @@ struct SlateFields: View {
                 field("Production", text: $slate.production)
                 field("Director", text: $slate.director)
                 field("DoP", text: $slate.cameraOperator)
-                field("Shooting day", text: $slate.shootingDay).frame(maxWidth: 140)
+                field("Shooting day", text: $slate.shootingDay).frame(maxWidth: large ? 180 : 140)
             }
             .disabled(locked)
             GridRow {
                 field("Scene", text: Binding(get: { slate.scene },
                                              set: { v in if let setScene { setScene(v) } else { slate.scene = v } }))
-                    .frame(maxWidth: 110)
+                    .frame(maxWidth: large ? 150 : 110)
                 field("Shot", text: Binding(get: { slate.shot },
                                              set: { v in if let setShot { setShot(v) } else { slate.shot = v } }))
-                    .frame(maxWidth: 110)
+                    .frame(maxWidth: large ? 150 : 110)
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("Take").font(.callout).foregroundStyle(.secondary)
+                    Text("Take").font(large ? .body : .callout).foregroundStyle(.secondary)
                     HStack(spacing: 4) {
-                        TextField("", value: $slate.take, format: .number)
-                            .textFieldStyle(.roundedBorder)
-                            .frame(width: 56)
+                        styled(TextField("", value: $slate.take, format: .number))
+                            .frame(width: large ? 80 : 56)
                         Stepper("", value: $slate.take, in: 1...999).labelsHidden()
                     }
                 }
@@ -96,20 +97,21 @@ struct SlateFields: View {
                     Picker("", selection: $slate.location) {
                         ForEach(SlateInfo.Location.allCases) { Text($0.title).tag($0) }
                     }
-                    .labelsHidden().frame(width: 90)
+                    .labelsHidden().frame(width: large ? 110 : 90)
                     Picker("", selection: $slate.timeOfDay) {
                         ForEach(SlateInfo.TimeOfDay.allCases) { Text($0.title).tag($0) }
                     }
-                    .labelsHidden().frame(width: 90)
+                    .labelsHidden().frame(width: large ? 110 : 90)
                     SegmentGroup {
                         Toggle(isOn: $slate.mos) {
                             Label("MOS", systemImage: "speaker.slash")
                         }
                         .help("Without sound")
                     }
-                    .toggleStyle(SegmentToggleStyle(width: 86, height: 24))   // + 2 pt group padding = 90 × 28 like EXT / DAY
+                    .toggleStyle(SegmentToggleStyle(width: large ? 106 : 86, height: large ? 32 : 24))   // + 2 pt group padding = like EXT / DAY
                 }
-                .padding(.top, 14)
+                .controlSize(large ? .extraLarge : .regular)
+                .padding(.top, large ? 22 : 14)
             }
             .disabled(locked)
             GridRow {
@@ -121,17 +123,38 @@ struct SlateFields: View {
                     }
                     .help("Good (circled) take")
                 }
-                .toggleStyle(SegmentToggleStyle(width: 150))
-                .padding(.top, 14)
+                .toggleStyle(SegmentToggleStyle(width: large ? 180 : 150, minHeight: large ? 32 : 30))
+                .padding(.top, large ? 22 : 14)
             }
         }
     }
 
     private func field(_ title: String, text: Binding<String>) -> some View {
         VStack(alignment: .leading, spacing: 2) {
-            Text(title).font(.callout).foregroundStyle(.secondary)
-            TextField(title, text: text).textFieldStyle(.roundedBorder)
+            Text(title).font(large ? .body : .callout).foregroundStyle(.secondary)
+            styled(TextField(title, text: text))
         }
+    }
+
+    @ViewBuilder
+    private func styled<Field: View>(_ field: Field) -> some View {
+        if large {
+            field.textFieldStyle(BigTextFieldStyle())
+        } else {
+            field.textFieldStyle(.roundedBorder)
+        }
+    }
+}
+
+/// Tall text field with larger text (rounded-border fields ignore larger fonts / sizes on macOS 26).
+struct BigTextFieldStyle: TextFieldStyle {
+    func _body(configuration: TextField<Self._Label>) -> some View {
+        configuration
+            .textFieldStyle(.plain)
+            .padding(.horizontal, 10)
+            .frame(minHeight: 40)
+            .background(RoundedRectangle(cornerRadius: 6).fill(Color.gray.opacity(0.15)))
+            .overlay(RoundedRectangle(cornerRadius: 6).strokeBorder(Color.gray.opacity(0.35)))
     }
 }
 
@@ -162,9 +185,9 @@ struct SlatePanel: View {
                 SlateFields(slate: $settings.slate,
                             locked: controller.slateLocked,
                             setScene: { controller.setSlateScene($0) },
-                            setShot: { controller.setSlateShot($0) })
-                    .controlSize(.large)
-                    .font(.body)
+                            setShot: { controller.setSlateShot($0) },
+                            large: true)
+                    .font(.title2)
             }
         }
     }
