@@ -22,6 +22,12 @@ struct Take: Identifiable, Hashable {
     var id: Int { number }
     var shootingDay: String { slate?.shootingDay.trimmingCharacters(in: .whitespaces) ?? "" }
     var name: String { TakeNaming.displayName(take: number) }
+
+    /// Camera name the clip was recorded with (from its file name), e.g. "D" after D was renamed back to B.
+    func cameraName(_ role: CameraRole, current names: CameraNames) -> String {
+        let file = role == .a ? camA : camB
+        return file.flatMap { TakeNaming.cameraName(in: $0.lastPathComponent) } ?? names.name(role)
+    }
 }
 
 struct TakeDayGroup: Identifiable {
