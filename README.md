@@ -74,7 +74,7 @@ Rozhranie aplikácie je **v angličtine** (Record / Playback / Slate …); tento
 - Všetko sa ukladá do `PROJECT.JSON` projektu a obnoví sa pri jeho otvorení; nový projekt
   prevezme nastavenia z naposledy otvoreného. Počas nahrávania sa meniť nedajú.
 - Globálne nastavenia (⌘,) obsahujú umiestnenie projektov, živý náhľad na telefóny a informácie o DeckLink.
-- **Record / Playback** sa prepína veľkým prepínačom pod lištou alebo klávesmi **R** / **P** (nie počas písania do poľa).
+- **Record / Playback / Edit** sa prepína veľkým prepínačom pod lištou alebo klávesmi **R** / **P** / **E** (nie počas písania do poľa).
 - **Help** (tlačidlo v lište projektu, menu Help alebo ⌘?) otvorí okno so všetkými klávesovými skratkami,
   vysvetlivkami značiek (REC, LATEST, ★, vlajočka IN/OUT, MOS …), čísel a názvov súborov.
 
@@ -161,8 +161,22 @@ Rozhranie aplikácie je **v angličtine** (Record / Playback / Slate …); tento
   na Macu) → nahrávanie to nezaťaží. Pri prvom spustení macOS môže žiadať povolenie prichádzajúcich spojení / lokálnej siete.
 - Telefóny vidia vstupy kamier (aj keď je na Macu otvorený Playback), nie prehrávané klipy.
 
+### Strih pre režiséra (záložka Edit, E)
+- V Playbacku sa označí IN / OUT a tlačidlom **+ Camera A** / **+ Camera B** (⇧A / ⇧B) sa úsek
+  pridá na koniec timeline – vždy len jedna kamera. Bez IN / OUT sa pridá celý klip (len IN → do konca,
+  len OUT → od začiatku). Po pridaní sa na chvíľu ukáže „Added to timeline: …“.
+- **Edit** prehrá celú timeline ako jeden film (medzerník, ← / → po snímke, ↑ / ↓ predchádzajúci /
+  nasledujúci úsek, klik do timeline = skok). Nad tlačidlami je popis úseku pod playheadom.
+- Na timeline: klik vyberie úsek, **ťahanie úseku** zmení poradie (aj ⌥← / ⌥→), **ťahanie okraja**
+  posunie IN / OUT (nie za koniec klipu), pri vybranom úseku sa dá prepnúť **Camera A / B**,
+  **Remove** (⌫) ho vyhodí, **Undo** (⌘Z) vráti poslednú zmenu. Zoom posuvníkom.
+- Timeline sa ukladá do `EDIT.JSON` v priečinku projektu; nahrávky sa nikdy nemenia ani nekopírujú.
+- **Export MOV…**: H.264 1080p film celej timeline so zvukom vybranej kamery, voliteľne s popisom
+  úseku v ľavom dolnom rohu (Clip · Scene · Shot · Take · Camera). Predvolene `<projekt>_EDIT.mov`
+  v priečinku projektu.
+
 ### Export PDF (⇧⌘P)
-- V Playback tlačidlo **Export PDF…**: report klipov **podľa natáčacích dní** (všetky dni alebo
+- V lište okna tlačidlo **Export PDF…**: report klipov **podľa natáčacích dní** (všetky dni alebo
   jeden deň, voliteľne len ★ dobré pokusy, s obrázkami alebo bez).
 - **A4 na šírku (6 klipov / strana) alebo na výšku (8 klipov / strana)**, každý deň začína novou stranou (projekt, deň, dátum, počet klipov); na strane
   6 klipov. Riadok: obrázok zo stredu klipu z kamery A aj B, číslo klipu, ★ / MOS,
@@ -273,6 +287,8 @@ DualCamRecorder/
   Preview/    PreviewRenderer (VTPixelTransfer → AVSampleBufferDisplayLayer), PreviewView
   Playback/   TakeLibrary, ThumbnailCache (náhľady zo stredu záberu),
               SyncPlaybackController (2× AVPlayer), PlayerView
+  Edit/       EditTimeline (EDIT.JSON, undo), EditComposition (AVMutableComposition,
+              prehrávač, export H.264), EditView (timeline)
   Views/      RecordView, PlaybackView, SettingsView, Components
 docs/PLAN.md                      plán a architektúra
 tools/gen_xcodeproj.py            generátor project.pbxproj + zdieľanej schémy

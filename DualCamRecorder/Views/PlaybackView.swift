@@ -9,7 +9,11 @@ struct PlaybackView: View {
     @ObservedObject var library: TakeLibrary
     @ObservedObject var player: SyncPlaybackController
     @ObservedObject var settings: AppSettings
+    @ObservedObject var timeline: EditTimeline
     @State private var selection: Take.ID?
+    /// "Added to timeline: …" for a moment after ⇧A / ⇧B.
+    @State private var addedMessage: String?
+    @State private var addedMessageToken = 0
     @State private var scrubValue: Double = 0
     @State private var isScrubbing = false
     @State private var editingSlate = false
@@ -99,6 +103,8 @@ struct PlaybackView: View {
                 ShortcutButton(key: .rightArrow, modifiers: [.command]) { selectAdjacentClip(1) }
                 ShortcutButton(key: .upArrow) { selectAdjacentClip(-1) }
                 ShortcutButton(key: .downArrow) { selectAdjacentClip(1) }
+                ShortcutButton(key: "a", modifiers: [.shift]) { addToTimeline(.a) }
+                ShortcutButton(key: "b", modifiers: [.shift]) { addToTimeline(.b) }
             }
         }
     }
@@ -343,6 +349,7 @@ struct PlaybackView: View {
             VStack(spacing: 10) {
                 transportRow
                 markRow
+                addRow
                 audioButtons
             }
             .buttonStyle(BigButtonStyle())
@@ -505,6 +512,50 @@ struct PlaybackView: View {
         }
     }
 
+    // MARK: - Add to the edit (always one camera)
+
+    /// "Add to timeline: + Camera A  + Camera B" – the IN → OUT piece of one camera.
+    private var addRow: some View {
+        HStack(spacing: 10) {
+            Text("Add to timeline").foregroundStyle(.secondary)
+            addButton(.a, key: "a")
+            addButton(.b, key: "b")
+            Text("\(timeline.segments.count) on timeline").font(.callout).foregroundStyle(.secondary)
+        }
+    }
+
+    private func addButton(_ role: CameraRole, key: KeyEquivalent) -> some View {
+        let name = player.take?.cameraName(role, current: settings.cameraNames) ?? settings.cameraNames.name(role)
+        return Button { addToTimeline(role) } label: {
+            Label("Camera \(name)", systemImage: "plus")
+        }
+        .keyboardShortcut(shortcut(key, [.shift]))
+        .disabled(file(of: role) == nil)
+        .help("Add IN → OUT of camera \(name) to the edit (⇧\(role.rawValue)); without IN / OUT the whole clip")
+    }
+
+    private func file(of role: CameraRole) -> URL? {
+        role == .a ? player.take?.camA : player.take?.camB
+    }
+
+    private func addToTimeline(_ role: CameraRole) {
+        guard let take = player.take, file(of: role) != nil, player.duration > 0 else { return }
+        let inPoint = player.marks.inPoint ?? 0
+        let outPoint = player.marks.outPoint ?? player.duration
+        guard outPoint - inPoint >= EditTimeline.minimumLength else { return }
+        let segment = TimelineSegment(take: take.number, camera: role,
+                                      fileA: take.camA?.lastPathComponent, fileB: take.camB?.lastPathComponent,
+                                      inPoint: inPoint, outPoint: outPoint, clipDuration: player.duration,
+                                      label: [take.name, player.slate?.shortLabel].compactMap { $0 }.joined(separator: " · "))
+        timeline.append(segment)
+        addedMessageToken += 1
+        let token = addedMessageToken
+        addedMessage = "Added to timeline: \(take.name) · Camera \(segment.cameraName) · \(player.timecode(segment.duration))"
+        DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
+            if addedMessageToken == token { addedMessage = nil }
+        }
+    }
+
     /// IN/OUT buttons centered, loop at the right edge under the speed.
     private var markRow: some View {
         HStack(spacing: 0) {
@@ -550,6 +601,11 @@ struct PlaybackView: View {
                 if let msg = player.marksMessage {
                     Text(msg).font(.callout).foregroundStyle(.red)
                 }
+            }
+            if let addedMessage {
+                Label(addedMessage, systemImage: "checkmark.circle.fill")
+                    .font(.title3)
+                    .foregroundStyle(.green)
             }
             if player.slate == nil && player.take != nil {
                 Text("This clip has no slate data.")

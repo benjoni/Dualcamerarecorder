@@ -19,8 +19,8 @@ struct HelpView: View {
                     key("⌘,", "App settings – projects location, live view on phones, DeckLink devices")
                     key("⇧⌘W", "Waveform over the pictures")
                     key("⌘F", "Screens only / show all controls")
-                    key("R  P", "Record / Playback (not while typing in a field)")
-                    key("⌘1  ⌘2", "Record / Playback (in Screens only)")
+                    key("R  P  E", "Record / Playback / Edit (not while typing in a field)")
+                    key("⌘1  ⌘2  ⌘3", "Record / Playback / Edit (in Screens only)")
                     key("⌘?", "This help")
                 }
 
@@ -36,7 +36,19 @@ struct HelpView: View {
                     key("↑  ↓", "Previous / next clip (also ⌘←  ⌘→)")
                     key("I  O", "Set IN / OUT at the current frame")
                     key("⌘L", "Show / hide the clip list")
+                    key("⇧A  ⇧B", "Add IN → OUT of camera A / B to the edit (no IN / OUT: whole clip)")
                     key("⇧⌘P", "Export PDF clip report")
+                }
+
+                section("Edit") {
+                    key("Space", "Play / pause the whole edit")
+                    key("←  →", "One frame back / forward")
+                    key("↑  ↓", "Start of this or previous piece / next piece")
+                    key("⌥←  ⌥→", "Move the selected piece earlier / later (or drag it)")
+                    key("⌫", "Remove the selected piece – the recording stays")
+                    key("⌘Z", "Undo the last change")
+                    term("Edges", "Drag the left / right edge of a piece to move its IN / OUT")
+                    term("EDIT.JSON", "The edit, saved in the project folder")
                 }
 
                 section("Badges and symbols") {

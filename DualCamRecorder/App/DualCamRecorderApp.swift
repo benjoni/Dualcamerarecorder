@@ -14,6 +14,8 @@ final class AppModel: ObservableObject {
     let projects: ProjectStore
     let library = TakeLibrary()
     let player = SyncPlaybackController()
+    /// Edit for the director (EDIT.JSON in the project folder).
+    let timeline = EditTimeline()
     let backup = BackupManager()
     let liveView = LiveViewServer()
     private var liveViewTimer: Timer?
@@ -91,6 +93,7 @@ final class AppModel: ObservableObject {
         settings.slate = slate
 
         player.load(nil)
+        timeline.load(folder: opened.folder)
         library.cueLatestOnShow = true
         recorder.refreshNextTake()
         configureBackup()
@@ -104,6 +107,7 @@ final class AppModel: ObservableObject {
     func closeProject() {
         guard !recorder.isRecording else { return }
         player.load(nil)
+        timeline.load(folder: nil)
         projects.closeCurrent(saving: settings.slate)
         backup.configure(source: nil, destination: nil)
     }
@@ -216,7 +220,9 @@ struct ContentView: View {
     @ObservedObject var model: AppModel
     @ObservedObject var settings: AppSettings
     @ObservedObject var projects: ProjectStore
+    /// 0 Record · 1 Playback · 2 Edit
     @State private var tab = 0
+    @StateObject private var editPlayer = EditPlayer()
     /// Hide everything except the camera pictures / players (⌘F).
     @State private var screensOnly = false
     @State private var showProjectSettings = false
@@ -257,6 +263,7 @@ struct ContentView: View {
         .onChange(of: tab) { _, newTab in
             applyActivity()
             if newTab == 1 { model.library.cueLatestOnShow = true }
+            if newTab != 1 { model.player.pause() }
         }
     }
 
@@ -267,9 +274,11 @@ struct ContentView: View {
                 Group {
                     if tab == 0 {
                         RecordView(controller: model.recorder, settings: model.settings, backup: model.backup, screensOnly: true)
-                    } else {
+                    } else if tab == 1 {
                         PlaybackView(library: model.library, player: model.player, settings: model.settings,
-                                     screensOnly: true)
+                                     timeline: model.timeline, screensOnly: true)
+                    } else {
+                        EditView(timeline: model.timeline, edit: editPlayer, screensOnly: true)
                     }
                 }
                 .background {
@@ -277,6 +286,7 @@ struct ContentView: View {
                     ZStack {
                         ShortcutButton(key: "1", modifiers: [.command]) { tab = 0 }
                         ShortcutButton(key: "2", modifiers: [.command]) { tab = 1 }
+                        ShortcutButton(key: "3", modifiers: [.command]) { tab = 2 }
                     }
                 }
             } else {
@@ -291,14 +301,21 @@ struct ContentView: View {
                             Label("Playback", systemImage: "play.fill")
                         }
                         .help("Playback (P)")
+                        Toggle(isOn: Binding(get: { tab == 2 }, set: { if $0 { tab = 2 } })) {
+                            Label("Edit", systemImage: "scissors")
+                        }
+                        .help("Edit for the director (E)")
                     }
                     .toggleStyle(SegmentToggleStyle(width: 180, minHeight: 38))
                     .font(.title3.weight(.semibold))
                     .padding(.top, 8)
                     if tab == 0 {
                         RecordView(controller: model.recorder, settings: model.settings, backup: model.backup)
+                    } else if tab == 1 {
+                        PlaybackView(library: model.library, player: model.player, settings: model.settings,
+                                     timeline: model.timeline)
                     } else {
-                        PlaybackView(library: model.library, player: model.player, settings: model.settings)
+                        EditView(timeline: model.timeline, edit: editPlayer)
                     }
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)   // same corners on Record and Playback
@@ -394,7 +411,7 @@ struct ContentView: View {
         }
     }
 
-    /// R → Record, P → Playback (plain keys, ignored while typing in a text field).
+    /// R → Record, P → Playback, E → Edit (plain keys, ignored while typing in a text field).
     private func installTabKeys() {
         guard tabKeyMonitor == nil else { return }
         tabKeyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
@@ -405,6 +422,7 @@ struct ContentView: View {
             switch event.charactersIgnoringModifiers?.lowercased() {
             case "r": tab = 0; return nil
             case "p": tab = 1; return nil
+            case "e": tab = 2; return nil
             default: return event
             }
         }

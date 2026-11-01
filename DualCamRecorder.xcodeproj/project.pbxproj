@@ -16,6 +16,9 @@
 		6600DF44958D153CDA02B31F /* HostClock.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9271C3CCB72AF1A9ABD071F4 /* HostClock.swift */; };
 		A10A2878105CB9C121421B72 /* SimulatedSource.swift in Sources */ = {isa = PBXBuildFile; fileRef = A90675E0408BFEE05A438E81 /* SimulatedSource.swift */; };
 		D574554270A2F11C80647E61 /* VideoSource.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8E2EF906A5821F6AA648C303 /* VideoSource.swift */; };
+		423DBC795644BE66A58FD697 /* EditComposition.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3D9A8B607BD32E0BE673D895 /* EditComposition.swift */; };
+		40C6DAF708DC21D21D7C4432 /* EditTimeline.swift in Sources */ = {isa = PBXBuildFile; fileRef = 15081912D752FA1F38349205 /* EditTimeline.swift */; };
+		BC54439FA26D38DC2A8CC9F7 /* EditView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 253AEEF55E6C5A0759F98664 /* EditView.swift */; };
 		015C8DB7E4CD2DAB8AA60D6A /* PDFReport.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9E647BF4D4C1E3F896460DB8 /* PDFReport.swift */; };
 		0B27B44163033F8362D89767 /* PlayerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0B9E5830569A82B806F54A7F /* PlayerView.swift */; };
 		F7ECB134D22BCFEAA2004CFD /* SyncPlaybackController.swift in Sources */ = {isa = PBXBuildFile; fileRef = A57B1970A4CECEE2CD3EACA6 /* SyncPlaybackController.swift */; };
@@ -60,6 +63,9 @@
 		9271C3CCB72AF1A9ABD071F4 /* HostClock.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HostClock.swift; sourceTree = "<group>"; };
 		A90675E0408BFEE05A438E81 /* SimulatedSource.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SimulatedSource.swift; sourceTree = "<group>"; };
 		8E2EF906A5821F6AA648C303 /* VideoSource.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VideoSource.swift; sourceTree = "<group>"; };
+		3D9A8B607BD32E0BE673D895 /* EditComposition.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditComposition.swift; sourceTree = "<group>"; };
+		15081912D752FA1F38349205 /* EditTimeline.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditTimeline.swift; sourceTree = "<group>"; };
+		253AEEF55E6C5A0759F98664 /* EditView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditView.swift; sourceTree = "<group>"; };
 		9E647BF4D4C1E3F896460DB8 /* PDFReport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PDFReport.swift; sourceTree = "<group>"; };
 		0B9E5830569A82B806F54A7F /* PlayerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlayerView.swift; sourceTree = "<group>"; };
 		A57B1970A4CECEE2CD3EACA6 /* SyncPlaybackController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SyncPlaybackController.swift; sourceTree = "<group>"; };
@@ -114,6 +120,7 @@
 				E22F0D10F63FE474775C630F /* App */,
 				6ACF7CA61AE8C17F2D7EA157 /* Bridge */,
 				52972602E0593B71147E1751 /* Capture */,
+				03366588E4702A171AE9C253 /* Edit */,
 				B3B796B27FB682FC3F40B168 /* Playback */,
 				26432D7ACCDE6A80CAE3E2B1 /* Preview */,
 				A2B6AD46AD5B1EB0037ED029 /* Recording */,
@@ -153,6 +160,16 @@
 				8E2EF906A5821F6AA648C303 /* VideoSource.swift */,
 			);
 			path = Capture;
+			sourceTree = "<group>";
+		};
+		03366588E4702A171AE9C253 /* Edit */ = {
+			isa = PBXGroup;
+			children = (
+				3D9A8B607BD32E0BE673D895 /* EditComposition.swift */,
+				15081912D752FA1F38349205 /* EditTimeline.swift */,
+				253AEEF55E6C5A0759F98664 /* EditView.swift */,
+			);
+			path = Edit;
 			sourceTree = "<group>";
 		};
 		B3B796B27FB682FC3F40B168 /* Playback */ = {
@@ -315,6 +332,9 @@
 				6600DF44958D153CDA02B31F /* HostClock.swift in Sources */,
 				A10A2878105CB9C121421B72 /* SimulatedSource.swift in Sources */,
 				D574554270A2F11C80647E61 /* VideoSource.swift in Sources */,
+				423DBC795644BE66A58FD697 /* EditComposition.swift in Sources */,
+				40C6DAF708DC21D21D7C4432 /* EditTimeline.swift in Sources */,
+				BC54439FA26D38DC2A8CC9F7 /* EditView.swift in Sources */,
 				015C8DB7E4CD2DAB8AA60D6A /* PDFReport.swift in Sources */,
 				0B27B44163033F8362D89767 /* PlayerView.swift in Sources */,
 				F7ECB134D22BCFEAA2004CFD /* SyncPlaybackController.swift in Sources */,
