@@ -44,6 +44,21 @@ final class ThumbnailCache {
         return image
     }
 
+    /// Frame at a given time (timeline pieces show the middle of their IN → OUT).
+    func image(url: URL, at seconds: Double) async -> NSImage? {
+        let k = "\(url.path)|@\(Int(seconds * 10))" as NSString
+        if let hit = cache.object(forKey: k) { return hit }
+        let generator = AVAssetImageGenerator(asset: AVURLAsset(url: url))
+        generator.appliesPreferredTrackTransform = true
+        generator.maximumSize = CGSize(width: 320, height: 180)
+        generator.requestedTimeToleranceBefore = CMTime(seconds: 0.2, preferredTimescale: 600)
+        generator.requestedTimeToleranceAfter = CMTime(seconds: 0.2, preferredTimescale: 600)
+        guard let result = try? await generator.image(at: CMTime(seconds: seconds, preferredTimescale: 600)) else { return nil }
+        let image = NSImage(cgImage: result.image, size: NSSize(width: result.image.width, height: result.image.height))
+        cache.setObject(image, forKey: k)
+        return image
+    }
+
     private func key(_ url: URL, _ modified: Date) -> NSString {
         "\(url.path)|\(modified.timeIntervalSince1970)" as NSString
     }

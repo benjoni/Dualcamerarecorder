@@ -338,12 +338,16 @@ struct TimelineStrip: View {
         return ZStack(alignment: .topLeading) {
             RoundedRectangle(cornerRadius: 6)
                 .fill(color(segment.camera))
-            VStack(alignment: .leading, spacing: 2) {
-                Text("Clip \(String(format: "%03d", segment.take))").font(.callout.weight(.bold))
-                Text("Camera \(segment.cameraName)").font(.caption.weight(.semibold))
-                Text(edit.timecode(segment.duration)).font(.caption.monospaced())
+            HStack(alignment: .top, spacing: 8) {
+                SegmentThumbnail(url: timeline.url(for: segment), seconds: (segment.inPoint + segment.outPoint) / 2)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Clip \(String(format: "%03d", segment.take))").font(.callout.weight(.bold))
+                    Text("Camera \(segment.cameraName)").font(.caption.weight(.semibold))
+                    Text(edit.timecode(segment.duration)).font(.caption.monospaced())
+                }
+                .foregroundStyle(.white)
+                .fixedSize()
             }
-            .foregroundStyle(.white)
             .padding(.horizontal, 10).padding(.vertical, 6)
             .frame(width: width, alignment: .leading)
             .clipped()
@@ -422,5 +426,29 @@ struct TimelineStrip: View {
                     }
             )
             .help(leading ? "Drag to move IN" : "Drag to move OUT")
+    }
+}
+
+/// Picture from the middle of a piece (from the camera the piece uses).
+private struct SegmentThumbnail: View {
+    let url: URL?
+    let seconds: Double
+    @State private var image: NSImage?
+
+    var body: some View {
+        ZStack {
+            Rectangle().fill(Color.black)
+            if let image {
+                Image(nsImage: image).resizable().aspectRatio(contentMode: .fit)
+            } else {
+                Image(systemName: "film").foregroundStyle(.secondary)
+            }
+        }
+        .frame(width: 120, height: 68)
+        .clipShape(RoundedRectangle(cornerRadius: 4))
+        .task(id: "\(url?.path ?? "")|\(Int(seconds * 10))") {
+            guard let url else { image = nil; return }
+            image = await ThumbnailCache.shared.image(url: url, at: seconds)
+        }
     }
 }
