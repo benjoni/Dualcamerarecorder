@@ -13,7 +13,6 @@ struct PlaybackView: View {
     @State private var scrubValue: Double = 0
     @State private var isScrubbing = false
     @State private var editingSlate = false
-    @State private var exportingPDF = false
     /// Clip list search (scene, shot, take, file, cam clip, note, "good", "mos" …).
     @State private var searchText = ""
     /// While typing in the search field, single-key shortcuts (space, I, O, arrows) are switched off.
@@ -161,20 +160,6 @@ struct PlaybackView: View {
             }
             .keyboardShortcut("l", modifiers: [.command])
             .help("Show / hide the clip list (⌘L)")
-            .buttonStyle(BigButtonStyle())
-            .font(.title3)
-
-            Button {
-                exportingPDF = true
-            } label: {
-                Label("Export PDF…", systemImage: "doc.richtext")
-            }
-            .keyboardShortcut("p", modifiers: [.command, .shift])
-            .help("Clip report by shooting day, with pictures (⇧⌘P)")
-            .disabled(library.takes.isEmpty)
-            .sheet(isPresented: $exportingPDF) {
-                ExportPDFSheet(library: library, settings: settings)
-            }
             .buttonStyle(BigButtonStyle())
             .font(.title3)
 

@@ -220,6 +220,7 @@ struct ContentView: View {
     /// Hide everything except the camera pictures / players (⌘F).
     @State private var screensOnly = false
     @State private var showProjectSettings = false
+    @State private var exportingPDF = false
     @Environment(\.openWindow) private var openWindow
     @State private var tabKeyMonitor: Any?
 
@@ -302,6 +303,9 @@ struct ContentView: View {
                 }
             }
         }
+        .sheet(isPresented: $exportingPDF) {
+            ExportPDFSheet(library: model.library, settings: settings)
+        }
         .sheet(isPresented: $showProjectSettings) {
             ProjectSettingsView(model: model, settings: settings, recorder: model.recorder, backup: model.backup)
         }
@@ -321,6 +325,17 @@ struct ContentView: View {
                 }
                 .disabled(model.recorder.isRecording)
                 .help(model.recorder.isRecording ? "Stop recording first" : "Back to the project list")
+            }
+            ToolbarItem(placement: .primaryAction) {
+                Button {
+                    exportingPDF = true
+                } label: {
+                    Label("Export PDF…", systemImage: "doc.richtext")
+                        .labelStyle(.titleAndIcon)
+                }
+                .keyboardShortcut("p", modifiers: [.command, .shift])
+                .help("Clip report by shooting day, with pictures (⇧⌘P)")
+                .disabled(model.recorder.isRecording)
             }
             ToolbarItem(placement: .primaryAction) {
                 Button {
