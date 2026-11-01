@@ -415,11 +415,12 @@ struct CameraSetupFields: View {
         HStack(alignment: .bottom, spacing: 4) {
             ForEach(Array(range), id: \.self) { index in
                 let f = CameraSetup.fields[index]
-                VStack(alignment: .leading, spacing: 1) {
-                    Text(f.1).font(.caption2).foregroundStyle(.secondary).lineLimit(1)
+                VStack(alignment: .leading, spacing: 2) {
+                    // Same left inset as the text inside the field, so the title sits right above the value.
+                    Text(f.1).font(.caption).foregroundStyle(.secondary).lineLimit(1)
+                        .padding(.leading, SetupFieldStyle.inset)
                     TextField(f.2, text: Binding(get: { setup[keyPath: f.0] }, set: { setup[keyPath: f.0] = $0 }))
-                        .textFieldStyle(.roundedBorder)
-                        .controlSize(.small)
+                        .textFieldStyle(SetupFieldStyle())
                 }
                 .frame(minWidth: index == 0 ? 90 : 52, maxWidth: index == 0 ? 160 : 80)
             }
@@ -431,5 +432,20 @@ struct CameraSetupFields: View {
                     .padding(.bottom, 3)
             }
         }
+    }
+}
+
+/// Small field with a known text inset (the system rounded border field has its own).
+private struct SetupFieldStyle: TextFieldStyle {
+    static let inset: CGFloat = 6
+
+    func _body(configuration: TextField<Self._Label>) -> some View {
+        configuration
+            .textFieldStyle(.plain)
+            .font(.callout)
+            .padding(.horizontal, Self.inset)
+            .frame(height: 24)
+            .background(RoundedRectangle(cornerRadius: 5).fill(Color.gray.opacity(0.15)))
+            .overlay(RoundedRectangle(cornerRadius: 5).strokeBorder(Color.gray.opacity(0.35)))
     }
 }
