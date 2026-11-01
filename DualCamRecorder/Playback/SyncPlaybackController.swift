@@ -81,7 +81,7 @@ final class SyncPlaybackController: ObservableObject {
     private let waveformQueue = DispatchQueue(label: "playback-waveform", qos: .utility)
     private var waveformBusy = false
 
-    private var timeObserver: Any?
+    private var timeObservers: [Any] = []
     private var endObserver: NSObjectProtocol?
     private var generation = 0
 
@@ -92,13 +92,17 @@ final class SyncPlaybackController: ObservableObject {
             p.actionAtItemEnd = .pause
         }
         playerB.isMuted = true
-        timeObserver = playerA.addPeriodicTimeObserver(forInterval: CMTime(value: 1, timescale: 30), queue: .main) { [weak self] _ in
-            self?.updateTime()
+        // Observe both players: a take recorded by camera B alone has no item in player A.
+        timeObservers = [playerA, playerB].map { p in
+            p.addPeriodicTimeObserver(forInterval: CMTime(value: 1, timescale: 30), queue: .main) { [weak self, weak p] _ in
+                guard let self, let p, p === self.master else { return }
+                self.updateTime()
+            }
         }
     }
 
     deinit {
-        if let timeObserver { playerA.removeTimeObserver(timeObserver) }
+        for (p, o) in zip([playerA, playerB], timeObservers) { p.removeTimeObserver(o) }
         if let endObserver { NotificationCenter.default.removeObserver(endObserver) }
     }
 
