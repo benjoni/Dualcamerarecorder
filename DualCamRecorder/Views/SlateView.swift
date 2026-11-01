@@ -317,6 +317,16 @@ struct SlateEditSheet: View {
                             .textFieldStyle(.roundedBorder).font(.body.monospaced()).frame(width: 200)
                         Text("(empty = camera did not record)").font(.callout).foregroundStyle(.secondary)
                     }
+                    HStack(alignment: .top, spacing: 16) {
+                        VStack(alignment: .leading) {
+                            Text("Camera A").font(.callout.weight(.semibold))
+                            CameraSetupFields(setup: $slate.setupA)
+                        }
+                        VStack(alignment: .leading) {
+                            Text("Camera B").font(.callout.weight(.semibold))
+                            CameraSetupFields(setup: $slate.setupB)
+                        }
+                    }
                 }
             }
             HStack {

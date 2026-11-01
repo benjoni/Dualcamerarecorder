@@ -53,10 +53,20 @@ Rozhranie aplikácie je **v angličtine** (Record / Playback / Slate …); tento
   - metadáta každého `.MOV`: vlastný kľúč `sk.dualcam.camera-clip` (celé ID),
     `com.apple.quicktime.information` = `Camera clip A001C0023` a riadok v popise,
   - **`CLIPLOG.CSV`** v priečinku projektu – riadok na každý súbor:
-    `clip,camera,camera_name,file,camera_clip,shooting_day,scene,shot,take,good,mos,int_ext,day_night,recorded_at,production,note`.
+    `clip,camera,camera_name,file,camera_clip,shooting_day,scene,shot,take,good,mos,int_ext,day_night,recorded_at,production,note,camera_setup`.
     Prepíše sa po každom zábere, po úprave klapky a pri otvorení projektu.
 - Čítanie skriptom, napr. `exiftool -Keys:All A007_S12_SH3B_T04.MOV` alebo priamo CSV.
 - V Playback → **Edit slate…** sa dajú hodnoty dodatočne opraviť.
+
+### Nastavenia kamery (Record → Setup)
+- Tlačidlo **Setup** v riadku nad obrazom kamery zapne/vypne pod oboma obrazmi polia
+  **Lens, Stop, Distance, Height, Tilt, Filter, ISO, Shutter, WB** (voľný text, jednotky podľa štábu).
+- Hodnoty ostávajú pre ďalšie zábery, kým ich nezmeníš (**Clear** vymaže); počas nahrávania sú zamknuté.
+- Ukladajú sa ku klipu: `C007_SLATE.JSON` → `setupA`, `setupB` (kamera, ktorá nenahrávala, ostane prázdna),
+  metadáta `.MOV` (kľúč `sk.dualcam.camera-setup` + riadok v popise), stĺpec `camera_setup` v `CLIPLOG.CSV`.
+- V Playback sa zobrazia pod názvom súboru kamery, opraviť ich ide cez **Edit slate…**; vyhľadávanie ich prehľadáva.
+- V PDF reporte je pod každým klipom riadok na kameru (prepínač **Camera setup** v exporte);
+  vtedy je na strane o klip menej (5 na šírku / 7 na výšku).
 
 ### Dočasné vypnutie jednej kamery (Record, ⌥1 / ⌥2)
 - V projekte s dvoma kamerami je nadpis **Camera A / Camera B** nad obrazom tlačidlo so značkou **ON / OFF**. Vypnutá kamera
@@ -184,7 +194,7 @@ Rozhranie aplikácie je **v angličtine** (Record / Playback / Slate …); tento
 - **A4 na šírku (6 klipov / strana) alebo na výšku (8 klipov / strana)**, každý deň začína novou stranou (projekt, deň, dátum, počet klipov); na strane
   6 klipov. Riadok: obrázok zo stredu klipu z kamery A aj B, číslo klipu, ★ / MOS,
   Scene / Shot / Take, INT/EXT · DAY/NIGHT, súbory + Cam clip, dĺžka, IN / OUT / DUR,
-  čas nahrávania, poznámka. Ukážky: `docs/preview/sample_clip_report.pdf` (na šírku), `docs/preview/sample_clip_report_portrait.pdf` (na výšku).
+  čas nahrávania, poznámka, nastavenia kamier (ak sú vyplnené). Ukážky: `docs/preview/sample_clip_report.pdf` (na šírku), `docs/preview/sample_clip_report_portrait.pdf` (na výšku).
 - PDF sa uloží (predvolene do priečinka projektu) a hneď otvorí.
 
 ### Waveform (⇧⌘W)

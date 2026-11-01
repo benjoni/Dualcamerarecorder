@@ -461,6 +461,15 @@ extension ContentView {
             try? await Task.sleep(nanoseconds: 3_000_000_000)
             saveWindowPicture(to: URL(fileURLWithPath: dir).appendingPathComponent("\(label).png"))
         }
+        // Clip reports of the project (landscape + portrait, camera setup lines when any clip has them).
+        for portrait in [false, true] {
+            let takes = model.library.takes
+            let options = ReportOptions(portrait: portrait, cameraNames: settings.cameraNames,
+                                        cameraSetup: takes.contains { $0.slate.map { !$0.setupA.isEmpty || !$0.setupB.isEmpty } ?? false })
+            let clips = await PDFReport.prepare(takes: takes, options: options)
+            try? PDFReport.write(clips: clips, production: settings.slate.production, options: options,
+                                 to: URL(fileURLWithPath: dir).appendingPathComponent(portrait ? "report_portrait.pdf" : "report.pdf"))
+        }
         exit(0)
     }
 

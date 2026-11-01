@@ -36,6 +36,8 @@ final class AppSettings: ObservableObject {
     @Published var backupRootPath: String { didSet { defaults.set(backupRootPath, forKey: "backupRootPath") } }
     /// Luma waveform over each camera picture (Record and Playback).
     @Published var showWaveform: Bool { didSet { defaults.set(showWaveform, forKey: "showWaveform") } }
+    /// Camera setup fields (lens, stop, distance, height, tilt …) under each camera on the Record tab.
+    @Published var showCameraSetup: Bool { didSet { defaults.set(showCameraSetup, forKey: "showCameraSetup") } }
     /// Current slate (clapperboard) – used for the next take.
     @Published var slate: SlateInfo {
         didSet { if let data = try? JSONEncoder().encode(slate) { defaults.set(data, forKey: "slate") } }
@@ -56,6 +58,7 @@ final class AppSettings: ObservableObject {
         deviceB = defaults.string(forKey: "deviceB") ?? ""
         cameraNameA = defaults.string(forKey: "cameraNameA") ?? "A"
         showWaveform = defaults.bool(forKey: "showWaveform")
+        showCameraSetup = defaults.bool(forKey: "showCameraSetup")
         backupEnabled = defaults.bool(forKey: "backupEnabled")
         backupRootPath = defaults.string(forKey: "backupRootPath") ?? ""
         cameraNameB = defaults.string(forKey: "cameraNameB") ?? "B"

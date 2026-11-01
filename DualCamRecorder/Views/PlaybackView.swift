@@ -284,6 +284,12 @@ struct PlaybackView: View {
             }
             .font(.callout.monospaced()).foregroundStyle(.secondary)
             .textSelection(.enabled)
+            if let setup = player.slate?.setup(role), !setup.isEmpty {
+                Text(setup.summary)
+                    .font(.callout).foregroundStyle(.secondary)
+                    .lineLimit(2).multilineTextAlignment(.center)
+                    .textSelection(.enabled)
+            }
         }
         .frame(maxWidth: .infinity)
     }

@@ -255,11 +255,21 @@ struct CameraPanel: View {
                         onDecrement: { cameraClipBinding.wrappedValue = CameraClipID.previous(cameraClipBinding.wrappedValue) })
                     .labelsHidden()
                     .disabled(controller.isRecording)
+                Toggle(isOn: $settings.showCameraSetup) {
+                    Label("Setup", systemImage: "camera.aperture")
+                }
+                .toggleStyle(.button)
+                .help("Camera setup – lens, stop, distance, height, tilt … saved with every clip and printed in the PDF report")
             }
             .frame(maxWidth: pictureWidth ?? .infinity)
 
             CameraScreen(channel: channel, showWaveform: showWaveform)
                 .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { pictureWidth = $0 }
+
+            if settings.showCameraSetup {
+                CameraSetupFields(setup: setupBinding, locked: controller.isRecording)
+                    .frame(maxWidth: pictureWidth ?? .infinity, alignment: .leading)
+            }
 
             VStack(alignment: .leading, spacing: 8) {
                 Text(channel.format?.displayString ?? "Format: —")
@@ -293,6 +303,20 @@ struct CameraPanel: View {
                 let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
                 if role == .a { controller.settings.slate.cameraClipA = trimmed }
                 else { controller.settings.slate.cameraClipB = trimmed }
+            })
+    }
+
+    /// Camera setup for the next take (frozen value of the running take while recording).
+    private var setupBinding: Binding<CameraSetup> {
+        let role = channel.role
+        return Binding(
+            get: {
+                if let frozen = controller.recordingSlate { return frozen.setup(role) }
+                return controller.settings.slate.setup(role)
+            },
+            set: { value in
+                if role == .a { controller.settings.slate.setupA = value }
+                else { controller.settings.slate.setupB = value }
             })
     }
 
@@ -365,5 +389,47 @@ struct CameraTitleButton: View {
         .buttonStyle(.plain)
         .disabled(controller.isRecording)
         .help("Camera \(settings.cameraNames.name(role)) on / off (⌥\(role == .a ? 1 : 2)) – the other camera fills the screen and records alone")
+    }
+}
+
+/// Lens / stop / distance / height / tilt … of one camera in one compact row (never wider than the picture).
+/// Kept for the next takes until changed; locked while recording (the running take keeps its values).
+struct CameraSetupFields: View {
+    @Binding var setup: CameraSetup
+    var locked = false
+
+    var body: some View {
+        // One row when the picture is wide enough, otherwise lens … tilt / filter … WB.
+        ViewThatFits(in: .horizontal) {
+            row(0..<CameraSetup.fields.count, clear: true)
+            VStack(alignment: .leading, spacing: 4) {
+                row(0..<5, clear: false)
+                row(5..<CameraSetup.fields.count, clear: true)
+            }
+        }
+        .disabled(locked)
+        .help(locked ? "Camera setup is locked while recording" : "Camera setup – kept for the next takes, saved with the clip, printed in the PDF report")
+    }
+
+    private func row(_ range: Range<Int>, clear: Bool) -> some View {
+        HStack(alignment: .bottom, spacing: 4) {
+            ForEach(Array(range), id: \.self) { index in
+                let f = CameraSetup.fields[index]
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(f.1).font(.caption2).foregroundStyle(.secondary).lineLimit(1)
+                    TextField(f.2, text: Binding(get: { setup[keyPath: f.0] }, set: { setup[keyPath: f.0] = $0 }))
+                        .textFieldStyle(.roundedBorder)
+                        .controlSize(.small)
+                }
+                .frame(minWidth: index == 0 ? 90 : 52, maxWidth: index == 0 ? 160 : 80)
+            }
+            if clear {
+                Button { setup = CameraSetup() } label: { Image(systemName: "xmark.circle") }
+                    .buttonStyle(.borderless)
+                    .help("Clear the camera setup")
+                    .disabled(locked || setup.isEmpty)
+                    .padding(.bottom, 3)
+            }
+        }
     }
 }

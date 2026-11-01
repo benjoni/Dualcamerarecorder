@@ -4,7 +4,8 @@
 //
 //  Clip report as PDF, grouped by shooting day: A4 landscape, every day starts on a new page.
 //  Each row: mid-clip picture of camera A (and B), clip number, scene / shot / take, good / MOS,
-//  INT/EXT, day/night, file names, camera clip IDs, duration, IN / OUT / DUR, recording time, note.
+//  INT/EXT, day/night, file names, camera clip IDs, duration, IN / OUT / DUR, recording time, note
+//  and (when filled in) each camera's setup – lens, stop, distance, height, tilt ….
 //  Pages are SwiftUI views rendered into a vector PDF context with ImageRenderer.
 //
 
@@ -22,10 +23,12 @@ struct ReportOptions {
     var portrait = false
     /// Camera names for column titles and file lines.
     var cameraNames = CameraNames()
+    /// Camera setup lines under each clip (taller rows, one clip less per page).
+    var cameraSetup = false
 
     var pageSize: CGSize { portrait ? CGSize(width: 595, height: 842) : CGSize(width: 842, height: 595) }
     /// Clips per page (portrait rows are taller but there is more height).
-    var rowsPerPage: Int { portrait ? 8 : 6 }
+    var rowsPerPage: Int { portrait ? (cameraSetup ? 7 : 8) : (cameraSetup ? 5 : 6) }
 }
 
 /// Everything one PDF row needs (pictures already generated).
@@ -119,6 +122,7 @@ enum PDFReport {
                                   portrait: options.portrait,
                                   showB: showB,
                                   names: options.cameraNames,
+                                  cameraSetup: options.cameraSetup,
                                   pageNumber: index + 1,
                                   pageCount: pages.count,
                                   dayPage: page.dayPage,
@@ -158,6 +162,7 @@ private struct ReportPage: View {
     let portrait: Bool
     let showB: Bool
     var names = CameraNames()
+    var cameraSetup = false
     let pageNumber: Int
     let pageCount: Int
     let dayPage: Int
@@ -213,9 +218,9 @@ private struct ReportPage: View {
 
             ForEach(clips) { clip in
                 if portrait {
-                    ReportRowPortrait(clip: clip, pictures: pictures, showB: showB, names: names)
+                    ReportRowPortrait(clip: clip, pictures: pictures, showB: showB, names: names, cameraSetup: cameraSetup)
                 } else {
-                    ReportRow(clip: clip, pictures: pictures, showB: showB, names: names)
+                    ReportRow(clip: clip, pictures: pictures, showB: showB, names: names, cameraSetup: cameraSetup)
                 }
                 Rectangle().fill(Color(white: 0.85)).frame(height: 0.5)
             }
@@ -241,14 +246,28 @@ private struct ReportRow: View {
     let pictures: Bool
     let showB: Bool
     var names = CameraNames()
+    var cameraSetup = false
 
     var body: some View {
-        let s = clip.slate
         HStack(alignment: .top, spacing: 10) {
             if pictures {
                 picture(clip.pictureA, recorded: clip.take.camA != nil)
                 if showB { picture(clip.pictureB, recorded: clip.take.camB != nil) }
             }
+            VStack(alignment: .leading, spacing: 3) {
+                columns
+                if cameraSetup {
+                    ReportSetupLines(clip: clip, names: names)
+                }
+            }
+        }
+        .padding(.vertical, 5)
+        .frame(height: cameraSetup ? 90 : 74, alignment: .top)
+    }
+
+    private var columns: some View {
+        let s = clip.slate
+        return HStack(alignment: .top, spacing: 10) {
             VStack(alignment: .leading, spacing: 3) {
                 Text(String(format: "%03d", clip.take.number)).font(.system(size: 14, weight: .bold))
                 if s?.good == true { tag("★ GOOD", Color(red: 0.75, green: 0.55, blue: 0)) }
@@ -294,8 +313,6 @@ private struct ReportRow: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .lineLimit(5)
         }
-        .padding(.vertical, 5)
-        .frame(height: 74, alignment: .top)
     }
 
     private func picture(_ image: CGImage?, recorded: Bool) -> some View {
@@ -338,6 +355,7 @@ private struct ReportRowPortrait: View {
     let pictures: Bool
     let showB: Bool
     var names = CameraNames()
+    var cameraSetup = false
 
     var body: some View {
         let s = clip.slate
@@ -367,14 +385,17 @@ private struct ReportRowPortrait: View {
                 if showB {
                     line(label(clip.take.camB, names.b), clip.take.camB?.lastPathComponent, s?.cameraClipB)
                 }
+                if cameraSetup {
+                    ReportSetupLines(clip: clip, names: names, lines: 2)
+                }
                 if let note = s?.note, !note.isEmpty {
-                    Text(note).font(.system(size: 8.5)).lineLimit(2)
+                    Text(note).font(.system(size: 8.5)).lineLimit(cameraSetup ? 1 : 2)
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
         }
         .padding(.vertical, 5)
-        .frame(height: 78, alignment: .top)
+        .frame(height: cameraSetup ? 92 : 78, alignment: .top)
     }
 
     /// "IN 00:00:08:10 · OUT 00:00:41:22 · DUR 00:00:33:12" (nil without marks)
@@ -422,6 +443,30 @@ private struct ReportRowPortrait: View {
     }
 }
 
+/// "A  Lens 32mm · Stop T2.8 · Distance 3.2 m · Height 1.40 m · Tilt −5°" – one line per camera with a setup.
+private struct ReportSetupLines: View {
+    let clip: ReportClip
+    var names = CameraNames()
+    /// Portrait pages are narrower – a long setup wraps to a second line.
+    var lines = 1
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 1) {
+            ForEach(CameraRole.allCases, id: \.self) { role in
+                if let setup = clip.slate?.setup(role), !setup.isEmpty {
+                    HStack(alignment: .firstTextBaseline, spacing: 4) {
+                        Text(label(role == .a ? clip.take.camA : clip.take.camB, names.name(role)))
+                            .font(.system(size: 7.5, weight: .bold))
+                            .padding(.horizontal, 3)
+                            .background(RoundedRectangle(cornerRadius: 2).fill(Color(white: 0.88)))
+                        Text(setup.summary).font(.system(size: 8)).lineLimit(lines)
+                    }
+                }
+            }
+        }
+    }
+}
+
 // MARK: - Export sheet
 
 struct ExportPDFSheet: View {
@@ -433,6 +478,7 @@ struct ExportPDFSheet: View {
     @State private var includePictures = true
     @State private var onlyGood = false
     @State private var portrait = false
+    @AppStorage("reportCameraSetup") private var includeSetup = true
     @State private var working = false
     @State private var error: String?
 
@@ -455,8 +501,10 @@ struct ExportPDFSheet: View {
                 .pickerStyle(.segmented)
                 Toggle("Include pictures (middle of each clip)", isOn: $includePictures)
                 Toggle("Only good takes (★)", isOn: $onlyGood)
+                Toggle("Camera setup (lens, stop, distance, height, tilt …)", isOn: $includeSetup)
+                    .disabled(!selectedHaveSetup)
                 LabeledContent("Clips") {
-                    Text("\(selectedCount) clip\(selectedCount == 1 ? "" : "s") · \(portrait ? 8 : 6) per page")
+                    Text("\(selectedCount) clip\(selectedCount == 1 ? "" : "s") · \(previewOptions.rowsPerPage) per page")
                 }
             }
             .formStyle(.grouped)
@@ -482,8 +530,21 @@ struct ExportPDFSheet: View {
         .frame(width: 560)
     }
 
-    private var selectedCount: Int {
-        library.takes.filter { (day == "*" || $0.shootingDay == day) && (!onlyGood || $0.slate?.good == true) }.count
+    private var selectedTakes: [Take] {
+        library.takes.filter { (day == "*" || $0.shootingDay == day) && (!onlyGood || $0.slate?.good == true) }
+    }
+
+    private var selectedCount: Int { selectedTakes.count }
+
+    /// Some selected clip has a camera setup filled in.
+    private var selectedHaveSetup: Bool {
+        selectedTakes.contains { $0.slate.map { !$0.setupA.isEmpty || !$0.setupB.isEmpty } ?? false }
+    }
+
+    private var previewOptions: ReportOptions {
+        ReportOptions(shootingDay: day == "*" ? nil : day, includePictures: includePictures,
+                      onlyGoodTakes: onlyGood, portrait: portrait, cameraNames: settings.cameraNames,
+                      cameraSetup: includeSetup && selectedHaveSetup)
     }
 
     private func export() {
@@ -496,8 +557,7 @@ struct ExportPDFSheet: View {
         panel.nameFieldStringValue = "\(production.isEmpty ? "Clips" : ProjectStore.folderName(for: production)) – \(dayPart).pdf"
         guard panel.runModal() == .OK, let url = panel.url else { return }
 
-        let options = ReportOptions(shootingDay: day == "*" ? nil : day, includePictures: includePictures,
-                                    onlyGoodTakes: onlyGood, portrait: portrait, cameraNames: settings.cameraNames)
+        let options = previewOptions
         let takes = library.takes
         working = true
         error = nil

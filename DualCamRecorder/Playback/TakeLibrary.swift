@@ -44,7 +44,8 @@ extension Take {
         if let s = slate {
             parts += [s.scene, s.shot, "s\(s.scene)", "sh\(s.shot)", "t\(s.take)", String(format: "t%02d", s.take),
                       "take \(s.take)", "day \(s.shootingDay)", "d\(s.shootingDay)", s.shootingDay,
-                      s.cameraClipA, s.cameraClipB, s.note, s.location.rawValue, s.timeOfDay.rawValue]
+                      s.cameraClipA, s.cameraClipB, s.note, s.location.rawValue, s.timeOfDay.rawValue,
+                      s.setupA.summary, s.setupB.summary]
             if s.good { parts.append("good ★") }
             if s.mos { parts.append("mos") }
         }

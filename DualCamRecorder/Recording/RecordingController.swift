@@ -360,6 +360,8 @@ final class RecordingController: NSObject, ObservableObject, DLDeviceBrowserDele
             let clipB = slate.cameraClipB
             if !recordedA { slate.cameraClipA = "" }
             if !recordedB { slate.cameraClipB = "" }
+            if !recordedA { slate.setupA = CameraSetup() }
+            if !recordedB { slate.setupB = CameraSetup() }
             do {
                 try TakeSlateStore.save(slate, folder: folder, take: take)
             } catch {
