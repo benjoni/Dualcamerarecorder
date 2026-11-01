@@ -256,6 +256,9 @@ struct ContentView: View {
             applyActivity()
         }
         .onAppear { installTabKeys() }
+        #if DEBUG
+        .task { await runSnapshotsIfRequested() }
+        #endif
         .onDisappear {
             if let tabKeyMonitor { NSEvent.removeMonitor(tabKeyMonitor) }
             tabKeyMonitor = nil
@@ -441,6 +444,36 @@ struct ContentView: View {
     }
 }
 
+
+#if DEBUG
+extension ContentView {
+    /// Debug only: `-snapshotDir <folder> -snapshotProject <name>` opens the project, saves pictures of the
+    /// window for Record / Playback / Edit (drawn by the app itself, works without screen capture) and quits.
+    @MainActor
+    func runSnapshotsIfRequested() async {
+        let args = UserDefaults.standard
+        guard let dir = args.string(forKey: "snapshotDir"), let name = args.string(forKey: "snapshotProject") else { return }
+        try? await Task.sleep(nanoseconds: 2_000_000_000)
+        guard let entry = projects.projects.first(where: { $0.project.name == name }) else { exit(2) }
+        model.open(entry)
+        for (index, label) in ["record", "playback", "edit"].enumerated() {
+            tab = index
+            try? await Task.sleep(nanoseconds: 3_000_000_000)
+            saveWindowPicture(to: URL(fileURLWithPath: dir).appendingPathComponent("\(label).png"))
+        }
+        exit(0)
+    }
+
+    @MainActor
+    private func saveWindowPicture(to url: URL) {
+        guard let window = NSApp.windows.first(where: { $0.isVisible && $0.contentView != nil }),
+              let view = window.contentView?.superview ?? window.contentView else { return }
+        guard let rep = view.bitmapImageRepForCachingDisplay(in: view.bounds) else { return }
+        view.cacheDisplay(in: view.bounds, to: rep)
+        try? rep.representation(using: .png, properties: [:])?.write(to: url)
+    }
+}
+#endif
 
 /// The project name is shown centered in the toolbar; hide the default title on the left (macOS 15+).
 private struct HiddenToolbarTitle: ViewModifier {

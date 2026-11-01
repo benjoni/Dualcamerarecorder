@@ -87,6 +87,7 @@ struct EditView: View {
             }
         }
         .padding()
+        .padding(.bottom, 20)   // room for the corner labels
         .background {
             ZStack {
                 ShortcutButton(key: .space) { edit.togglePlay() }
@@ -150,9 +151,11 @@ struct EditView: View {
                     .toggleStyle(.checkbox)
                     .font(.callout)
                     .help("Clip, scene, shot, take and camera in the bottom left corner of the exported movie")
-                Button { export() } label: { Label("Export MOV…", systemImage: "square.and.arrow.up") }
-                    .disabled(exportProgress != nil)
-                    .help("H.264 1080p movie of the whole edit, for the director")
+                Button { export() } label: {
+                    Label("Export MOV…", systemImage: "square.and.arrow.up").fixedSize()
+                }
+                .disabled(exportProgress != nil)
+                .help("H.264 1080p movie of the whole edit, for the director")
             }
             if let exportProgress {
                 ProgressView(value: Double(exportProgress)) {
