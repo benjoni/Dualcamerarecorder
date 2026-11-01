@@ -300,7 +300,9 @@ struct ContentView: View {
         }
         .toolbar {
             ToolbarItem(placement: .principal) {
-                Text(projects.current?.project.name ?? "").font(.headline)
+                Label(projects.current?.project.name ?? "", systemImage: "film")
+                    .labelStyle(.titleAndIcon)
+                    .font(.title.weight(.bold))
             }
             ToolbarItem(placement: .navigation) {
                 Button {
