@@ -16,6 +16,7 @@
 		6600DF44958D153CDA02B31F /* HostClock.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9271C3CCB72AF1A9ABD071F4 /* HostClock.swift */; };
 		A10A2878105CB9C121421B72 /* SimulatedSource.swift in Sources */ = {isa = PBXBuildFile; fileRef = A90675E0408BFEE05A438E81 /* SimulatedSource.swift */; };
 		D574554270A2F11C80647E61 /* VideoSource.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8E2EF906A5821F6AA648C303 /* VideoSource.swift */; };
+		2B8917D19A2D604DEA6324D4 /* EditClipList.swift in Sources */ = {isa = PBXBuildFile; fileRef = EAAAF8E8C63E2B848AB5C849 /* EditClipList.swift */; };
 		423DBC795644BE66A58FD697 /* EditComposition.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3D9A8B607BD32E0BE673D895 /* EditComposition.swift */; };
 		40C6DAF708DC21D21D7C4432 /* EditTimeline.swift in Sources */ = {isa = PBXBuildFile; fileRef = 15081912D752FA1F38349205 /* EditTimeline.swift */; };
 		BC54439FA26D38DC2A8CC9F7 /* EditView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 253AEEF55E6C5A0759F98664 /* EditView.swift */; };
@@ -63,6 +64,7 @@
 		9271C3CCB72AF1A9ABD071F4 /* HostClock.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HostClock.swift; sourceTree = "<group>"; };
 		A90675E0408BFEE05A438E81 /* SimulatedSource.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SimulatedSource.swift; sourceTree = "<group>"; };
 		8E2EF906A5821F6AA648C303 /* VideoSource.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VideoSource.swift; sourceTree = "<group>"; };
+		EAAAF8E8C63E2B848AB5C849 /* EditClipList.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditClipList.swift; sourceTree = "<group>"; };
 		3D9A8B607BD32E0BE673D895 /* EditComposition.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditComposition.swift; sourceTree = "<group>"; };
 		15081912D752FA1F38349205 /* EditTimeline.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditTimeline.swift; sourceTree = "<group>"; };
 		253AEEF55E6C5A0759F98664 /* EditView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditView.swift; sourceTree = "<group>"; };
@@ -165,6 +167,7 @@
 		03366588E4702A171AE9C253 /* Edit */ = {
 			isa = PBXGroup;
 			children = (
+				EAAAF8E8C63E2B848AB5C849 /* EditClipList.swift */,
 				3D9A8B607BD32E0BE673D895 /* EditComposition.swift */,
 				15081912D752FA1F38349205 /* EditTimeline.swift */,
 				253AEEF55E6C5A0759F98664 /* EditView.swift */,
@@ -332,6 +335,7 @@
 				6600DF44958D153CDA02B31F /* HostClock.swift in Sources */,
 				A10A2878105CB9C121421B72 /* SimulatedSource.swift in Sources */,
 				D574554270A2F11C80647E61 /* VideoSource.swift in Sources */,
+				2B8917D19A2D604DEA6324D4 /* EditClipList.swift in Sources */,
 				423DBC795644BE66A58FD697 /* EditComposition.swift in Sources */,
 				40C6DAF708DC21D21D7C4432 /* EditTimeline.swift in Sources */,
 				BC54439FA26D38DC2A8CC9F7 /* EditView.swift in Sources */,

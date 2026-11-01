@@ -165,6 +165,9 @@ Rozhranie aplikácie je **v angličtine** (Record / Playback / Slate …); tento
 - V Playbacku sa označí IN / OUT a tlačidlom **+ Camera A** / **+ Camera B** (⇧A / ⇧B) sa úsek
   pridá na koniec timeline – vždy len jedna kamera. Bez IN / OUT sa pridá celý klip (len IN → do konca,
   len OUT → od začiatku). Po pridaní sa na chvíľu ukáže „Added to timeline: …“.
+- V záložke **Edit** je vľavo **zoznam klipov** (Clips, ⌘L) s vyhľadávaním, kde má každá kamera klipu
+  vlastný riadok (Clip 014 · Camera A, Clip 014 · Camera D). **+**, dvojklik alebo ↵ pridá riadok na koniec
+  timeline – s IN / OUT v tej dĺžke, inak celý klip.
 - **Edit** prehrá celú timeline ako jeden film (medzerník, ← / → po snímke, ↑ / ↓ predchádzajúci /
   nasledujúci úsek, klik do timeline = skok). Nad tlačidlami je popis úseku pod playheadom.
 - Na timeline: klik vyberie úsek, **ťahanie úseku** zmení poradie (aj ⌥← / ⌥→), **ťahanie okraja**
@@ -288,7 +291,7 @@ DualCamRecorder/
   Playback/   TakeLibrary, ThumbnailCache (náhľady zo stredu záberu),
               SyncPlaybackController (2× AVPlayer), PlayerView
   Edit/       EditTimeline (EDIT.JSON, undo), EditComposition (AVMutableComposition,
-              prehrávač, export H.264), EditView (timeline)
+              prehrávač, export H.264), EditView (timeline), EditClipList (klipy po kamerách)
   Views/      RecordView, PlaybackView, SettingsView, Components
 docs/PLAN.md                      plán a architektúra
 tools/gen_xcodeproj.py            generátor project.pbxproj + zdieľanej schémy

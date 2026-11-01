@@ -281,7 +281,7 @@ struct ContentView: View {
                         PlaybackView(library: model.library, player: model.player, settings: model.settings,
                                      timeline: model.timeline, screensOnly: true)
                     } else {
-                        EditView(timeline: model.timeline, edit: editPlayer, screensOnly: true)
+                        EditView(timeline: model.timeline, edit: editPlayer, library: model.library, settings: model.settings, screensOnly: true)
                     }
                 }
                 .background {
@@ -318,7 +318,7 @@ struct ContentView: View {
                         PlaybackView(library: model.library, player: model.player, settings: model.settings,
                                      timeline: model.timeline)
                     } else {
-                        EditView(timeline: model.timeline, edit: editPlayer)
+                        EditView(timeline: model.timeline, edit: editPlayer, library: model.library, settings: model.settings)
                     }
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)   // same corners on Record and Playback

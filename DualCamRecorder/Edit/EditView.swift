@@ -13,7 +13,15 @@ import UniformTypeIdentifiers
 struct EditView: View {
     @ObservedObject var timeline: EditTimeline
     @ObservedObject var edit: EditPlayer
+    @ObservedObject var library: TakeLibrary
+    @ObservedObject var settings: AppSettings
     var screensOnly = false
+
+    @AppStorage("editShowClips") private var showClipList = true
+    /// While typing in the clip search, single-key shortcuts are off.
+    @FocusState private var searchFocused: Bool
+    @State private var addedMessage: String?
+    @State private var addedMessageToken = 0
 
     @State private var selection: TimelineSegment.ID?
     @State private var zoom: Double = 1
@@ -45,7 +53,41 @@ struct EditView: View {
     }
 
     private var normalBody: some View {
+        HStack(spacing: 0) {
+            if showClipList {
+                EditClipList(library: library, settings: settings, timeline: timeline, edit: edit,
+                             searchFocused: $searchFocused, onAdded: showAdded)
+                    .frame(width: 340)
+                    .padding(.bottom, 28)   // room for the corner label
+                    .transition(.move(edge: .leading))
+                Divider()
+            }
+            editArea
+        }
+        .animation(.easeInOut(duration: 0.2), value: showClipList)
+    }
+
+    private func showAdded(_ message: String) {
+        addedMessageToken += 1
+        let token = addedMessageToken
+        addedMessage = message
+        DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
+            if addedMessageToken == token { addedMessage = nil }
+        }
+    }
+
+    private var editArea: some View {
         VStack(spacing: 12) {
+            Button {
+                showClipList.toggle()
+            } label: {
+                Label(showClipList ? "Hide clips" : "Clips", systemImage: "sidebar.left")
+            }
+            .keyboardShortcut("l", modifiers: [.command])
+            .help("Show / hide the clip list (⌘L)")
+            .buttonStyle(BigButtonStyle())
+            .font(.title3)
+
             PlayerView(player: edit.player)
                 .aspectRatio(16.0 / 9.0, contentMode: .fit)
                 .clipShape(RoundedRectangle(cornerRadius: 6))
@@ -54,7 +96,7 @@ struct EditView: View {
                         VStack(spacing: 8) {
                             Image(systemName: "scissors").font(.largeTitle)
                             Text("The timeline is empty.").font(.title2.weight(.semibold))
-                            Text("In Playback set IN / OUT and press + Camera A or + Camera B (⇧A / ⇧B).")
+                            Text("Add clips from the list (+, double-click, ↵) or in Playback with + Camera A / B (⇧A / ⇧B).")
                         }
                         .foregroundStyle(.secondary)
                     }
@@ -64,6 +106,16 @@ struct EditView: View {
             Text(currentLabel)
                 .font(.system(size: 30, weight: .bold))
                 .lineLimit(1).minimumScaleFactor(0.6)
+                .overlay(alignment: .bottom) {
+                    if let addedMessage {
+                        Label(addedMessage, systemImage: "checkmark.circle.fill")
+                            .font(.title3)
+                            .foregroundStyle(.green)
+                            .padding(.horizontal, 12).padding(.vertical, 4)
+                            .background(RoundedRectangle(cornerRadius: 8).fill(Color.black.opacity(0.85)))
+                            .fixedSize()
+                    }
+                }
 
             transportRow
                 .buttonStyle(BigButtonStyle())
@@ -79,27 +131,36 @@ struct EditView: View {
 
             HStack(spacing: 10) {
                 Text("Zoom").foregroundStyle(.secondary)
-                Slider(value: $zoom, in: 1...20).frame(width: 220)
-                Spacer()
-                Text("\(timeline.segments.count) pieces · \(edit.timecode(timeline.totalDuration))")
-                    .font(.system(.body, design: .monospaced))
-                    .foregroundStyle(.secondary)
+                Slider(value: $zoom, in: 1...20).frame(width: 140)
+                Spacer(minLength: 12)
+                VStack(spacing: 2) {
+                    Text("\(edit.timecode(edit.currentTime)) / \(edit.timecode(edit.duration))")
+                        .font(.system(.title3, design: .monospaced))
+                    Text("\(timeline.segments.count) pieces").font(.callout).foregroundStyle(.secondary)
+                }
+                .fixedSize()
+                Spacer(minLength: 12)
+                exportControls
             }
         }
         .padding()
         .padding(.bottom, 20)   // room for the corner labels
         .background {
-            ZStack {
-                ShortcutButton(key: .space) { edit.togglePlay() }
-                ShortcutButton(key: .leftArrow) { edit.step(-1) }
-                ShortcutButton(key: .rightArrow) { edit.step(1) }
-                ShortcutButton(key: .upArrow) { jumpPiece(-1) }
-                ShortcutButton(key: .downArrow) { jumpPiece(1) }
-                ShortcutButton(key: .leftArrow, modifiers: [.option]) { moveSelected(-1) }
-                ShortcutButton(key: .rightArrow, modifiers: [.option]) { moveSelected(1) }
-                ShortcutButton(key: .delete) { deleteSelected() }
-                ShortcutButton(key: "z", modifiers: [.command]) { timeline.undo() }
-            }
+            if !searchFocused { editShortcuts }
+        }
+    }
+
+    private var editShortcuts: some View {
+        ZStack {
+            ShortcutButton(key: .space) { edit.togglePlay() }
+            ShortcutButton(key: .leftArrow) { edit.step(-1) }
+            ShortcutButton(key: .rightArrow) { edit.step(1) }
+            ShortcutButton(key: .upArrow) { jumpPiece(-1) }
+            ShortcutButton(key: .downArrow) { jumpPiece(1) }
+            ShortcutButton(key: .leftArrow, modifiers: [.option]) { moveSelected(-1) }
+            ShortcutButton(key: .rightArrow, modifiers: [.option]) { moveSelected(1) }
+            ShortcutButton(key: .delete) { deleteSelected() }
+            ShortcutButton(key: "z", modifiers: [.command]) { timeline.undo() }
         }
     }
 
@@ -112,35 +173,21 @@ struct EditView: View {
 
     // MARK: - Transport + export
 
+    /// Prev · frame back · play · frame forward · Next (icons only, so the row fits next to the clip list).
     private var transportRow: some View {
-        HStack(spacing: 0) {
-            exportControls.hidden()
-            Spacer(minLength: 24)
-            HStack(spacing: 14) {
-                Text(edit.timecode(edit.currentTime))
-                    .font(.system(.title2, design: .monospaced))
-                    .frame(width: 170, alignment: .trailing)
-                Button { jumpPiece(-1) } label: { Label("Prev", systemImage: "backward.end.alt.fill") }
-                    .help("Start of this / previous piece (↑)")
-                Button { edit.step(-1) } label: { Image(systemName: "backward.frame.fill") }
-                    .help("One frame back (←)")
-                Button { edit.togglePlay() } label: {
-                    Image(systemName: edit.isPlaying ? "pause.fill" : "play.fill").frame(width: 160)
-                }
-                .help("Play / pause the whole edit (space)")
-                Button { edit.step(1) } label: { Image(systemName: "forward.frame.fill") }
-                    .help("One frame forward (→)")
-                Button { jumpPiece(1) } label: {
-                    Label("Next", systemImage: "forward.end.alt.fill").labelStyle(TrailingIconLabelStyle())
-                }
-                .help("Next piece (↓)")
-                Text(edit.timecode(edit.duration))
-                    .font(.system(.title2, design: .monospaced))
-                    .foregroundStyle(.secondary)
-                    .frame(width: 170, alignment: .leading)
+        HStack(spacing: 14) {
+            Button { jumpPiece(-1) } label: { Image(systemName: "backward.end.alt.fill") }
+                .help("Start of this / previous piece (↑)")
+            Button { edit.step(-1) } label: { Image(systemName: "backward.frame.fill") }
+                .help("One frame back (←)")
+            Button { edit.togglePlay() } label: {
+                Image(systemName: edit.isPlaying ? "pause.fill" : "play.fill").frame(width: 140)
             }
-            Spacer(minLength: 24)
-            exportControls
+            .help("Play / pause the whole edit (space)")
+            Button { edit.step(1) } label: { Image(systemName: "forward.frame.fill") }
+                .help("One frame forward (→)")
+            Button { jumpPiece(1) } label: { Image(systemName: "forward.end.alt.fill") }
+                .help("Next piece (↓)")
         }
     }
 
@@ -215,6 +262,7 @@ struct EditView: View {
     private var selectedRow: some View {
         if let i = selectedIndex {
             let s = timeline.segments[i]
+            VStack(spacing: 8) {
             HStack(spacing: 12) {
                 Text("\(i + 1).").foregroundStyle(.secondary)
                 Text("Clip \(String(format: "%03d", s.take))").fontWeight(.semibold)
@@ -230,6 +278,9 @@ struct EditView: View {
                 Text("IN \(edit.timecode(s.inPoint))  ·  OUT \(edit.timecode(s.outPoint))  ·  DUR \(edit.timecode(s.duration))")
                     .font(.system(.body, design: .monospaced))
                     .foregroundStyle(.secondary)
+                    .fixedSize()
+            }
+            HStack(spacing: 12) {
                 Button { moveSelected(-1) } label: { Image(systemName: "arrow.left") }
                     .disabled(i == 0)
                     .help("Move the piece earlier (⌥←)")
@@ -242,15 +293,16 @@ struct EditView: View {
                     .disabled(!timeline.canUndo)
                     .help("Undo the last change (⌘Z)")
             }
+            }
         } else {
-            HStack(spacing: 12) {
+            VStack(spacing: 8) {
                 Text(timeline.segments.isEmpty ? " " : "Click a piece to select it · drag it to move · drag its edges to trim")
                     .foregroundStyle(.secondary)
+                    .frame(minHeight: 36)
                 Button { timeline.undo() } label: { Label("Undo", systemImage: "arrow.uturn.backward") }
                     .disabled(!timeline.canUndo)
                     .help("Undo the last change (⌘Z)")
             }
-            .frame(minHeight: 44)
         }
     }
 

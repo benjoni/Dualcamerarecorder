@@ -41,6 +41,8 @@ struct HelpView: View {
                 }
 
                 section("Edit") {
+                    key("+  ↵", "Clip list: add the clip of this camera to the end (IN → OUT, or the whole clip); also double-click")
+                    key("⌘L", "Show / hide the clip list")
                     key("Space", "Play / pause the whole edit")
                     key("←  →", "One frame back / forward")
                     key("↑  ↓", "Start of this or previous piece / next piece")
