@@ -272,7 +272,7 @@ struct SlatePanel: View {
         HStack(alignment: .top, spacing: 0) {
             SlateBoard(slate: displayedSlate, recording: controller.isRecording, large: true)
             Spacer(minLength: 16)
-            VStack(alignment: .leading, spacing: 6) {
+            VStack(alignment: .center, spacing: 6) {
                 HStack {
                     Text("Slate").font(.title3.weight(.semibold))
                     Text(controller.isRecording
