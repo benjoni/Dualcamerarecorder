@@ -301,6 +301,13 @@ struct ContentView: View {
                         PlaybackView(library: model.library, player: model.player, settings: model.settings)
                     }
                 }
+                .overlay(alignment: .bottomTrailing) {
+                    Text("DualCamRecorder")
+                        .font(.callout.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                        .padding(12)
+                        .allowsHitTesting(false)
+                }
             }
         }
         .sheet(isPresented: $exportingPDF) {
