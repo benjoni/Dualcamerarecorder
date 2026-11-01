@@ -178,15 +178,7 @@ struct PlaybackView: View {
             .buttonStyle(BigButtonStyle())
             .font(.title3)
 
-            if let take = player.take {
-                Text(take.name).font(.headline)
-                if let slate = take.slate {
-                    Text(slate.shortLabel).foregroundStyle(.secondary)
-                }
-                if take.id == library.latestTake?.id {
-                    Badge(text: "LATEST", color: .blue)
-                }
-            } else {
+            if player.take == nil {
                 Text(library.takes.isEmpty ? "No clips in this folder yet." : "No clip selected.")
                     .foregroundStyle(.secondary)
             }
@@ -343,12 +335,21 @@ struct PlaybackView: View {
             }
             rangeBar
 
-            // Scene · shot · take in big letters above the transport buttons.
-            if let slate = player.slate {
-                Text(slate.shortLabel)
-                    .font(.system(size: 34, weight: .bold))
-                    .lineLimit(1).minimumScaleFactor(0.6)
-                    .padding(.top, 6)
+            // Clip · day · scene · shot · take in big letters above the transport buttons.
+            if let take = player.take {
+                HStack(spacing: 14) {
+                    Text([take.name, player.slate?.shortLabel].compactMap { $0 }.joined(separator: " · "))
+                        .font(.system(size: 34, weight: .bold))
+                        .lineLimit(1).minimumScaleFactor(0.6)
+                    if take.id == library.latestTake?.id {
+                        Text("LATEST")
+                            .font(.title3.weight(.bold))
+                            .padding(.horizontal, 10).padding(.vertical, 4)
+                            .background(Color.blue.opacity(0.85), in: RoundedRectangle(cornerRadius: 6))
+                            .foregroundStyle(.white)
+                    }
+                }
+                .padding(.top, 6)
             }
 
             // Buttons, one group under another; audio last.
