@@ -301,6 +301,7 @@ struct ContentView: View {
                         PlaybackView(library: model.library, player: model.player, settings: model.settings)
                     }
                 }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)   // same corners on Record and Playback
                 .overlay(alignment: .bottomTrailing) {
                     Text("DualCamRecorder")
                         .font(.callout.weight(.semibold))
