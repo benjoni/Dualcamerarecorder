@@ -223,6 +223,13 @@ struct ContentView: View {
     @Environment(\.openWindow) private var openWindow
     @State private var tabKeyMonitor: Any?
 
+    /// Project name in the middle of the toolbar – no glass capsule around it on macOS 26.
+    private var projectTitle: some View {
+        Label(projects.current?.project.name ?? "", systemImage: "film")
+            .labelStyle(.titleAndIcon)
+            .font(.title.weight(.bold))
+    }
+
     var body: some View {
         Group {
             if let project = projects.current {
@@ -299,10 +306,11 @@ struct ContentView: View {
             ProjectSettingsView(model: model, settings: settings, recorder: model.recorder, backup: model.backup)
         }
         .toolbar {
-            ToolbarItem(placement: .principal) {
-                Label(projects.current?.project.name ?? "", systemImage: "film")
-                    .labelStyle(.titleAndIcon)
-                    .font(.title.weight(.bold))
+            if #available(macOS 26.0, *) {
+                ToolbarItem(placement: .principal) { projectTitle }
+                    .sharedBackgroundVisibility(.hidden)
+            } else {
+                ToolbarItem(placement: .principal) { projectTitle }
             }
             ToolbarItem(placement: .navigation) {
                 Button {
