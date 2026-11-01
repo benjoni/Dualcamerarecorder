@@ -33,7 +33,7 @@ struct HelpView: View {
                 section("Playback") {
                     key("Space", "Play / pause")
                     key("←  →", "One frame back / forward")
-                    key("⌘←  ⌘→", "Previous / next clip")
+                    key("↑  ↓", "Previous / next clip (also ⌘←  ⌘→)")
                     key("I  O", "Set IN / OUT at the current frame")
                     key("⌘L", "Show / hide the clip list")
                     key("⇧⌘P", "Export PDF clip report")

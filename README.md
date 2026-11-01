@@ -127,7 +127,7 @@ Rozhranie aplikácie je **v angličtine** (Record / Playback / Slate …); tento
 - **Hľadanie** v zozname klipov: číslo klipu, súbor, scéna, záber, pokus (`T04`), shooting day,
   Cam clip, poznámka, INT/EXT, DAY/NIGHT a slová `good` / `mos`; viac slov = všetky musia sedieť
   (napr. `12 3B good`). Počas písania sú jednoklávesové skratky (medzerník, I, O, šípky) vypnuté.
-- **Prev / Next** (⌘← / ⌘→) prepne na predchádzajúci / nasledujúci klip (podľa čísla klipu),
+- **Prev / Next** (↑ / ↓, aj ⌘← / ⌘→) prepne na predchádzajúci / nasledujúci klip (podľa čísla klipu),
   funguje aj v Screens only.
 - **Zoznam klipov je predvolene skrytý** – otvorí/skryje ho tlačidlo **Clips** (⌘L), takže
   prehrávače majú celú šírku okna. Pri prepnutí na Playback sa **automaticky načíta posledný

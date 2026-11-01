@@ -97,6 +97,8 @@ struct PlaybackView: View {
                 ShortcutButton(key: "o") { player.setOut() }
                 ShortcutButton(key: .leftArrow, modifiers: [.command]) { selectAdjacentClip(-1) }
                 ShortcutButton(key: .rightArrow, modifiers: [.command]) { selectAdjacentClip(1) }
+                ShortcutButton(key: .upArrow) { selectAdjacentClip(-1) }
+                ShortcutButton(key: .downArrow) { selectAdjacentClip(1) }
             }
         }
     }
@@ -397,9 +399,9 @@ struct PlaybackView: View {
             Button { selectAdjacentClip(-1) } label: {
                 Label("Prev", systemImage: "backward.end.alt.fill")
             }
-            .keyboardShortcut(shortcut(.leftArrow, [.command]))
+            .keyboardShortcut(shortcut(.upArrow))
             .disabled(adjacentClip(-1) == nil)
-            .help("Previous clip (⌘←)")
+            .help("Previous clip (↑ or ⌘←)")
 
             Button { player.step(-1) } label: { Image(systemName: "backward.frame.fill") }
                 .keyboardShortcut(shortcut(.leftArrow))
@@ -417,9 +419,9 @@ struct PlaybackView: View {
                 Label("Next", systemImage: "forward.end.alt.fill")
                     .labelStyle(TrailingIconLabelStyle())
             }
-            .keyboardShortcut(shortcut(.rightArrow, [.command]))
+            .keyboardShortcut(shortcut(.downArrow))
             .disabled(adjacentClip(1) == nil)
-            .help("Next clip (⌘→)")
+            .help("Next clip (↓ or ⌘→)")
         }
     }
 
