@@ -308,6 +308,13 @@ struct ContentView: View {
                         .padding(12)
                         .allowsHitTesting(false)
                 }
+                .overlay(alignment: .bottomLeading) {
+                    Text("Made by BENJONI")
+                        .font(.callout.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                        .padding(12)
+                        .allowsHitTesting(false)
+                }
             }
         }
         .sheet(isPresented: $exportingPDF) {
