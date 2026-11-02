@@ -6,6 +6,7 @@
 import SwiftUI
 import AppKit
 import Combine
+import CoreMedia
 
 /// Long-lived objects live here so capture keeps running while switching tabs.
 final class AppModel: ObservableObject {
@@ -18,6 +19,7 @@ final class AppModel: ObservableObject {
     let timeline = EditTimeline()
     let backup = BackupManager()
     let liveView = LiveViewServer()
+    let monitor = MonitorOutput()
     private var liveViewTimer: Timer?
     private var cancellables = Set<AnyCancellable>()
 
@@ -36,6 +38,17 @@ final class AppModel: ObservableObject {
         // Live view for phones: camera JPEGs go straight from the preview queue to the server.
         recorder.channelA.preview.onJPEG = { [weak liveView = self.liveView] jpeg in liveView?.updateFrame(camera: "A", jpeg: jpeg) }
         recorder.channelB.preview.onJPEG = { [weak liveView = self.liveView] jpeg in liveView?.updateFrame(camera: "B", jpeg: jpeg) }
+
+        // Blackmagic monitor: live pictures and formats of both inputs, device / source from the project settings.
+        recorder.channelA.onPicture = { [weak monitor = self.monitor] picture in monitor?.submit(picture, role: .a) }
+        recorder.channelB.onPicture = { [weak monitor = self.monitor] picture in monitor?.submit(picture, role: .b) }
+        recorder.channelA.$format.sink { [weak monitor = self.monitor] f in monitor?.setFormat(f, for: .a) }.store(in: &cancellables)
+        recorder.channelB.$format.sink { [weak monitor = self.monitor] f in monitor?.setFormat(f, for: .b) }.store(in: &cancellables)
+        settings.$monitorDevice.combineLatest(settings.$monitorSource, recorder.$outputDevices)
+            .sink { [weak monitor = self.monitor] id, source, devices in
+                monitor?.configure(deviceID: id, source: source, available: devices.contains { $0.identifier == id })
+            }
+            .store(in: &cancellables)
 
         // Never copy the files of the take that is being recorded.
         backup.isExcluded = { [weak recorder = self.recorder, weak settings = self.settings] name in
@@ -342,7 +355,7 @@ struct ContentView: View {
             ExportPDFSheet(library: model.library, settings: settings)
         }
         .sheet(isPresented: $showProjectSettings) {
-            ProjectSettingsView(model: model, settings: settings, recorder: model.recorder, backup: model.backup)
+            ProjectSettingsView(model: model, settings: settings, recorder: model.recorder, backup: model.backup, monitor: model.monitor)
         }
         .toolbar {
             if #available(macOS 26.0, *) {
@@ -441,6 +454,10 @@ struct ContentView: View {
         model.recorder.channelA.preview.waveformEnabled = settings.showWaveform && recordVisible
         model.recorder.channelB.preview.waveformEnabled = settings.showWaveform && recordVisible
         model.player.waveformEnabled = settings.showWaveform && playbackVisible
+        // Monitor output: the clip being played on Playback, the cameras everywhere else.
+        model.monitor.setPlayback(playbackVisible ? { [weak player = model.player] in
+            player?.monitorFrames() ?? MonitorPlaybackFrames(frameDuration: CMTime(value: 1, timescale: 25))
+        } : nil)
     }
 }
 
@@ -462,7 +479,7 @@ extension ContentView {
             saveWindowPicture(to: URL(fileURLWithPath: dir).appendingPathComponent("\(label).png"))
         }
         // Project settings sheet, drawn off screen.
-        let sheet = NSHostingView(rootView: ProjectSettingsView(model: model, settings: settings, recorder: model.recorder, backup: model.backup)
+        let sheet = NSHostingView(rootView: ProjectSettingsView(model: model, settings: settings, recorder: model.recorder, backup: model.backup, monitor: model.monitor)
             .frame(width: 720, height: 900).preferredColorScheme(.dark))
         sheet.frame = NSRect(x: 0, y: 0, width: 720, height: 900)
         sheet.layoutSubtreeIfNeeded()

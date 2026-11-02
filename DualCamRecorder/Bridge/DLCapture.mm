@@ -26,6 +26,7 @@
 #include <atomic>
 #include <mutex>
 #include <map>
+#include <vector>
 #include <string>
 #include <cmath>
 
@@ -81,6 +82,7 @@ static NSError *DLMakeError(NSInteger code, NSString *message)
 @property (nonatomic, readwrite, copy) NSString *displayName;
 @property (nonatomic, readwrite, copy) NSString *modelName;
 @property (nonatomic, readwrite) BOOL supportsCapture;
+@property (nonatomic, readwrite) BOOL supportsPlayback;
 @property (nonatomic, readwrite) BOOL supportsFormatDetection;
 @property (nonatomic, readwrite) NSInteger maxAudioChannels;
 @end
@@ -190,8 +192,14 @@ static DLDeviceDescriptor *DLDescribe(IDeckLink *deckLink, NSString **outIdentif
         }
         if (attributes->GetInt(BMDDeckLinkVideoIOSupport, &value) == S_OK) {
             d.supportsCapture = (value & bmdDeviceSupportsCapture) != 0;
+            d.supportsPlayback = (value & bmdDeviceSupportsPlayback) != 0;
         } else {
             d.supportsCapture = YES;
+            IDeckLinkOutput *output = nullptr;
+            if (deckLink->QueryInterface(IID_IDeckLinkOutput, (void **)&output) == S_OK && output) {
+                d.supportsPlayback = YES;
+                output->Release();
+            }
         }
         bool flag = false;
         d.supportsFormatDetection = (attributes->GetFlag(BMDDeckLinkSupportsInputFormatDetection, &flag) == S_OK) && flag;
@@ -856,6 +864,171 @@ private:
 - (void)_fail:(NSString *)message
 {
     [self.delegate captureDevice:self didFailWithMessage:message];
+}
+
+@end
+
+#pragma mark - DLOutputDevice
+
+@implementation DLOutputDevice {
+#if DL_HAS_SDK
+    IDeckLink *_deckLink;
+    IDeckLinkOutput *_output;
+    std::vector<IDeckLinkMutableVideoFrame *> _frames;   // small ring – a frame is not rewritten while it may still be sent
+    size_t _nextFrame;
+    int32_t _width, _height, _rowBytes;
+#endif
+    NSString *_modeName;
+}
+
+- (nullable instancetype)initWithIdentifier:(NSString *)identifier
+{
+#if DL_HAS_SDK
+    IDeckLink *deckLink = DLCopyDevice(identifier);
+    if (!deckLink) return nil;
+    IDeckLinkOutput *output = nullptr;
+    if (deckLink->QueryInterface(IID_IDeckLinkOutput, (void **)&output) != S_OK || !output) {
+        deckLink->Release();
+        return nil;
+    }
+    if ((self = [super init])) {
+        _identifier = [identifier copy];
+        _deckLink = deckLink;
+        _output = output;
+    } else {
+        output->Release();
+        deckLink->Release();
+    }
+    return self;
+#else
+    return nil;
+#endif
+}
+
+- (void)dealloc
+{
+    [self stop];
+#if DL_HAS_SDK
+    if (_output) _output->Release();
+    if (_deckLink) _deckLink->Release();
+#endif
+}
+
+- (nullable NSString *)modeName { return _modeName; }
+
+- (BOOL)startWithWidth:(int32_t)width height:(int32_t)height frameDuration:(int64_t)frameDuration
+             timeScale:(int64_t)timeScale interlaced:(BOOL)interlaced error:(NSError **)error
+{
+#if DL_HAS_SDK
+    [self stop];
+    BMDDisplayMode chosen = bmdModeUnknown;
+    NSString *name = nil;
+    IDeckLinkDisplayModeIterator *iterator = nullptr;
+    if (_output->GetDisplayModeIterator(&iterator) == S_OK && iterator) {
+        IDeckLinkDisplayMode *mode = nullptr;
+        while (chosen == bmdModeUnknown && iterator->Next(&mode) == S_OK) {
+            BMDTimeValue duration = 0;
+            BMDTimeScale scale = 0;
+            mode->GetFrameRate(&duration, &scale);
+            BMDFieldDominance field = mode->GetFieldDominance();
+            bool modeInterlaced = field == bmdLowerFieldFirst || field == bmdUpperFieldFirst;
+            if (mode->GetWidth() == width && mode->GetHeight() == height && modeInterlaced == (bool)interlaced
+                && (int64_t)duration * timeScale == frameDuration * (int64_t)scale) {
+                bool supported = false;
+                BMDDisplayMode actual = bmdModeUnknown;
+                if (_output->DoesSupportVideoMode(bmdVideoConnectionUnspecified, mode->GetDisplayMode(), bmdFormat8BitYUV,
+                                                  bmdNoVideoOutputConversion, bmdSupportedVideoModeDefault,
+                                                  &actual, &supported) == S_OK && supported) {
+                    chosen = mode->GetDisplayMode();
+                    CFStringRef cf = NULL;
+                    name = mode->GetName(&cf) == S_OK ? DLStringFromCF(cf) : nil;
+                }
+            }
+            mode->Release();
+        }
+        iterator->Release();
+    }
+    if (chosen == bmdModeUnknown) {
+        if (error) *error = DLMakeError(200, [NSString stringWithFormat:@"The output cannot send %d×%d%@ at this frame rate.",
+                                              width, height, interlaced ? @"i" : @"p"]);
+        return NO;
+    }
+    if (_output->EnableVideoOutput(chosen, bmdVideoOutputFlagDefault) != S_OK) {
+        if (error) *error = DLMakeError(201, @"The output is in use by another application.");
+        return NO;
+    }
+    int32_t rowBytes = 0;
+    if (_output->RowBytesForPixelFormat(bmdFormat8BitYUV, width, &rowBytes) != S_OK) rowBytes = width * 2;
+    for (int i = 0; i < 3; i++) {
+        IDeckLinkMutableVideoFrame *frame = nullptr;
+        if (_output->CreateVideoFrame(width, height, rowBytes, bmdFormat8BitYUV, bmdFrameFlagDefault, &frame) != S_OK || !frame) {
+            [self stop];
+            if (error) *error = DLMakeError(202, @"Could not create output frames.");
+            return NO;
+        }
+        _frames.push_back(frame);
+    }
+    _width = width;
+    _height = height;
+    _rowBytes = rowBytes;
+    _nextFrame = 0;
+    _modeName = name ?: [NSString stringWithFormat:@"%d×%d", width, height];
+    return YES;
+#else
+    if (error) *error = DLMakeError(100, @"The app was built without the DeckLink SDK.");
+    return NO;
+#endif
+}
+
+- (BOOL)displayPixelBuffer:(CVPixelBufferRef)pixelBuffer
+{
+#if DL_HAS_SDK
+    if (_frames.empty() || CVPixelBufferGetPixelFormatType(pixelBuffer) != kCVPixelFormatType_422YpCbCr8
+        || (int32_t)CVPixelBufferGetWidth(pixelBuffer) != _width || (int32_t)CVPixelBufferGetHeight(pixelBuffer) != _height) {
+        return NO;
+    }
+    IDeckLinkMutableVideoFrame *frame = _frames[_nextFrame];
+    _nextFrame = (_nextFrame + 1) % _frames.size();
+
+    void *bytes = nullptr;
+#if BLACKMAGIC_DECKLINK_API_VERSION >= 0x0e030000
+    IDeckLinkVideoBuffer *buffer = nullptr;
+    if (frame->QueryInterface(IID_IDeckLinkVideoBuffer, (void **)&buffer) != S_OK || !buffer) return NO;
+    if (buffer->StartAccess(bmdBufferAccessWrite) != S_OK) { buffer->Release(); return NO; }
+    buffer->GetBytes(&bytes);
+#else
+    frame->GetBytes(&bytes);
+#endif
+    if (bytes) {
+        CVPixelBufferLockBaseAddress(pixelBuffer, kCVPixelBufferLock_ReadOnly);
+        const uint8_t *src = (const uint8_t *)CVPixelBufferGetBaseAddress(pixelBuffer);
+        size_t srcRowBytes = CVPixelBufferGetBytesPerRow(pixelBuffer);
+        size_t copyBytes = MIN(srcRowBytes, (size_t)_rowBytes);
+        for (int32_t y = 0; y < _height; y++) {
+            memcpy((uint8_t *)bytes + (size_t)y * _rowBytes, src + (size_t)y * srcRowBytes, copyBytes);
+        }
+        CVPixelBufferUnlockBaseAddress(pixelBuffer, kCVPixelBufferLock_ReadOnly);
+    }
+#if BLACKMAGIC_DECKLINK_API_VERSION >= 0x0e030000
+    buffer->EndAccess(bmdBufferAccessWrite);
+    buffer->Release();
+#endif
+    return bytes != nullptr && _output->DisplayVideoFrameSync(frame) == S_OK;
+#else
+    return NO;
+#endif
+}
+
+- (void)stop
+{
+#if DL_HAS_SDK
+    if (!_frames.empty() || _modeName) {
+        _output->DisableVideoOutput();
+    }
+    for (IDeckLinkMutableVideoFrame *frame : _frames) frame->Release();
+    _frames.clear();
+#endif
+    _modeName = nil;
 }
 
 @end

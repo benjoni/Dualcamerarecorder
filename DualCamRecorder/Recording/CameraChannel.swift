@@ -46,6 +46,8 @@ struct ChannelTakeResult {
 final class CameraChannel: ObservableObject, VideoSourceDelegate {
     let role: CameraRole
     let preview = PreviewRenderer()
+    /// Every captured picture (capture thread) – the monitor output. Set once at start.
+    var onPicture: ((CVPixelBuffer) -> Void)?
 
     // Published on main.
     @Published private(set) var sourceName: String = "—"
@@ -178,6 +180,7 @@ final class CameraChannel: ObservableObject, VideoSourceDelegate {
 
     func videoSource(_ source: VideoSource, didCapture frame: CapturedFrame) {
         preview.enqueue(frame.pixelBuffer)
+        onPicture?(frame.pixelBuffer)
 
         let limit = maxBacklog
         let overloaded = backlog.withLock { count -> Bool in

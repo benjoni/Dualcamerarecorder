@@ -27,6 +27,8 @@ final class RecordingController: NSObject, ObservableObject, DLDeviceBrowserDele
     let channelB = CameraChannel(role: .b)
 
     @Published private(set) var devices: [DLDeviceDescriptor] = []
+    /// Devices with a video output (for a monitor).
+    @Published private(set) var outputDevices: [DLDeviceDescriptor] = []
     @Published private(set) var state: State = .idle
     @Published private(set) var nextTake: Int = 1
     @Published private(set) var elapsed: TimeInterval = 0
@@ -91,6 +93,7 @@ final class RecordingController: NSObject, ObservableObject, DLDeviceBrowserDele
     func deviceBrowser(_ browser: DLDeviceBrowser, didUpdateDevices devices: [DLDeviceDescriptor]) {
         let old = Set(self.devices.map(\.identifier))
         self.devices = devices.filter(\.supportsCapture)
+        self.outputDevices = devices.filter(\.supportsPlayback)
         let new = Set(self.devices.map(\.identifier))
 
         // First run: auto-assign device 1 → A, device 2 → B.

@@ -22,6 +22,8 @@ FOUNDATION_EXPORT uint64_t DLHostTimeNanos(void);
 @property (nonatomic, readonly, copy) NSString *displayName;
 @property (nonatomic, readonly, copy) NSString *modelName;
 @property (nonatomic, readonly) BOOL supportsCapture;
+/// Has a video output (UltraStudio Monitor 3G, HD Mini …) – usable for a monitor.
+@property (nonatomic, readonly) BOOL supportsPlayback;
 @property (nonatomic, readonly) BOOL supportsFormatDetection;
 @property (nonatomic, readonly) NSInteger maxAudioChannels;
 @end
@@ -121,6 +123,28 @@ FOUNDATION_EXPORT uint64_t DLHostTimeNanos(void);
 @property (nonatomic, readonly) BOOL isRunning;
 
 - (BOOL)startAndReturnError:(NSError **)error NS_SWIFT_NAME(start());
+- (void)stop;
+@end
+
+#pragma mark - Output (monitor)
+
+/// Video output of a DeckLink device (feeds a Blackmagic monitor). Frames are shown as they come (no scheduling).
+@interface DLOutputDevice : NSObject
+
+/// nil if no device with this identifier is present or it has no video output.
+- (nullable instancetype)initWithIdentifier:(NSString *)identifier NS_SWIFT_NAME(init(identifier:));
+- (instancetype)init NS_UNAVAILABLE;
+
+@property (nonatomic, readonly, copy) NSString *identifier;
+/// Running output mode ("1080p25"), nil when stopped.
+@property (nonatomic, readonly, copy, nullable) NSString *modeName;
+
+/// Enables the output in the mode with this size and frame rate (8-bit YUV 4:2:2).
+- (BOOL)startWithWidth:(int32_t)width height:(int32_t)height frameDuration:(int64_t)frameDuration
+             timeScale:(int64_t)timeScale interlaced:(BOOL)interlaced error:(NSError **)error
+    NS_SWIFT_NAME(start(width:height:frameDuration:timeScale:interlaced:));
+/// Shows a '2vuy' buffer of the running mode's size as the next frame. Calls must not overlap.
+- (BOOL)displayPixelBuffer:(CVPixelBufferRef)pixelBuffer NS_SWIFT_NAME(display(_:));
 - (void)stop;
 @end
 

@@ -70,6 +70,15 @@ Rozhranie aplikácie je **v angličtine** (Record / Playback / Slate …); tento
 - V PDF reporte je pod každým klipom riadok na kameru (prepínač **Camera settings** v exporte);
   vtedy je na strane o klip menej (5 na šírku / 7 na výšku).
 
+### Výstup na monitor (Project settings → Monitor output)
+- **Device**: DeckLink zariadenie s video výstupom (napr. **UltraStudio Monitor 3G**, UltraStudio HD Mini) –
+  na jeho SDI/HDMI výstup sa pripojí Blackmagic monitor. UltraStudio Recorder 3G vie len nahrávať, výstup nemá.
+- **Show**: kamera A, kamera B alebo obe vedľa seba (**A | B**, každá na polovicu, čierne pruhy hore a dole).
+- Na záložke Record ide živý obraz kamier, na Playback prehrávaný klip (pri pauze ostane posledná snímka).
+- Formát výstupu = formát kamier (napr. 1080p25, 8-bit 4:2:2); keď ho zariadenie nevie, ukáže to chybu v nastaveniach.
+- Nastavenie sa ukladá s projektom (`monitorDevice`, `monitorSource` v `PROJECT.JSON`).
+- Neotestované so skutočným výstupným zariadením – obraz (A, B, A | B, 10-bit vstup, Playback) overený len testom bez hardvéru.
+
 ### Dočasné vypnutie jednej kamery (Record, ⌥1 / ⌥2)
 - V projekte s dvoma kamerami je nadpis **Camera A / Camera B** nad obrazom tlačidlo so značkou **ON / OFF**. Vypnutá kamera
   zmizne, druhá sa roztiahne na celú šírku a **nahráva sa len ona** (aj Cam clip sa zvýši len jej).

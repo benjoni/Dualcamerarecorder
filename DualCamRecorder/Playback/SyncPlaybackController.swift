@@ -12,6 +12,7 @@ import AVFoundation
 import QuartzCore
 import CoreMedia
 import Combine
+import os
 
 final class SyncPlaybackController: ObservableObject {
     let playerA = AVPlayer()
@@ -76,6 +77,9 @@ final class SyncPlaybackController: ObservableObject {
     }
     private var outputA: AVPlayerItemVideoOutput?
     private var outputB: AVPlayerItemVideoOutput?
+    /// Own frame taps for the monitor output (read on the monitor's queue).
+    fileprivate let monitorTaps = OSAllocatedUnfairLock<(a: AVPlayerItemVideoOutput?, b: AVPlayerItemVideoOutput?, frameDuration: CMTime)>(
+        initialState: (nil, nil, CMTime(value: 1, timescale: 25)))
     private var waveformTimer: Timer?
     private var forceWaveformRefresh = false
     private let waveformQueue = DispatchQueue(label: "playback-waveform", qos: .utility)
@@ -140,6 +144,18 @@ final class SyncPlaybackController: ObservableObject {
             item.add(o)
             return o
         }
+        let twoVuy: [String: Any] = [kCVPixelBufferPixelFormatTypeKey as String: kCVPixelFormatType_422YpCbCr8]
+        let monitorA = itemA.map { item in
+            let o = AVPlayerItemVideoOutput(pixelBufferAttributes: twoVuy)
+            item.add(o)
+            return o
+        }
+        let monitorB = itemB.map { item in
+            let o = AVPlayerItemVideoOutput(pixelBufferAttributes: twoVuy)
+            item.add(o)
+            return o
+        }
+        monitorTaps.withLock { $0.a = monitorA; $0.b = monitorB }
         waveformA.image = nil
         waveformB.image = nil
         forceWaveformRefresh = true
@@ -177,7 +193,10 @@ final class SyncPlaybackController: ObservableObject {
             }
             guard let self, self.generation == gen else { return }
             self.duration = longest
-            if let fd { self.frameDuration = fd }
+            if let fd {
+                self.frameDuration = fd
+                self.monitorTaps.withLock { $0.frameDuration = fd }
+            }
             // Cue the take at IN.
             if let i = self.marks.inPoint { self.seek(seconds: i) }
         }
@@ -421,5 +440,19 @@ final class SyncPlaybackController: ObservableObject {
         let f = totalFrames % nominal
         let s = totalFrames / nominal
         return String(format: "%02d:%02d:%02d:%02d", s / 3600, (s / 60) % 60, s % 60, f)
+    }
+}
+
+extension SyncPlaybackController {
+    /// New frames of both cameras at this moment (nil = no new frame, e.g. paused). Any thread.
+    func monitorFrames() -> MonitorPlaybackFrames {
+        let taps = monitorTaps.withLock { $0 }
+        func frame(_ output: AVPlayerItemVideoOutput?) -> CVPixelBuffer? {
+            guard let output else { return nil }
+            let time = output.itemTime(forHostTime: CACurrentMediaTime())
+            guard output.hasNewPixelBuffer(forItemTime: time) else { return nil }
+            return output.copyPixelBuffer(forItemTime: time, itemTimeForDisplay: nil)
+        }
+        return MonitorPlaybackFrames(a: frame(taps.a), b: frame(taps.b), frameDuration: taps.frameDuration)
     }
 }

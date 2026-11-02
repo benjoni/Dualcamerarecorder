@@ -14,6 +14,7 @@ struct ProjectSettingsView: View {
     @ObservedObject var settings: AppSettings
     @ObservedObject var recorder: RecordingController
     @ObservedObject var backup: BackupManager
+    @ObservedObject var monitor: MonitorOutput
     @Environment(\.dismiss) private var dismiss
 
     /// Audio / bit depth need the inputs restarted – done once when the sheet closes.
@@ -77,6 +78,36 @@ struct ProjectSettingsView: View {
                         Spacer()
                         Text("Picked above each picture on the Record tab.").font(.callout).foregroundStyle(.secondary)
                     }
+                }
+
+                Section("Monitor output") {
+                    Picker("Device", selection: $settings.monitorDevice) {
+                        Text("Off").tag("")
+                        ForEach(recorder.outputDevices, id: \.identifier) { d in
+                            Text(d.displayName).tag(d.identifier)
+                        }
+                        if !settings.monitorDevice.isEmpty, !recorder.outputDevices.contains(where: { $0.identifier == settings.monitorDevice }) {
+                            Text("Not connected").tag(settings.monitorDevice)
+                        }
+                    }
+                    Picker("Show", selection: $settings.monitorSource) {
+                        Text("Camera \(settings.cameraNames.a)").tag(MonitorSource.a)
+                        if settings.twoCameras {
+                            Text("Camera \(settings.cameraNames.b)").tag(MonitorSource.b)
+                            Text("\(settings.cameraNames.a) | \(settings.cameraNames.b)").tag(MonitorSource.both)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+                    .disabled(settings.monitorDevice.isEmpty)
+                    if recorder.outputDevices.isEmpty {
+                        Text("No device with a video output is connected. UltraStudio Recorder 3G only records – the monitor needs e.g. an UltraStudio Monitor 3G (SDI / HDMI out).")
+                            .font(.callout).foregroundStyle(.secondary)
+                    } else if !settings.monitorDevice.isEmpty {
+                        Label(monitor.status, systemImage: monitor.failed ? "exclamationmark.triangle.fill" : "display")
+                            .foregroundStyle(monitor.failed ? .red : .secondary)
+                    }
+                    Text("Record: live picture of the cameras · Playback: the clip being played. Same format as the cameras (e.g. 1080p25).")
+                        .font(.callout).foregroundStyle(.secondary)
                 }
 
                 Section("Recording") {

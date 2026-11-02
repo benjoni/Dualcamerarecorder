@@ -14,6 +14,7 @@
 		9702D5C78A7731A21798CE69 /* DLCapture.mm in Sources */ = {isa = PBXBuildFile; fileRef = A4CED7CFCAAD74CB7DEA1EED /* DLCapture.mm */; };
 		630F330E84A6D4165DB8AAD0 /* DeckLinkSource.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6117E90CD68D5B390594AEB6 /* DeckLinkSource.swift */; };
 		6600DF44958D153CDA02B31F /* HostClock.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9271C3CCB72AF1A9ABD071F4 /* HostClock.swift */; };
+		45475185142B877473098EB4 /* MonitorOutput.swift in Sources */ = {isa = PBXBuildFile; fileRef = F597998D595AA5960A66E22F /* MonitorOutput.swift */; };
 		A10A2878105CB9C121421B72 /* SimulatedSource.swift in Sources */ = {isa = PBXBuildFile; fileRef = A90675E0408BFEE05A438E81 /* SimulatedSource.swift */; };
 		D574554270A2F11C80647E61 /* VideoSource.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8E2EF906A5821F6AA648C303 /* VideoSource.swift */; };
 		2B8917D19A2D604DEA6324D4 /* EditClipList.swift in Sources */ = {isa = PBXBuildFile; fileRef = EAAAF8E8C63E2B848AB5C849 /* EditClipList.swift */; };
@@ -63,6 +64,7 @@
 		8E914CCF7EDC0F606247452E /* DualCamRecorder-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "DualCamRecorder-Bridging-Header.h"; sourceTree = "<group>"; };
 		6117E90CD68D5B390594AEB6 /* DeckLinkSource.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeckLinkSource.swift; sourceTree = "<group>"; };
 		9271C3CCB72AF1A9ABD071F4 /* HostClock.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HostClock.swift; sourceTree = "<group>"; };
+		F597998D595AA5960A66E22F /* MonitorOutput.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MonitorOutput.swift; sourceTree = "<group>"; };
 		A90675E0408BFEE05A438E81 /* SimulatedSource.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SimulatedSource.swift; sourceTree = "<group>"; };
 		8E2EF906A5821F6AA648C303 /* VideoSource.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VideoSource.swift; sourceTree = "<group>"; };
 		EAAAF8E8C63E2B848AB5C849 /* EditClipList.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditClipList.swift; sourceTree = "<group>"; };
@@ -160,6 +162,7 @@
 			children = (
 				6117E90CD68D5B390594AEB6 /* DeckLinkSource.swift */,
 				9271C3CCB72AF1A9ABD071F4 /* HostClock.swift */,
+				F597998D595AA5960A66E22F /* MonitorOutput.swift */,
 				A90675E0408BFEE05A438E81 /* SimulatedSource.swift */,
 				8E2EF906A5821F6AA648C303 /* VideoSource.swift */,
 			);
@@ -336,6 +339,7 @@
 				9702D5C78A7731A21798CE69 /* DLCapture.mm in Sources */,
 				630F330E84A6D4165DB8AAD0 /* DeckLinkSource.swift in Sources */,
 				6600DF44958D153CDA02B31F /* HostClock.swift in Sources */,
+				45475185142B877473098EB4 /* MonitorOutput.swift in Sources */,
 				A10A2878105CB9C121421B72 /* SimulatedSource.swift in Sources */,
 				D574554270A2F11C80647E61 /* VideoSource.swift in Sources */,
 				2B8917D19A2D604DEA6324D4 /* EditClipList.swift in Sources */,
