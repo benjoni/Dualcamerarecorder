@@ -409,7 +409,7 @@ struct ContentView: View {
                 .help("Luma waveform over each picture (⇧⌘W)")
             }
             if settings.monitorEnabled {
-                ToolbarItem(placement: .primaryAction) { monitorMenu }
+                ToolbarItem(placement: .primaryAction) { MonitorMenu(settings: settings, monitor: model.monitor) }
             }
             ToolbarItem(placement: .primaryAction) {
                 Button {
@@ -434,32 +434,6 @@ struct ContentView: View {
         }
     }
 
-    /// What goes to the Blackmagic monitor (Project settings → Monitor output turns it on).
-    private var monitorMenu: some View {
-        let names = settings.cameraNames
-        let title: String
-        switch settings.monitorSource {
-        case .a: title = "Monitor \(names.a)"
-        case .b: title = "Monitor \(names.b)"
-        case .both: title = "Monitor \(names.a)|\(names.b)"
-        }
-        return Menu {
-            Picker("Show on the monitor", selection: $settings.monitorSource) {
-                Text("Camera \(names.a)").tag(MonitorSource.a)
-                if settings.twoCameras {
-                    Text("Camera \(names.b)").tag(MonitorSource.b)
-                    Text("Both side by side (\(names.a) | \(names.b))").tag(MonitorSource.both)
-                }
-            }
-            .pickerStyle(.inline)
-            Divider()
-            Text(model.monitor.status)
-        } label: {
-            Label(title, systemImage: model.monitor.failed ? "exclamationmark.triangle" : "display")
-                .labelStyle(.titleAndIcon)
-        }
-        .help("What goes to the Blackmagic monitor – \(model.monitor.status)")
-    }
 
     /// R → Record, P → Playback, E → Edit (plain keys, ignored while typing in a text field).
     private func installTabKeys() {
@@ -605,6 +579,39 @@ extension ContentView {
     }
 }
 #endif
+
+/// What goes to the Blackmagic monitor (Project settings → Monitor output turns it on).
+/// Its own view so the output state ("Sending 1080p25", "not connected" …) stays current.
+private struct MonitorMenu: View {
+    @ObservedObject var settings: AppSettings
+    @ObservedObject var monitor: MonitorOutput
+
+    var body: some View {
+        let names = settings.cameraNames
+        let title: String
+        switch settings.monitorSource {
+        case .a: title = "Monitor \(names.a)"
+        case .b: title = "Monitor \(names.b)"
+        case .both: title = "Monitor \(names.a)|\(names.b)"
+        }
+        return Menu {
+            Picker("Show on the monitor", selection: $settings.monitorSource) {
+                Text("Camera \(names.a)").tag(MonitorSource.a)
+                if settings.twoCameras {
+                    Text("Camera \(names.b)").tag(MonitorSource.b)
+                    Text("Both side by side (\(names.a) | \(names.b))").tag(MonitorSource.both)
+                }
+            }
+            .pickerStyle(.inline)
+            Divider()
+            Text(monitor.status)
+        } label: {
+            Label(title, systemImage: monitor.failed ? "exclamationmark.triangle" : "display")
+                .labelStyle(.titleAndIcon)
+        }
+        .help("What goes to the Blackmagic monitor – \(monitor.status)")
+    }
+}
 
 /// The project name is shown centered in the toolbar; hide the default title on the left (macOS 15+).
 private struct HiddenToolbarTitle: ViewModifier {

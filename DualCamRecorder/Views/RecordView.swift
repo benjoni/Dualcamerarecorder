@@ -344,7 +344,7 @@ struct CameraScreen: View {
                     if !channel.hasSource || !channel.hasSignal {
                         GeometryReader { geo in
                             BenjoniLogo()
-                                .fill(Color.white.opacity(0.85))
+                                .fill(Color.white.opacity(0.3))
                                 .frame(height: geo.size.height * 0.32)
                                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                         }
