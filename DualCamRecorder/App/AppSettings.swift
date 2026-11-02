@@ -31,6 +31,8 @@ final class AppSettings: ObservableObject {
     /// Camera names used for earlier recordings of the open project (kept in PROJECT.JSON).
     @Published var earlierCameraNamesA: [String] = []
     @Published var earlierCameraNamesB: [String] = []
+    /// Camera list of the open project (Project settings → Camera list), picked on the Record tab.
+    @Published var cameras: [ProjectCamera] = []
     /// Backup copy of the project's clips on a second disk (per project).
     @Published var backupEnabled: Bool { didSet { defaults.set(backupEnabled, forKey: "backupEnabled") } }
     @Published var backupRootPath: String { didSet { defaults.set(backupRootPath, forKey: "backupRootPath") } }
@@ -91,7 +93,7 @@ final class AppSettings: ObservableObject {
         ProjectSettings(cameraCount: cameraCount, proResFlavor: proResFlavor.rawValue, audioChannels: audioChannels,
                         forceEightBit: forceEightBit, cameraNameA: cameraNameA, cameraNameB: cameraNameB,
                         earlierCameraNamesA: earlierCameraNamesA, earlierCameraNamesB: earlierCameraNamesB,
-                        deviceA: deviceA, deviceB: deviceB,
+                        cameras: cameras, deviceA: deviceA, deviceB: deviceB,
                         backupEnabled: backupEnabled, backupRootPath: backupRootPath)
     }
 
@@ -104,6 +106,10 @@ final class AppSettings: ObservableObject {
         cameraNameB = p.cameraNameB
         earlierCameraNamesA = p.earlierCameraNamesA
         earlierCameraNamesB = p.earlierCameraNamesB
+        // Older projects: the list starts with the cameras in use.
+        cameras = p.cameras.isEmpty
+            ? [ProjectCamera(name: cameraNames.a)] + (cameraCount >= 2 ? [ProjectCamera(name: cameraNames.b)] : [])
+            : p.cameras
         deviceA = p.deviceA
         deviceB = p.deviceB
         backupEnabled = p.backupEnabled
@@ -113,6 +119,29 @@ final class AppSettings: ObservableObject {
     /// Sanitized, guaranteed-distinct camera names.
     var cameraNames: CameraNames {
         CameraNames(a: cameraNameA, b: cameraNameB, earlierA: earlierCameraNamesA, earlierB: earlierCameraNamesB)
+    }
+
+    /// Cameras to pick from for one input: the list without the camera the other input uses
+    /// (+ the camera in use, if it is not in the list).
+    func cameraChoices(for role: CameraRole) -> [ProjectCamera] {
+        let names = cameraNames
+        let mine = names.name(role)
+        let other = twoCameras ? names.name(role == .a ? .b : .a) : nil
+        var seen = Set<String>()
+        var list = cameras.filter { camera in
+            let n = TakeNaming.sanitize(camera.name)
+            guard !n.isEmpty, n != other, !seen.contains(n) else { return false }
+            seen.insert(n)
+            return true
+        }
+        if !seen.contains(mine) { list.insert(ProjectCamera(name: mine), at: 0) }
+        return list
+    }
+
+    /// Camera of the list an input records with (nil when it is not in the list).
+    func camera(_ role: CameraRole) -> ProjectCamera? {
+        let name = cameraNames.name(role)
+        return cameras.first { TakeNaming.sanitize($0.name) == name }
     }
 
     /// Remembers the names a recording was made with, so its files are still found after a rename.

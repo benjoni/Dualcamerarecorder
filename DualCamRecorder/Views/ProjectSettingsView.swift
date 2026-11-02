@@ -48,6 +48,37 @@ struct ProjectSettingsView: View {
                         .font(.callout.monospaced()).foregroundStyle(.secondary)
                 }
 
+                Section("Camera list") {
+                    ForEach($settings.cameras) { $camera in
+                        HStack(spacing: 10) {
+                            Text("Camera").foregroundStyle(.secondary)
+                            TextField("", text: Binding(
+                                get: { camera.name },
+                                set: { rename(camera, to: $0) }), prompt: Text("C"))
+                                .textFieldStyle(.roundedBorder)
+                                .labelsHidden()
+                                .frame(width: 60)
+                                .help("Starts the file names: C → C007_….MOV")
+                            TextField("", text: $camera.model, prompt: Text("Model, e.g. Ronin 4D"))
+                                .textFieldStyle(.roundedBorder)
+                                .labelsHidden()
+                            Button { settings.cameras.removeAll { $0.id == camera.id } } label: {
+                                Image(systemName: "minus.circle")
+                            }
+                            .buttonStyle(.borderless)
+                            .disabled(inUse(camera))
+                            .help(inUse(camera) ? "Used by an input right now" : "Remove from the list")
+                        }
+                    }
+                    HStack {
+                        Button { settings.cameras.append(ProjectCamera(name: nextFreeName())) } label: {
+                            Label("Add camera", systemImage: "plus")
+                        }
+                        Spacer()
+                        Text("Picked above each picture on the Record tab.").font(.callout).foregroundStyle(.secondary)
+                    }
+                }
+
                 Section("Recording") {
                     Picker("Codec", selection: $settings.proResFlavor) {
                         ForEach(ProResFlavor.allCases) { Text($0.title).tag($0) }
@@ -166,9 +197,33 @@ struct ProjectSettingsView: View {
         if panel.runModal() == .OK, let url = panel.url { settings.backupRootPath = url.path }
     }
 
-    /// Device + file-name prefix for one camera.
+    private func inUse(_ camera: ProjectCamera) -> Bool {
+        settings.activeRoles.contains { settings.cameraNames.name($0) == TakeNaming.sanitize(camera.name) }
+            || (!settings.twoCameras && settings.cameraNames.a == TakeNaming.sanitize(camera.name))
+    }
+
+    /// Renaming a camera an input uses renames the input's camera too (next files C… → D…).
+    private func rename(_ camera: ProjectCamera, to name: String) {
+        guard let i = settings.cameras.firstIndex(where: { $0.id == camera.id }) else { return }
+        let old = TakeNaming.sanitize(camera.name)
+        let names = settings.cameraNames
+        settings.cameras[i].name = name
+        guard !TakeNaming.sanitize(name).isEmpty else { return }
+        // (A field emptied while typing keeps no name – the input that lost its camera takes the new one.)
+        for role in CameraRole.allCases where names.name(role) == old || (old.isEmpty && settings.camera(role) == nil) {
+            recorder.setCameraName(name, for: role)
+        }
+    }
+
+    /// First letter A, B, C … not used in the list yet.
+    private func nextFreeName() -> String {
+        let used = Set(settings.cameras.map { TakeNaming.sanitize($0.name) })
+        return "ABCDEFGHIJKLMNOPQRSTUVWXYZ".map(String.init).first { !used.contains($0) } ?? ""
+    }
+
+    /// Device + camera of the list for one input.
     private func cameraRow(_ role: CameraRole) -> some View {
-        LabeledContent("Camera \(role.rawValue)") {
+        LabeledContent(role == .a ? "Input 1" : "Input 2") {
             HStack(spacing: 10) {
                 Picker("", selection: Binding(
                     get: { recorder.assignedID(role) },
@@ -179,13 +234,15 @@ struct ProjectSettingsView: View {
                 }
                 .labelsHidden()
                 .frame(minWidth: 260)
-                Text("Name").foregroundStyle(.secondary)
-                TextField(role.rawValue, text: Binding(
-                    get: { role == .a ? settings.cameraNameA : settings.cameraNameB },
-                    set: { recorder.setCameraName($0, for: role) }))
-                    .textFieldStyle(.roundedBorder)
-                    .labelsHidden()
-                    .frame(width: 100)
+                Picker("", selection: Binding(
+                    get: { settings.cameraNames.name(role) },
+                    set: { recorder.setCameraName($0, for: role) })) {
+                    ForEach(settings.cameraChoices(for: role)) { camera in
+                        Text(camera.title).tag(TakeNaming.sanitize(camera.name))
+                    }
+                }
+                .labelsHidden()
+                .frame(width: 170)
             }
         }
     }

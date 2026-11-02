@@ -102,8 +102,10 @@ Rozhranie aplikácie je **v angličtine** (Record / Playback / Slate …); tento
   so **SDI embedded audiom** (48 kHz, 2/8/16 kanálov, uložené ako 24-bit LPCM).
 - Názvy súborov veľkými písmenami, na začiatku **názov kamery** a číslo klipu, potom skratky
   z klapky: `A007_S12_SH3B_T04.MOV` / `B007_S12_SH3B_T04.MOV`.
-  - **A / B** = názov kamery – nastaviteľný pri náhľade alebo v Nastaveniach (napr. `RONIN1` →
-    `RONIN1_007_S12_SH3B_T04.MOV`; pri viacpísmenovom názve sa pred číslo pridá `_`).
+  - **A / B** = názov kamery – vyberá sa nad náhľadom zo **zoznamu kamier projektu** (Project settings →
+    **Camera list**: názov + model, napr. `A` Venice, `B` Venice, `C` Ronin 4D; v menu „C · Ronin 4D“).
+    Kameru, ktorú práve používa druhý vstup, menu neponúka. Premenovanie kamery v zozname premenuje aj vstup,
+    ktorý ju používa. Viacpísmenový názov (napr. `RONIN1` → `RONIN1_007_S12_SH3B_T04.MOV`) dostane pred číslo `_`.
     Meno sa ukazuje aj v nadpise kamery (napr. „Camera C“), v Playbacku, v PDF reporte a v `CLIPLOG.CSV`
     (stĺpec `camera_name`). Staršie súbory nahraté pod predchádzajúcim menom (napr. `B007_…` po premenovaní
     B → C) appka naďalej nájde – použité mená si pamätá v `PROJECT.JSON`.

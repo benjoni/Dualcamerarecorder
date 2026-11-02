@@ -461,6 +461,16 @@ extension ContentView {
             try? await Task.sleep(nanoseconds: 3_000_000_000)
             saveWindowPicture(to: URL(fileURLWithPath: dir).appendingPathComponent("\(label).png"))
         }
+        // Project settings sheet, drawn off screen.
+        let sheet = NSHostingView(rootView: ProjectSettingsView(model: model, settings: settings, recorder: model.recorder, backup: model.backup)
+            .frame(width: 720, height: 900).preferredColorScheme(.dark))
+        sheet.frame = NSRect(x: 0, y: 0, width: 720, height: 900)
+        sheet.layoutSubtreeIfNeeded()
+        try? await Task.sleep(nanoseconds: 1_000_000_000)
+        if let rep = sheet.bitmapImageRepForCachingDisplay(in: sheet.bounds) {
+            sheet.cacheDisplay(in: sheet.bounds, to: rep)
+            try? rep.representation(using: .png, properties: [:])?.write(to: URL(fileURLWithPath: dir).appendingPathComponent("project_settings.png"))
+        }
         // Clip reports of the project (landscape + portrait, camera setup lines when any clip has them).
         for portrait in [false, true] {
             let takes = model.library.takes

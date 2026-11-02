@@ -12,6 +12,19 @@ import Foundation
 import Combine
 import AppKit
 
+/// A camera of the project's list: "C" + "Ronin 4D". The name goes into the file names (C007_…).
+struct ProjectCamera: Codable, Hashable, Identifiable {
+    var id = UUID()
+    var name: String
+    var model = ""
+
+    /// "C · Ronin 4D" (or just "C").
+    var title: String {
+        let m = model.trimmingCharacters(in: .whitespaces)
+        return m.isEmpty ? TakeNaming.sanitize(name) : "\(TakeNaming.sanitize(name)) · \(m)"
+    }
+}
+
 /// Settings stored per project (applied when the project is opened).
 struct ProjectSettings: Codable, Equatable {
     var cameraCount = 2
@@ -23,6 +36,8 @@ struct ProjectSettings: Codable, Equatable {
     /// Names the cameras had before (files recorded with them are still recognised).
     var earlierCameraNamesA: [String] = []
     var earlierCameraNamesB: [String] = []
+    /// Cameras of the production (Camera A Venice, Camera C Ronin 4D …) – picked on the Record tab.
+    var cameras: [ProjectCamera] = []
     var deviceA = ""
     var deviceB = ""
     /// Second copy of all clips on another disk: <backupRootPath>/<project folder name>.
@@ -43,6 +58,7 @@ extension ProjectSettings {
         cameraNameB = try c.decodeIfPresent(String.self, forKey: .cameraNameB) ?? cameraNameB
         earlierCameraNamesA = try c.decodeIfPresent([String].self, forKey: .earlierCameraNamesA) ?? earlierCameraNamesA
         earlierCameraNamesB = try c.decodeIfPresent([String].self, forKey: .earlierCameraNamesB) ?? earlierCameraNamesB
+        cameras = try c.decodeIfPresent([ProjectCamera].self, forKey: .cameras) ?? cameras
         deviceA = try c.decodeIfPresent(String.self, forKey: .deviceA) ?? deviceA
         deviceB = try c.decodeIfPresent(String.self, forKey: .deviceB) ?? deviceB
         backupEnabled = try c.decodeIfPresent(Bool.self, forKey: .backupEnabled) ?? backupEnabled
