@@ -18,6 +18,7 @@ struct EditView: View {
     var screensOnly = false
 
     @AppStorage("editShowClips") private var showClipList = true
+    @AppStorage("editShowSequences") private var showSequenceList = true
     /// While typing in the clip search, single-key shortcuts are off.
     @FocusState private var searchFocused: Bool
     @State private var addedMessage: String?
@@ -63,8 +64,16 @@ struct EditView: View {
                 Divider()
             }
             editArea
+            if showSequenceList {
+                Divider()
+                EditSequenceList(timeline: timeline, edit: edit)
+                    .frame(width: 260)
+                    .padding(.bottom, 28)
+                    .transition(.move(edge: .trailing))
+            }
         }
         .animation(.easeInOut(duration: 0.2), value: showClipList)
+        .animation(.easeInOut(duration: 0.2), value: showSequenceList)
     }
 
     private func showAdded(_ message: String) {
@@ -78,13 +87,27 @@ struct EditView: View {
 
     private var editArea: some View {
         VStack(spacing: 12) {
-            Button {
-                showClipList.toggle()
-            } label: {
-                Label(showClipList ? "Hide clips" : "Clips", systemImage: "sidebar.left")
+            HStack {
+                Button {
+                    showClipList.toggle()
+                } label: {
+                    Label(showClipList ? "Hide clips" : "Clips", systemImage: "sidebar.left")
+                }
+                .keyboardShortcut("l", modifiers: [.command])
+                .help("Show / hide the clip list (⌘L)")
+                Spacer(minLength: 12)
+                Label(timeline.currentSequence?.name ?? "", systemImage: "film.stack")
+                    .font(.title3.weight(.semibold))
+                    .lineLimit(1)
+                Spacer(minLength: 12)
+                Button {
+                    showSequenceList.toggle()
+                } label: {
+                    Label(showSequenceList ? "Hide sequences" : "Sequences", systemImage: "sidebar.right")
+                }
+                .keyboardShortcut("k", modifiers: [.command])
+                .help("Show / hide the sequences – several cut passages (⌘K)")
             }
-            .keyboardShortcut("l", modifiers: [.command])
-            .help("Show / hide the clip list (⌘L)")
             .buttonStyle(BigButtonStyle())
             .font(.title3)
 
@@ -229,7 +252,8 @@ struct EditView: View {
         let panel = NSSavePanel()
         panel.allowedContentTypes = [.quickTimeMovie]
         panel.directoryURL = folder
-        panel.nameFieldStringValue = "\(folder.lastPathComponent)_EDIT.mov"
+        let sequence = (timeline.currentSequence?.name ?? "EDIT").replacingOccurrences(of: "/", with: "-")
+        panel.nameFieldStringValue = "\(folder.lastPathComponent)_\(sequence).mov"
         panel.canCreateDirectories = true
         guard panel.runModal() == .OK, let url = panel.url else { return }
         let segments = timeline.segments

@@ -2,7 +2,8 @@
 //  EditTimeline.swift
 //  DualCamRecorder
 //
-//  Simple edit for the director: pieces of clips (always one camera) in a row.
+//  Simple edit for the director: pieces of clips (always one camera) in a row. A project has several
+//  sequences (one passage cut, then New and another one …); the timeline shows the selected one.
 //  Saved as EDIT.JSON in the project folder; the recordings themselves are never changed.
 //
 
@@ -32,8 +33,21 @@ struct TimelineSegment: Codable, Identifiable, Equatable {
     var cameraName: String { file.flatMap { TakeNaming.cameraName(in: $0) } ?? camera.rawValue }
 }
 
+/// One cut passage.
+struct EditSequence: Codable, Identifiable, Equatable {
+    var id = UUID()
+    var name: String
+    var segments: [TimelineSegment] = []
+
+    var duration: Double { segments.reduce(0) { $0 + $1.duration } }
+}
+
 final class EditTimeline: ObservableObject {
+    /// Pieces of the selected sequence.
     @Published private(set) var segments: [TimelineSegment] = []
+    /// All sequences of the project (the selected one is updated whenever the timeline is saved).
+    @Published private(set) var sequences: [EditSequence] = []
+    @Published private(set) var currentID: EditSequence.ID?
     @Published private(set) var canUndo = false
     private(set) var folder: URL?
     private var history: [[TimelineSegment]] = []
@@ -61,26 +75,120 @@ final class EditTimeline: ObservableObject {
         self.folder = folder
         history = []
         canUndo = false
-        guard let folder,
-              let data = try? Data(contentsOf: folder.appendingPathComponent(Self.fileName)),
-              let saved = try? JSONDecoder().decode(SavedEdit.self, from: data) else {
-            segments = []
-            return
+        var loaded: [EditSequence] = []
+        var current: EditSequence.ID?
+        if let folder,
+           let data = try? Data(contentsOf: folder.appendingPathComponent(Self.fileName)),
+           let saved = try? JSONDecoder().decode(SavedEdit.self, from: data) {
+            loaded = saved.sequences ?? []
+            current = saved.current
+            // EDIT.JSON of version 1: one timeline.
+            if loaded.isEmpty, let old = saved.segments, !old.isEmpty {
+                loaded = [EditSequence(name: "Sequence 1", segments: old)]
+            }
         }
-        segments = saved.segments
+        if loaded.isEmpty { loaded = [EditSequence(name: "Sequence 1")] }
+        sequences = loaded
+        let selected = loaded.first { $0.id == current } ?? loaded[0]
+        currentID = selected.id
+        segments = selected.segments
     }
 
     private func save() {
+        syncCurrent()
         guard let folder else { return }
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
-        guard let data = try? encoder.encode(SavedEdit(segments: segments)) else { return }
+        guard let data = try? encoder.encode(SavedEdit(sequences: sequences, current: currentID)) else { return }
         try? data.write(to: folder.appendingPathComponent(Self.fileName), options: .atomic)
     }
 
+    /// Timeline → its sequence in the list.
+    private func syncCurrent() {
+        guard let i = sequences.firstIndex(where: { $0.id == currentID }), sequences[i].segments != segments else { return }
+        sequences[i].segments = segments
+    }
+
     private struct SavedEdit: Codable {
-        var version = 1
-        var segments: [TimelineSegment]
+        var version = 2
+        var sequences: [EditSequence]?
+        var current: EditSequence.ID?
+        /// Version 1 (one timeline) – read only.
+        var segments: [TimelineSegment]?
+    }
+
+    // MARK: - Sequences
+
+    var currentSequence: EditSequence? { sequences.first { $0.id == currentID } }
+
+    /// Shows another sequence on the timeline (Undo starts again).
+    func select(_ id: EditSequence.ID) {
+        guard id != currentID, let next = sequences.first(where: { $0.id == id }) else { return }
+        syncCurrent()
+        currentID = id
+        segments = next.segments
+        history = []
+        canUndo = false
+        save()
+    }
+
+    /// Empty sequence "Sequence N", selected.
+    func newSequence() {
+        syncCurrent()
+        let sequence = EditSequence(name: nextName("Sequence"))
+        sequences.append(sequence)
+        select(sequence.id)
+    }
+
+    /// Copy of a sequence ("… copy"), selected.
+    func duplicate(_ id: EditSequence.ID) {
+        syncCurrent()
+        guard let i = sequences.firstIndex(where: { $0.id == id }) else { return }
+        var copy = sequences[i]
+        copy.id = UUID()
+        copy.segments = copy.segments.map { var s = $0; s.id = UUID(); return s }
+        copy.name = nextName(copy.name + " copy")
+        sequences.insert(copy, at: i + 1)
+        select(copy.id)
+    }
+
+    func rename(_ id: EditSequence.ID, to name: String) {
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty, let i = sequences.firstIndex(where: { $0.id == id }), sequences[i].name != trimmed else { return }
+        sequences[i].name = trimmed
+        save()
+    }
+
+    /// Deletes a sequence (the last one is only emptied).
+    func delete(_ id: EditSequence.ID) {
+        syncCurrent()
+        guard let i = sequences.firstIndex(where: { $0.id == id }) else { return }
+        if sequences.count == 1 {
+            sequences[0].segments = []
+            segments = []
+            history = []
+            canUndo = false
+            save()
+            return
+        }
+        sequences.remove(at: i)
+        if id == currentID {
+            let next = sequences[min(i, sequences.count - 1)]
+            currentID = next.id
+            segments = next.segments
+            history = []
+            canUndo = false
+        }
+        save()
+    }
+
+    /// "Sequence 3" – the first number not used yet (or the name itself when free).
+    private func nextName(_ base: String) -> String {
+        let used = Set(sequences.map(\.name))
+        if base != "Sequence", !used.contains(base) { return base }
+        var n = base == "Sequence" ? sequences.count + 1 : 2
+        while used.contains("\(base) \(n)") { n += 1 }
+        return "\(base) \(n)"
     }
 
     // MARK: - Changes (each one can be undone)

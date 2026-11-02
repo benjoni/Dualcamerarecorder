@@ -43,6 +43,8 @@ struct HelpView: View {
                 section("Edit") {
                     key("+  ↵", "Clip list: add the clip of this camera to the end (IN → OUT, or the whole clip); also double-click")
                     key("⌘L", "Show / hide the clip list")
+                    key("⌘K", "Show / hide the sequences (several cut passages)")
+                    key("⌥⌘N", "New sequence")
                     key("Space", "Play / pause the whole edit")
                     key("←  →", "One frame back / forward")
                     key("↑  ↓", "Start of this or previous piece / next piece")
@@ -50,7 +52,7 @@ struct HelpView: View {
                     key("⌫", "Remove the selected piece – the recording stays")
                     key("⌘Z", "Undo the last change")
                     term("Edges", "Drag the left / right edge of a piece to move its IN / OUT")
-                    term("EDIT.JSON", "The edit, saved in the project folder")
+                    term("EDIT.JSON", "The edit – all sequences – saved in the project folder")
                 }
 
                 section("Badges and symbols") {

@@ -201,7 +201,12 @@ Rozhranie aplikácie je **v angličtine** (Record / Playback / Slate …); tento
 - Na timeline: klik vyberie úsek, **ťahanie úseku** zmení poradie (aj ⌥← / ⌥→), **ťahanie okraja**
   posunie IN / OUT (nie za koniec klipu), pri vybranom úseku sa dá prepnúť **Camera A / B**,
   **Remove** (⌫) ho vyhodí, **Undo** (⌘Z) vráti poslednú zmenu. Zoom posuvníkom.
-- Timeline sa ukladá do `EDIT.JSON` v priečinku projektu; nahrávky sa nikdy nemenia ani nekopírujú.
+- **Sekvencie** (vpravo, Sequences, ⌘K): projekt má viac strihov – postriháš jednu pasáž, dáš **New** (⌥⌘N)
+  a strihaš ďalšiu. Klik na sekvenciu ju ukáže na timeline, dvojklik premenuje, kontextové menu ju
+  zduplikuje alebo zmaže (posledná sa len vyprázdni). Undo platí v rámci sekvencie (pri prepnutí sa začína znova).
+  Export MOV ponúkne názov `<projekt>_<sekvencia>.mov`.
+- Timeline sa ukladá do `EDIT.JSON` v priečinku projektu (verzia 2: všetky sekvencie + vybraná; starý súbor
+  s jednou timeline sa načíta ako „Sequence 1“); nahrávky sa nikdy nemenia ani nekopírujú.
 - **Export MOV…**: H.264 1080p film celej timeline so zvukom vybranej kamery, voliteľne s popisom
   úseku v ľavom dolnom rohu (Clip · Scene · Shot · Take · Camera). Predvolene `<projekt>_EDIT.mov`
   v priečinku projektu.
