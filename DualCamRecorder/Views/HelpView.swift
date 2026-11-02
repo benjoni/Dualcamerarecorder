@@ -2,7 +2,7 @@
 //  HelpView.swift
 //  DualCamRecorder
 //
-//  Help window (Help menu / toolbar, ⌘?): all keyboard shortcuts, badges and symbols, file names.
+//  Help window (Help menu / toolbar, ⌘?): all keyboard shortcuts, badges and symbols, monitor output, file names.
 //
 
 import SwiftUI
@@ -10,12 +10,21 @@ import SwiftUI
 struct HelpView: View {
     var body: some View {
         ScrollView {
+            Self.content
+        }
+        .frame(minWidth: 640, idealWidth: 720, minHeight: 520, idealHeight: 760)
+    }
+
+    /// Everything the window shows (also drawn by the debug snapshot).
+    static var content: some View { HelpView().sections }
+
+    private var sections: some View {
             VStack(alignment: .leading, spacing: 22) {
                 Text("DualCamRecorder Help").font(.largeTitle.weight(.bold))
 
                 section("General") {
                     key("⌘N", "New project (project list)")
-                    key("⌥⌘,", "Project settings – cameras, inputs, codec, audio, backup")
+                    key("⌥⌘,", "Project settings – inputs, camera list, monitor output, codec, audio, backup")
                     key("⌘,", "App settings – projects location, live view on phones, DeckLink devices")
                     key("⇧⌘W", "Waveform over the pictures")
                     key("⌘F", "Screens only / show all controls")
@@ -28,6 +37,9 @@ struct HelpView: View {
                     key("⌘R", "REC / STOP")
                     key("⌘I  ⌘O", "IN / OUT at the current take time (while recording)")
                     key("⌥1  ⌥2", "Camera A / B on or off – not while recording; the other camera records alone")
+                    term("A · Venice ▾", "Menu above each picture: which camera of the project's camera list is on this input. Its name starts the file names (C → C007_…); the camera the other input uses is not offered")
+                    term("Camera list", "Project settings: name + model of every camera (A Venice, B Venice, C Ronin 4D …). Add camera / ⊖ removes; renaming a camera renames the input using it")
+                    term("Camera Settings", "Button next to Slate: fields under both cameras. A bare number gets its unit when you leave the field (or ↵ / REC): Lens 32 → 32mm, Stop 2.8 → T2.8, Distance / Height 3.2 → 3.2 m, Tilt / Shutter 180 → 180°, WB 5600 → 5600K. Text with its own unit (AWB, 1/50, 10 ft) stays; ISO and Filter are not changed")
                 }
 
                 section("Playback") {
@@ -52,6 +64,8 @@ struct HelpView: View {
                     key("⌫", "Remove the selected piece – the recording stays")
                     key("⌘Z", "Undo the last change")
                     term("Edges", "Drag the left / right edge of a piece to move its IN / OUT")
+                    term("Sequences", "Right side: several cut passages – New starts an empty one. Click shows it on the timeline, double-click renames, right-click: Rename / Duplicate / Delete (the last one is only cleared). Clips are added to the sequence shown; Undo works within it")
+                    term("Export MOV…", "The sequence shown, file name <project>_<sequence>.mov; “Clip info in picture” burns in clip and camera")
                     term("EDIT.JSON", "The edit – all sequences – saved in the project folder")
                 }
 
@@ -70,6 +84,16 @@ struct HelpView: View {
                     sign(Label("Camera Settings", systemImage: "camera.aperture"), "Record (next to Slate): camera settings under both cameras – lens, stop, distance, height, tilt, filter, ISO, shutter, WB. Kept for the next takes, saved with every clip, in the PDF report")
                 }
 
+                section("Monitor output (Blackmagic monitor)") {
+                    term("Project settings", "“Send the picture to a Blackmagic monitor” – on / off. The first device with a video output is used (UltraStudio Monitor 3G); UltraStudio Recorder 3G has no output")
+                    sign(Label("Monitor A|C", systemImage: "display"), "Toolbar (only when the output is on): what goes to the monitor – camera A, camera C or both side by side; the menu also shows the output state")
+                    sign(Label("Monitor", systemImage: "exclamationmark.triangle"), "Output problem – monitor not connected, or it cannot show the cameras' format")
+                    term("Record", "Live picture of the chosen camera(s)")
+                    term("Playback", "The clip being played (paused: the last frame stays)")
+                    term("Edit", "The cut – always one full picture, the camera choice is not used")
+                    term("Picture", "Clean full frame in the cameras' format (e.g. 1080p25, 8-bit 4:2:2) – no buttons, waveform or text")
+                }
+
                 section("Numbers") {
                     term("Captured / Written", "Frames received from the camera / frames saved to the file")
                     term("Dropped (input)", "Frames the camera input lost – red when above 0")
@@ -86,13 +110,13 @@ struct HelpView: View {
                     term("C005_SLATE.JSON", "Slate of clip 005 (scene, shot, take, good, MOS, note …)")
                     term("C005_MARKS.JSON", "IN / OUT of clip 005")
                     term("CLIPLOG.CSV", "All clips of the project in one table (opens in Excel / Numbers)")
-                    term("PROJECT.JSON", "Project details, its settings and the last slate")
+                    term("PROJECT.JSON", "Project details, its settings (camera list, monitor output …) and the last slate")
+                    term("EDIT.JSON", "All edit sequences of the project and the one shown")
+                    term("<project>_<sequence>.mov", "Exported edit for the director (H.264 1080p)")
                 }
             }
             .padding(28)
             .frame(maxWidth: .infinity, alignment: .leading)
-        }
-        .frame(minWidth: 640, idealWidth: 720, minHeight: 520, idealHeight: 760)
     }
 
     private var onOff: some View {

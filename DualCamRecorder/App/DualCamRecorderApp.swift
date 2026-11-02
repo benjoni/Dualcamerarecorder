@@ -528,6 +528,16 @@ extension ContentView {
             sheet.cacheDisplay(in: sheet.bounds, to: rep)
             try? rep.representation(using: .png, properties: [:])?.write(to: URL(fileURLWithPath: dir).appendingPathComponent("project_settings.png"))
         }
+        // Help window, whole content (no scroll view).
+        let help = NSHostingView(rootView: HelpView.content.frame(width: 900).fixedSize(horizontal: false, vertical: true)
+            .background(Color(nsColor: .windowBackgroundColor)).preferredColorScheme(.dark))
+        help.frame = NSRect(origin: .zero, size: help.fittingSize)
+        help.layoutSubtreeIfNeeded()
+        try? await Task.sleep(nanoseconds: 500_000_000)
+        if let rep = help.bitmapImageRepForCachingDisplay(in: help.bounds) {
+            help.cacheDisplay(in: help.bounds, to: rep)
+            try? rep.representation(using: .png, properties: [:])?.write(to: URL(fileURLWithPath: dir).appendingPathComponent("help.png"))
+        }
         // Clip reports of the project (landscape + portrait, camera setup lines when any clip has them).
         for portrait in [false, true] {
             let takes = model.library.takes
