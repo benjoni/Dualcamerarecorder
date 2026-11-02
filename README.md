@@ -29,6 +29,12 @@ Rozhranie aplikácie je **v angličtine** (Record / Playback / Slate …); tento
   skryje (súbory ostanú); 🔍 ho ukáže vo Finderi.
 - Tlačidlo **Projects** v lište sa vráti na úvod (nie počas nahrávania).
 
+### Malé okno
+- Keď je okno nižšie ako 1050 bodov, záložka Record sa zhustí: menšie REC / IN / OUT s časomierou v jednom
+  riadku, menšia klapka a polia slate (nápoveda len ako tooltip), počítadlá v jednom riadku. Počítadlá a
+  nastavenia kamery sa už nezalamujú pod úzkym obrazom – obraz je v malom okne zhruba 2× väčší.
+- Čo najväčší obraz: ⌘F (Screens only) alebo skryť Camera Settings.
+
 ### Obraz bez signálu
 - Kamera bez vstupu (Unassigned) alebo bez signálu (No signal) ukazuje namiesto čierneho / zamrznutého
   obrazu logo BENJONI (kreslené vektorovo, `BenjoniLogo` v `Components.swift`).

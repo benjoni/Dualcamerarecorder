@@ -489,6 +489,11 @@ extension ContentView {
         try? await Task.sleep(nanoseconds: 2_000_000_000)
         guard let entry = projects.projects.first(where: { $0.project.name == name }) else { exit(2) }
         model.open(entry)
+        // -snapshotWindowSize 1372x869: pictures of a smaller window.
+        if let size = args.string(forKey: "snapshotWindowSize")?.split(separator: "x").compactMap({ Double($0) }), size.count == 2,
+           let window = NSApp.windows.first(where: { $0.isVisible && $0.contentView != nil }) {
+            window.setContentSize(NSSize(width: size[0], height: size[1]))
+        }
         for (index, label) in ["record", "playback", "edit"].enumerated() {
             tab = index
             try? await Task.sleep(nanoseconds: 3_000_000_000)

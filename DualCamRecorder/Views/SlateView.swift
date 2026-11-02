@@ -258,6 +258,8 @@ struct BigTextFieldStyle: TextFieldStyle {
 struct SlatePanel: View {
     @ObservedObject var controller: RecordingController
     @ObservedObject var settings: AppSettings
+    /// Low window: small board and fields, the hint only as a tooltip.
+    var compact = false
 
     /// While recording, show the frozen slate of the running take (with the live note / good flag).
     private var displayedSlate: SlateInfo {
@@ -270,15 +272,14 @@ struct SlatePanel: View {
     var body: some View {
         // Board at the left edge, fields centered in the window (an invisible board on the right balances it).
         HStack(alignment: .top, spacing: 0) {
-            SlateBoard(slate: displayedSlate, recording: controller.isRecording, large: true)
+            SlateBoard(slate: displayedSlate, recording: controller.isRecording, large: !compact)
             Spacer(minLength: 16)
             VStack(alignment: .center, spacing: 6) {
                 HStack {
                     Text("Slate").font(.title3.weight(.semibold))
-                    Text(controller.isRecording
-                         ? "Scene / shot / take are locked while recording – note and “good take” can still be changed."
-                         : "Take goes up by 1 after each recording; changing scene or shot resets it to 1.")
-                        .font(.callout).foregroundStyle(.secondary)
+                    if !compact {
+                        Text(slateHint).font(.callout).foregroundStyle(.secondary)
+                    }
                     Toggle(isOn: $settings.showCameraSetup) {
                         Label("Camera Settings", systemImage: "camera.aperture")
                     }
@@ -287,16 +288,23 @@ struct SlatePanel: View {
                     .padding(.leading, 8)
                     .help("Shows lens, stop, distance, height, tilt … under both cameras – saved with every clip and printed in the PDF report")
                 }
+                .help(compact ? slateHint : "")
                 SlateFields(slate: $settings.slate,
                             locked: controller.slateLocked,
                             setScene: { controller.setSlateScene($0) },
                             setShot: { controller.setSlateShot($0) },
-                            large: true)
-                    .font(.title2)
+                            large: !compact)
+                    .font(compact ? .body : .title2)
             }
             Spacer(minLength: 16)
-            SlateBoard(slate: displayedSlate, large: true).hidden()
+            SlateBoard(slate: displayedSlate, large: !compact).hidden()
         }
+    }
+
+    private var slateHint: String {
+        controller.isRecording
+            ? "Scene / shot / take are locked while recording – note and “good take” can still be changed."
+            : "Take goes up by 1 after each recording; changing scene or shot resets it to 1."
     }
 }
 

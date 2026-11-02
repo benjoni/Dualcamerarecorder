@@ -12,6 +12,9 @@ struct RecordView: View {
     @ObservedObject var backup: BackupManager
     /// Only the two camera pictures, nothing else (toggled with ⌘F).
     var screensOnly = false
+    /// Low window: smaller transport and slate, numbers in one line – more height for the pictures.
+    @State private var compact = false
+    static let compactBelowHeight: CGFloat = 1050
 
     var body: some View {
         if screensOnly {
@@ -50,10 +53,10 @@ struct RecordView: View {
         VStack(spacing: 12) {
             HStack(alignment: .top, spacing: 12) {
                 if settings.isCameraOn(.a) {
-                    CameraPanel(controller: controller, channel: controller.channelA, settings: settings, showWaveform: settings.showWaveform)
+                    CameraPanel(controller: controller, channel: controller.channelA, settings: settings, showWaveform: settings.showWaveform, compact: compact)
                 }
                 if settings.isCameraOn(.b) {
-                    CameraPanel(controller: controller, channel: controller.channelB, settings: settings, showWaveform: settings.showWaveform)
+                    CameraPanel(controller: controller, channel: controller.channelB, settings: settings, showWaveform: settings.showWaveform, compact: compact)
                 }
             }
             .animation(.easeInOut(duration: 0.2), value: settings.cameraAOn)
@@ -68,7 +71,7 @@ struct RecordView: View {
             Divider()
             transportBar
             Divider()
-            SlatePanel(controller: controller, settings: settings)
+            SlatePanel(controller: controller, settings: settings, compact: compact)
             Divider()
             filesAndDisk
             if let error = controller.errorMessage {
@@ -78,7 +81,8 @@ struct RecordView: View {
                     .textSelection(.enabled)
             }
         }
-        .padding()
+        .padding(compact ? 10 : 16)
+        .onGeometryChange(for: Bool.self) { $0.size.height < Self.compactBelowHeight } action: { compact = $0 }
     }
 
     /// REC/STOP, IN and OUT side by side with the same height; timer and IN/OUT times below.
@@ -87,16 +91,24 @@ struct RecordView: View {
             if case .recording = controller.state { return true }
             return false
         }()
-        return VStack(spacing: 10) {
-            HStack(alignment: .center, spacing: 10) {
+        let buttonHeight: CGFloat = compact ? 34 : 48
+        let timer = VStack(spacing: compact ? 2 : 10) {
+            Text(DisplayFormat.duration(controller.elapsed))
+                .font(.system(size: compact ? 24 : 30, weight: .semibold, design: .monospaced))
+                .foregroundStyle(controller.isRecording ? .red : .primary)
+            Text("IN \(DisplayFormat.mark(controller.marks.inPoint))  ·  OUT \(DisplayFormat.mark(controller.marks.outPoint))")
+                .font(.system(compact ? .callout : .title3, design: .monospaced))
+                .foregroundStyle(.secondary)
+        }
+        let buttons = HStack(alignment: .center, spacing: 10) {
                 Button(action: controller.toggleRecording) {
                     HStack(spacing: 10) {
                         Image(systemName: controller.isRecording ? "stop.fill" : "record.circle")
-                            .font(.system(size: 28))
+                            .font(.system(size: compact ? 20 : 28))
                         Text(recordButtonTitle)
-                            .font(.title2.weight(.bold))
+                            .font((compact ? Font.title3 : .title2).weight(.bold))
                     }
-                    .frame(width: 180, height: 48)
+                    .frame(width: compact ? 150 : 180, height: buttonHeight)
                 }
                 .buttonStyle(.borderedProminent)
                 .tint(controller.isRecording ? .gray : .red)
@@ -105,12 +117,12 @@ struct RecordView: View {
 
                 Group {
                     Button { controller.markIn() } label: {
-                        Text("IN").font(.title2.weight(.bold)).frame(width: 90, height: 48)
+                        Text("IN").font((compact ? Font.title3 : .title2).weight(.bold)).frame(width: compact ? 70 : 90, height: buttonHeight)
                     }
                     .keyboardShortcut("i", modifiers: [.command])
                     .help("Set IN at the current take time (⌘I)")
                     Button { controller.markOut() } label: {
-                        Text("OUT").font(.title2.weight(.bold)).frame(width: 90, height: 48)
+                        Text("OUT").font((compact ? Font.title3 : .title2).weight(.bold)).frame(width: compact ? 70 : 90, height: buttonHeight)
                     }
                     .keyboardShortcut("o", modifiers: [.command])
                     .help("Set OUT at the current take time (⌘O)")
@@ -122,14 +134,14 @@ struct RecordView: View {
                     .buttonStyle(.borderless)
                     .help("Clear IN/OUT")
                     .disabled(!recording || controller.marks.isEmpty)
+        }
+        return Group {
+            if compact {
+                // One row: buttons, then the timer with IN / OUT.
+                HStack(spacing: 24) { buttons; timer }
+            } else {
+                VStack(spacing: 10) { buttons; timer }
             }
-
-            Text(DisplayFormat.duration(controller.elapsed))
-                .font(.system(size: 30, weight: .semibold, design: .monospaced))
-                .foregroundStyle(controller.isRecording ? .red : .primary)
-            Text("IN \(DisplayFormat.mark(controller.marks.inPoint))  ·  OUT \(DisplayFormat.mark(controller.marks.outPoint))")
-                .font(.system(.title3, design: .monospaced))
-                .foregroundStyle(.secondary)
         }
         .frame(maxWidth: .infinity)
     }
@@ -207,6 +219,7 @@ struct CameraPanel: View {
     @ObservedObject var channel: CameraChannel
     @ObservedObject var settings: AppSettings
     var showWaveform = false
+    var compact = false
     /// Width of the picture: title row and stats line up with it, everything centered
     /// (with one camera the picture is limited by the window height and does not fill the width).
     @State private var pictureWidth: CGFloat?
@@ -269,25 +282,40 @@ struct CameraPanel: View {
 
             if settings.showCameraSetup {
                 CameraSetupFields(setup: setupBinding, locked: controller.isRecording)
-                    .frame(maxWidth: pictureWidth ?? .infinity, alignment: .leading)
+                    .frame(maxWidth: pictureWidth.map { max($0, Self.infoMinWidth) } ?? .infinity, alignment: .leading)
             }
 
-            VStack(alignment: .leading, spacing: 8) {
+            VStack(alignment: .leading, spacing: compact ? 4 : 8) {
                 Text(channel.format?.displayString ?? "Format: —")
-                    .font(.system(.body, design: .monospaced))
+                    .font(.system(compact ? .callout : .body, design: .monospaced))
+                    .lineLimit(1).truncationMode(.tail)
                 AudioMeter(db: channel.audioLevelDB)
-                HStack(spacing: 16) {
-                    stat("Captured", channel.stats.framesCaptured)
-                    stat("Written", channel.stats.framesWritten)
-                    stat("Dropped (input)", channel.stats.inputDropped, alert: channel.stats.inputDropped > 0)
-                    stat("Dropped (write)", channel.stats.writerDropped, alert: channel.stats.writerDropped > 0)
+                if compact {
+                    // Numbers in one line.
+                    HStack(spacing: 14) {
+                        inlineStat("Captured", channel.stats.framesCaptured)
+                        inlineStat("Written", channel.stats.framesWritten)
+                        inlineStat("Dropped in", channel.stats.inputDropped, alert: channel.stats.inputDropped > 0)
+                        inlineStat("Dropped write", channel.stats.writerDropped, alert: channel.stats.writerDropped > 0)
+                    }
+                    .font(.callout)
+                    .lineLimit(1)
+                } else {
+                    HStack(spacing: 16) {
+                        stat("Captured", channel.stats.framesCaptured)
+                        stat("Written", channel.stats.framesWritten)
+                        stat("Dropped (input)", channel.stats.inputDropped, alert: channel.stats.inputDropped > 0)
+                        stat("Dropped (write)", channel.stats.writerDropped, alert: channel.stats.writerDropped > 0)
+                    }
+                    .font(.callout)
+                    .lineLimit(1)
                 }
-                .font(.callout)
                 if let error = channel.lastError {
                     Text(error).font(.callout).foregroundStyle(.red)
                 }
             }
-            .frame(maxWidth: pictureWidth ?? .infinity, alignment: .leading)
+            // At least as wide as the numbers – a small picture must not wrap them (that would shrink it further).
+            .frame(maxWidth: pictureWidth.map { max($0, Self.infoMinWidth) } ?? .infinity, alignment: .leading)
         }
         .frame(maxWidth: .infinity)
     }
@@ -319,6 +347,17 @@ struct CameraPanel: View {
                 if role == .a { controller.settings.slate.setupA = value }
                 else { controller.settings.slate.setupB = value }
             })
+    }
+
+    static let infoMinWidth: CGFloat = 460
+
+    private func inlineStat(_ title: String, _ value: Int, alert: Bool = false) -> some View {
+        HStack(spacing: 4) {
+            Text(title).foregroundStyle(.secondary)
+            Text("\(value)").font(.system(.callout, design: .monospaced).weight(.semibold))
+                .foregroundStyle(alert ? .red : .primary)
+        }
+        .fixedSize()
     }
 
     private func stat(_ title: String, _ value: Int, alert: Bool = false) -> some View {
