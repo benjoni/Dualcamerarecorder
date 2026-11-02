@@ -233,9 +233,10 @@ struct CameraPanel: View {
         VStack(alignment: .center, spacing: 8) {
             HStack {
                 cameraTitles
+                    .fixedSize()   // never squeezed, even when the picture is narrow
                 // Input device is chosen in Project settings.
                 Spacer(minLength: 12)
-                Text("Name").font(.caption).foregroundStyle(.secondary)
+                Text("Name").font(.caption).foregroundStyle(.secondary).fixedSize()
                 TextField("A", text: Binding(
                     get: { channel.role == .a ? controller.settings.cameraNameA : controller.settings.cameraNameB },
                     set: { controller.setCameraName($0, for: channel.role) }))
@@ -243,7 +244,7 @@ struct CameraPanel: View {
                     .frame(width: 80)
                     .disabled(controller.isRecording)
                     .help("Camera name at the start of the file name, e.g. A → A007_S12_SH3B_T04.MOV")
-                Text("Cam clip").font(.caption).foregroundStyle(.secondary)
+                Text("Cam clip").font(.caption).foregroundStyle(.secondary).fixedSize()
                 TextField("A001C0001", text: cameraClipBinding)
                     .textFieldStyle(.roundedBorder)
                     .font(.body.monospaced())
@@ -259,6 +260,7 @@ struct CameraPanel: View {
                     Label("Setup", systemImage: "camera.aperture")
                 }
                 .toggleStyle(.button)
+                .fixedSize()
                 .help("Camera setup – lens, stop, distance, height, tilt … saved with every clip and printed in the PDF report")
             }
             .frame(maxWidth: pictureWidth ?? .infinity)
