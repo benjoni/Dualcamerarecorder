@@ -9,6 +9,7 @@
 import AVFoundation
 import AppKit
 import CoreImage
+import os
 
 enum EditComposition {
     struct Piece {
@@ -170,6 +171,9 @@ final class EditPlayer: ObservableObject {
     @Published private(set) var pieces: [EditComposition.Piece] = []
     private var timeObserver: Any?
     private var buildGeneration = 0
+    /// Frame tap of the cut for the monitor output (read on the monitor's queue).
+    private nonisolated let monitorTap = OSAllocatedUnfairLock<(output: AVPlayerItemVideoOutput?, frameDuration: CMTime)>(
+        initialState: (nil, CMTime(value: 1, timescale: 25)))
 
     init() {
         player.actionAtItemEnd = .pause
@@ -188,6 +192,7 @@ final class EditPlayer: ObservableObject {
         let generation = buildGeneration
         guard let folder, !segments.isEmpty else {
             player.replaceCurrentItem(with: nil)
+            monitorTap.withLock { $0.output = nil }
             pieces = []
             duration = 0
             currentTime = 0
@@ -200,11 +205,15 @@ final class EditPlayer: ObservableObject {
         guard generation == buildGeneration else { return }   // a newer change is being loaded
         guard let built else {
             player.replaceCurrentItem(with: nil)
+            monitorTap.withLock { $0.output = nil }
             pieces = []
             duration = 0
             return
         }
         let item = AVPlayerItem(asset: built.composition)
+        let tap = AVPlayerItemVideoOutput(pixelBufferAttributes: [kCVPixelBufferPixelFormatTypeKey as String: kCVPixelFormatType_422YpCbCr8])
+        item.add(tap)
+        monitorTap.withLock { $0 = (tap, CMTime(value: 1, timescale: CMTimeScale(max(1, built.fps.rounded())))) }
         player.replaceCurrentItem(with: item)
         pieces = built.pieces
         fps = built.fps
@@ -261,3 +270,18 @@ final class EditPlayer: ObservableObject {
     }
 }
 
+
+extension EditPlayer {
+    /// New frame of the cut at this moment (nil = none, e.g. paused) – shown full on the monitor. Any thread.
+    nonisolated func monitorFrames() -> MonitorPlaybackFrames {
+        let tap = monitorTap.withLock { $0 }
+        var frame: CVPixelBuffer?
+        if let output = tap.output {
+            let time = output.itemTime(forHostTime: CACurrentMediaTime())
+            if output.hasNewPixelBuffer(forItemTime: time) {
+                frame = output.copyPixelBuffer(forItemTime: time, itemTimeForDisplay: nil)
+            }
+        }
+        return MonitorPlaybackFrames(a: frame, b: nil, frameDuration: tap.frameDuration, program: true)
+    }
+}

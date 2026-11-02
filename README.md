@@ -77,10 +77,12 @@ Rozhranie aplikácie je **v angličtine** (Record / Playback / Slate …); tento
   sa použije hneď, ako sa objaví.
 - Čo ide na monitor, sa vyberá tlačidlom **Monitor** v hornej lište (vedľa Waveform, je tam len pri zapnutom výstupe):
   kamera A, kamera B alebo obe vedľa seba (**A | B**, každá na polovicu, čierne pruhy hore a dole).
-- Na záložke Record ide živý obraz kamier, na Playback prehrávaný klip (pri pauze ostane posledná snímka).
+- Na záložke Record ide živý obraz kamier, na Playback prehrávaný klip (pri pauze ostane posledná snímka),
+  na **Edit strih** – vždy jeden obraz na celú plochu (voľba A / B / A | B sa tam nepoužije), bez popisu klipu.
+- Na monitor ide len čistý obraz – žiadne ovládacie prvky, waveform ani texty appky.
 - Formát výstupu = formát kamier (napr. 1080p25, 8-bit 4:2:2); keď ho zariadenie nevie, ukáže chybu (menu Monitor a nastavenia).
 - Ukladá sa s projektom (`monitorEnabled`, `monitorSource` v `PROJECT.JSON`).
-- Neotestované so skutočným UltraStudio Monitor – obraz (A, B, A | B, 10-bit vstup, Playback) overený len testom bez hardvéru.
+- Neotestované so skutočným UltraStudio Monitor – obraz (A, B, A | B, 10-bit vstup, Playback, strih z Edit) overený len testom bez hardvéru.
 
 ### Dočasné vypnutie jednej kamery (Record, ⌥1 / ⌥2)
 - V projekte s dvoma kamerami je nadpis **Camera A / Camera B** nad obrazom tlačidlo so značkou **ON / OFF**. Vypnutá kamera

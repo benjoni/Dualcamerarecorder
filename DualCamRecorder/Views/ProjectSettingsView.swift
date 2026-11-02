@@ -92,7 +92,7 @@ struct ProjectSettingsView: View {
                               systemImage: "display.trianglebadge.exclamationmark")
                             .foregroundStyle(settings.monitorEnabled ? .red : .secondary)
                     }
-                    Text("What goes out (camera \(settings.cameraNames.a), \(settings.cameraNames.b) or both) is chosen with the Monitor button in the toolbar. Record: live picture · Playback: the clip being played.")
+                    Text("What goes out (camera \(settings.cameraNames.a), \(settings.cameraNames.b) or both) is chosen with the Monitor button in the toolbar. Record: live picture · Playback: the clip being played · Edit: the cut.")
                         .font(.callout).foregroundStyle(.secondary)
                 }
 

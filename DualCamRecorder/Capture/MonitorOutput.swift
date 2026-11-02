@@ -3,7 +3,8 @@
 //  DualCamRecorder
 //
 //  Picture for a Blackmagic monitor on a DeckLink output (UltraStudio Monitor 3G, HD Mini …):
-//  camera A, camera B or both side by side – live on the Record tab, the clip being played on Playback.
+//  camera A, camera B or both side by side – live on the Record tab, the clip being played on Playback,
+//  the cut (one full picture) on Edit.
 //  The output runs in the format of the cameras (1080p25 …); frames go out as they come (no scheduling).
 //
 
@@ -19,12 +20,14 @@ enum MonitorSource: String, CaseIterable, Identifiable {
     var id: String { rawValue }
 }
 
-/// Frames of the clip being played (Playback tab).
+/// Frames of the clip being played (Playback tab) or of the cut (Edit tab).
 struct MonitorPlaybackFrames {
     var a: CVPixelBuffer?
     var b: CVPixelBuffer?
     /// Frame duration of the clip (25 fps when unknown).
     var frameDuration: CMTime
+    /// Edit tab: `a` is the cut – always shown full, whatever camera choice the monitor has.
+    var program = false
 }
 
 final class MonitorOutput: ObservableObject {
@@ -48,6 +51,8 @@ final class MonitorOutput: ObservableObject {
     private var playback: (() -> MonitorPlaybackFrames)?
     private var playbackTimer: DispatchSourceTimer?
     private var busy = false
+    /// The picture shown is the cut (one full picture, camera choice ignored).
+    private var program = false
 
     // MARK: - Settings (main queue)
 
@@ -88,6 +93,7 @@ final class MonitorOutput: ObservableObject {
     func setPlayback(_ provider: (() -> MonitorPlaybackFrames)?) {
         queue.async { [self] in
             playback = provider
+            program = false
             latest = [:]   // no live frame next to a clip (and back)
             updatePlaybackTimer()
         }
@@ -135,7 +141,7 @@ final class MonitorOutput: ObservableObject {
         defer { busy = false }
         if !ensureRunning(width: width, height: height, frameDuration: frameDuration, interlaced: interlaced, device: device) { return }
         guard let out = buffer(width: width, height: height, format: kCVPixelFormatType_422YpCbCr8) else { return }
-        if source == .both {
+        if source == .both && !program {
             guard let canvas = sideBySide(a: a, b: b, width: width, height: height) else { return }
             guard copy(canvas, to: out) else { return }
         } else {
@@ -245,11 +251,12 @@ final class MonitorOutput: ObservableObject {
     private func playbackTick() {
         guard let device, let playback else { return }
         let frames = playback()
+        program = frames.program
         if let a = frames.a { latest[.a] = a }
         if let b = frames.b { latest[.b] = b }
         guard frames.a != nil || frames.b != nil else { return }   // paused: the monitor keeps the last frame
-        let a = source == .b ? nil : latest[.a]
-        let b = source == .a ? nil : latest[.b]
+        let a = source == .b && !program ? nil : latest[.a]
+        let b = source == .a || program ? nil : latest[.b]
         guard a != nil || b != nil else { return }
         // Keep the cameras' format when it is known (no mode switch on the monitor), otherwise the clip's.
         let format = formats[.a] ?? formats[.b]

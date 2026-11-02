@@ -486,10 +486,18 @@ struct ContentView: View {
         model.recorder.channelA.preview.waveformEnabled = settings.showWaveform && recordVisible
         model.recorder.channelB.preview.waveformEnabled = settings.showWaveform && recordVisible
         model.player.waveformEnabled = settings.showWaveform && playbackVisible
-        // Monitor output: the clip being played on Playback, the cameras everywhere else.
-        model.monitor.setPlayback(playbackVisible ? { [weak player = model.player] in
-            player?.monitorFrames() ?? MonitorPlaybackFrames(frameDuration: CMTime(value: 1, timescale: 25))
-        } : nil)
+        // Monitor output: the clip being played on Playback, the cut on Edit, the cameras everywhere else.
+        if playbackVisible {
+            model.monitor.setPlayback { [weak player = model.player] in
+                player?.monitorFrames() ?? MonitorPlaybackFrames(frameDuration: CMTime(value: 1, timescale: 25))
+            }
+        } else if inProject && tab == 2 {
+            model.monitor.setPlayback { [weak edit = editPlayer] in
+                edit?.monitorFrames() ?? MonitorPlaybackFrames(frameDuration: CMTime(value: 1, timescale: 25), program: true)
+            }
+        } else {
+            model.monitor.setPlayback(nil)
+        }
     }
 }
 
