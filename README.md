@@ -61,6 +61,8 @@ Rozhranie aplikácie je **v angličtine** (Record / Playback / Slate …); tento
 ### Nastavenia kamery (Record → Camera Settings)
 - Jedno tlačidlo **Camera Settings** v riadku **Slate** zapne/vypne pod oboma obrazmi polia
   **Lens, Stop, Distance, Height, Tilt, Filter, ISO, Shutter, WB** (voľný text, jednotky podľa štábu).
+- Holé číslo dostane po opustení poľa jednotku: Lens `32` → `32mm`, Stop `2.8` → `T2.8`, Distance/Height `3.2` → `3.2 m`,
+  Tilt/Shutter `180` → `180°`, WB `5600` → `5600K`. Text s vlastnou jednotkou (`AWB`, `1/50`, `10 ft`) ostane, ISO a Filter bez zmeny.
 - Hodnoty ostávajú pre ďalšie zábery, kým ich nezmeníš (**Clear** vymaže); počas nahrávania sú zamknuté.
 - Ukladajú sa ku klipu: `C007_SLATE.JSON` → `setupA`, `setupB` (kamera, ktorá nenahrávala, ostane prázdna),
   metadáta `.MOV` (kľúč `sk.dualcam.camera-setup` + riadok v popise), stĺpec `camera_setup` v `CLIPLOG.CSV`.

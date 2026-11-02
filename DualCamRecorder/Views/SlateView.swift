@@ -339,7 +339,12 @@ struct SlateEditSheet: View {
             HStack {
                 Spacer()
                 Button("Cancel") { dismiss() }.keyboardShortcut(.cancelAction)
-                Button("Save") { onSave(slate); dismiss() }.keyboardShortcut(.defaultAction)
+                Button("Save") {
+                    slate.setupA = slate.setupA.completed
+                    slate.setupB = slate.setupB.completed
+                    onSave(slate)
+                    dismiss()
+                }.keyboardShortcut(.defaultAction)
             }
         }
         .padding(20)

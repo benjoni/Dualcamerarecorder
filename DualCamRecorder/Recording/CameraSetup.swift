@@ -3,7 +3,7 @@
 //  DualCamRecorder
 //
 //  Camera setup of one camera for a take: lens, stop, focus distance, height, tilt, …
-//  Free text (the crew writes the units they use). Stored in the slate (setupA / setupB),
+//  Free text (the crew writes the units they use); a bare number gets the usual unit (5600 → 5600K). Stored in the slate (setupA / setupB),
 //  so it goes into C###_SLATE.JSON, the movie metadata, CLIPLOG.CSV and the PDF report.
 //
 
@@ -32,6 +32,27 @@ struct CameraSetup: Codable, Hashable {
         (\.shutter, "Shutter", "180°"),
         (\.whiteBalance, "WB", "5600K"),
     ]
+
+    /// Unit added to a bare number: "5600" → "5600K", "2.8" → "T2.8". Text with its own unit ("AWB", "1/50", "10 ft") stays.
+    static func completed(_ value: String, field: WritableKeyPath<CameraSetup, String>) -> String {
+        let text = value.trimmingCharacters(in: .whitespaces)
+        guard text.range(of: #"^[+\-−]?[0-9]+([.,][0-9]+)?$"#, options: .regularExpression) != nil else { return value }
+        switch field {
+        case \.lens: return text + "mm"
+        case \.stop: return "T" + text
+        case \.focus, \.height: return text + " m"
+        case \.tilt, \.shutter: return text + "°"
+        case \.whiteBalance: return text + "K"
+        default: return value
+        }
+    }
+
+    /// Every field with its unit completed.
+    var completed: CameraSetup {
+        var setup = self
+        for field in Self.fields { setup[keyPath: field.0] = Self.completed(setup[keyPath: field.0], field: field.0) }
+        return setup
+    }
 
     var isEmpty: Bool { Self.fields.allSatisfy { self[keyPath: $0.0].trimmingCharacters(in: .whitespaces).isEmpty } }
 

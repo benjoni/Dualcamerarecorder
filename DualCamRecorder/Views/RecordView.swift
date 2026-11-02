@@ -393,6 +393,7 @@ struct CameraTitleButton: View {
 struct CameraSetupFields: View {
     @Binding var setup: CameraSetup
     var locked = false
+    @FocusState private var focused: Int?
 
     var body: some View {
         // One row when the picture is wide enough, otherwise lens … tilt / filter … WB.
@@ -404,7 +405,17 @@ struct CameraSetupFields: View {
             }
         }
         .disabled(locked)
+        // Leaving a field (or ↵) adds the unit to a bare number (5600 → 5600K).
+        .onChange(of: focused) { old, _ in
+            if let old { complete(old) }
+        }
         .help(locked ? "Camera settings are locked while recording" : "Camera settings – kept for the next takes, saved with the clip, printed in the PDF report")
+    }
+
+    private func complete(_ index: Int) {
+        let key = CameraSetup.fields[index].0
+        let value = CameraSetup.completed(setup[keyPath: key], field: key)
+        if value != setup[keyPath: key] { setup[keyPath: key] = value }
     }
 
     private func row(_ range: Range<Int>, clear: Bool) -> some View {
@@ -417,6 +428,8 @@ struct CameraSetupFields: View {
                         .padding(.leading, SetupFieldStyle.inset)
                     TextField(f.2, text: Binding(get: { setup[keyPath: f.0] }, set: { setup[keyPath: f.0] = $0 }))
                         .textFieldStyle(SetupFieldStyle())
+                        .focused($focused, equals: index)
+                        .onSubmit { complete(index) }
                 }
                 .frame(minWidth: index == 0 ? 90 : 52, maxWidth: index == 0 ? 160 : 80)
             }

@@ -236,6 +236,9 @@ final class RecordingController: NSObject, ObservableObject, DLDeviceBrowserDele
         let audioChannels = settings.audioChannels
         pendingResults = []
         expectedResults = 0
+        // Units of a camera settings field still being typed in (they are completed when the field is left).
+        settings.slate.setupA = settings.slate.setupA.completed
+        settings.slate.setupB = settings.slate.setupB.completed
         var slate = settings.slate
         slate.recordedAt = Date()
 
