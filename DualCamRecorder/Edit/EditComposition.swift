@@ -8,7 +8,7 @@
 
 import AVFoundation
 import AppKit
-import QuartzCore
+import CoreImage
 
 enum EditComposition {
     struct Piece {
@@ -83,8 +83,7 @@ enum EditComposition {
         }
         session.outputURL = url
         session.outputFileType = .mov
-        if burnIn, let videoComposition = try? await AVMutableVideoComposition.videoComposition(withPropertiesOf: built.composition) {
-            addLabels(to: videoComposition, pieces: built.pieces)
+        if burnIn, let videoComposition = await labelComposition(built) {
             session.videoComposition = videoComposition
         }
         try? FileManager.default.removeItem(at: url)
@@ -106,34 +105,33 @@ enum EditComposition {
         }
     }
 
-    /// Text in the bottom left corner, shown only while its piece plays.
-    private static func addLabels(to videoComposition: AVMutableVideoComposition, pieces: [Piece]) {
-        let size = videoComposition.renderSize
-        let parent = CALayer()
-        parent.frame = CGRect(origin: .zero, size: size)
-        let video = CALayer()
-        video.frame = parent.frame
-        parent.addSublayer(video)
-
+    /// Text in the bottom left corner, shown only while its piece plays – drawn into every frame with Core Image.
+    /// (A Core Animation overlay rendered in a command-line test but showed nothing when exported from the app.)
+    private static func labelComposition(_ built: Built) async -> AVVideoComposition? {
+        guard let size = try? await AVMutableVideoComposition.videoComposition(withPropertiesOf: built.composition).renderSize
+        else { return nil }
         let fontSize = max(18, size.height / 30)
-        for piece in pieces {
-            // Text drawn into an image – CATextLayer glyphs are not rendered by the export.
+        let labels: [(start: Double, end: Double, image: CIImage)] = built.pieces.compactMap { piece in
             let text = "\(piece.segment.label) · Camera \(piece.segment.cameraName)"
-            guard let image = labelImage(text, fontSize: fontSize, maxWidth: size.width - 2 * fontSize) else { continue }
-            let label = CALayer()
-            label.contents = image
-            label.frame = CGRect(x: fontSize, y: fontSize, width: CGFloat(image.width), height: CGFloat(image.height))
-            label.opacity = 0
-            let show = CABasicAnimation(keyPath: "opacity")
-            show.fromValue = 1
-            show.toValue = 1
-            show.beginTime = AVCoreAnimationBeginTimeAtZero + piece.start
-            show.duration = piece.duration
-            show.isRemovedOnCompletion = true
-            label.add(show, forKey: "show")
-            parent.addSublayer(label)
+            guard let image = labelImage(text, fontSize: fontSize, maxWidth: size.width - 2 * fontSize) else { return nil }
+            // Core Image origin is bottom left.
+            return (piece.start, piece.start + piece.duration,
+                    CIImage(cgImage: image).transformed(by: CGAffineTransform(translationX: fontSize, y: fontSize)))
         }
-        videoComposition.animationTool = AVVideoCompositionCoreAnimationTool(postProcessingAsVideoLayer: video, in: parent)
+        let handler: @Sendable (AVAsynchronousCIImageFilteringRequest) -> Void = { request in
+            let t = request.compositionTime.seconds
+            let source = request.sourceImage
+            if let label = labels.first(where: { t >= $0.start - 0.001 && t < $0.end - 0.001 }) {
+                request.finish(with: label.image.composited(over: source).cropped(to: source.extent), context: nil)
+            } else {
+                request.finish(with: source, context: nil)
+            }
+        }
+        if #available(macOS 15.0, *) {
+            return try? await AVMutableVideoComposition.videoComposition(with: built.composition, applyingCIFiltersWithHandler: handler)
+        } else {
+            return AVMutableVideoComposition(asset: built.composition, applyingCIFiltersWithHandler: handler)
+        }
     }
 
     /// White bold text on a dark rounded box.
@@ -236,6 +234,14 @@ final class EditPlayer: ObservableObject {
         player.seek(to: t, toleranceBefore: .zero, toleranceAfter: .zero)
     }
 
+    /// Playhead to the start of a piece – after a move the picture shows the moved piece, not what slid into its old place.
+    /// (The rebuilt movie keeps this position.)
+    func seekToStart(of id: TimelineSegment.ID, in timeline: EditTimeline) {
+        guard let i = timeline.segments.firstIndex(where: { $0.id == id }) else { return }
+        pause()
+        seek(to: timeline.starts[i])
+    }
+
     /// One frame back / forward.
     func step(_ frames: Int) {
         pause()
@@ -254,3 +260,4 @@ final class EditPlayer: ObservableObject {
         pieces.lastIndex { time >= $0.start - 0.001 }
     }
 }
+

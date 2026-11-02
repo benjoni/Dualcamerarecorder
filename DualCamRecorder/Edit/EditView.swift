@@ -314,6 +314,7 @@ struct EditView: View {
     private func moveSelected(_ delta: Int) {
         guard let selection, let i = selectedIndex else { return }
         timeline.move(selection, to: i + delta)
+        edit.seekToStart(of: selection, in: timeline)
     }
 
     private func deleteSelected() {
@@ -444,6 +445,7 @@ struct TimelineStrip: View {
             if CGFloat(starts[i] + other.duration / 2) * pps < middle { target += 1 }
         }
         timeline.move(segment.id, to: target)
+        edit.seekToStart(of: segment.id, in: timeline)
     }
 
     private func trimHandle(_ segment: TimelineSegment, pps: CGFloat, leading: Bool) -> some View {
