@@ -40,8 +40,9 @@ struct ProjectSettings: Codable, Equatable {
     var cameras: [ProjectCamera] = []
     var deviceA = ""
     var deviceB = ""
-    /// Monitor on a DeckLink output: device ("" = off) and what it shows (MonitorSource: a / b / both).
-    var monitorDevice = ""
+    /// Monitor on a DeckLink output (the first device with an output, e.g. UltraStudio Monitor 3G)
+    /// and what it shows (MonitorSource: a / b / both).
+    var monitorEnabled = false
     var monitorSource = MonitorSource.a.rawValue
     /// Second copy of all clips on another disk: <backupRootPath>/<project folder name>.
     var backupEnabled = false
@@ -64,7 +65,7 @@ extension ProjectSettings {
         cameras = try c.decodeIfPresent([ProjectCamera].self, forKey: .cameras) ?? cameras
         deviceA = try c.decodeIfPresent(String.self, forKey: .deviceA) ?? deviceA
         deviceB = try c.decodeIfPresent(String.self, forKey: .deviceB) ?? deviceB
-        monitorDevice = try c.decodeIfPresent(String.self, forKey: .monitorDevice) ?? monitorDevice
+        monitorEnabled = try c.decodeIfPresent(Bool.self, forKey: .monitorEnabled) ?? monitorEnabled
         monitorSource = try c.decodeIfPresent(String.self, forKey: .monitorSource) ?? monitorSource
         backupEnabled = try c.decodeIfPresent(Bool.self, forKey: .backupEnabled) ?? backupEnabled
         backupRootPath = try c.decodeIfPresent(String.self, forKey: .backupRootPath) ?? backupRootPath

@@ -81,32 +81,18 @@ struct ProjectSettingsView: View {
                 }
 
                 Section("Monitor output") {
-                    Picker("Device", selection: $settings.monitorDevice) {
-                        Text("Off").tag("")
-                        ForEach(recorder.outputDevices, id: \.identifier) { d in
-                            Text(d.displayName).tag(d.identifier)
-                        }
-                        if !settings.monitorDevice.isEmpty, !recorder.outputDevices.contains(where: { $0.identifier == settings.monitorDevice }) {
-                            Text("Not connected").tag(settings.monitorDevice)
-                        }
+                    Toggle("Send the picture to a Blackmagic monitor", isOn: $settings.monitorEnabled)
+                        .disabled(recorder.outputDevices.isEmpty && !settings.monitorEnabled)
+                    if let found = recorder.outputDevices.first {
+                        Label(settings.monitorEnabled ? "\(found.displayName) · \(monitor.status)" : "Found: \(found.displayName)",
+                              systemImage: monitor.failed && settings.monitorEnabled ? "exclamationmark.triangle.fill" : "display")
+                            .foregroundStyle(monitor.failed && settings.monitorEnabled ? .red : .secondary)
+                    } else {
+                        Label("No UltraStudio Monitor found – connect it, it is used as soon as it appears.",
+                              systemImage: "display.trianglebadge.exclamationmark")
+                            .foregroundStyle(settings.monitorEnabled ? .red : .secondary)
                     }
-                    Picker("Show", selection: $settings.monitorSource) {
-                        Text("Camera \(settings.cameraNames.a)").tag(MonitorSource.a)
-                        if settings.twoCameras {
-                            Text("Camera \(settings.cameraNames.b)").tag(MonitorSource.b)
-                            Text("\(settings.cameraNames.a) | \(settings.cameraNames.b)").tag(MonitorSource.both)
-                        }
-                    }
-                    .pickerStyle(.segmented)
-                    .disabled(settings.monitorDevice.isEmpty)
-                    if recorder.outputDevices.isEmpty {
-                        Text("No device with a video output is connected. UltraStudio Recorder 3G only records – the monitor needs e.g. an UltraStudio Monitor 3G (SDI / HDMI out).")
-                            .font(.callout).foregroundStyle(.secondary)
-                    } else if !settings.monitorDevice.isEmpty {
-                        Label(monitor.status, systemImage: monitor.failed ? "exclamationmark.triangle.fill" : "display")
-                            .foregroundStyle(monitor.failed ? .red : .secondary)
-                    }
-                    Text("Record: live picture of the cameras · Playback: the clip being played. Same format as the cameras (e.g. 1080p25).")
+                    Text("What goes out (camera \(settings.cameraNames.a), \(settings.cameraNames.b) or both) is chosen with the Monitor button in the toolbar. Record: live picture · Playback: the clip being played.")
                         .font(.callout).foregroundStyle(.secondary)
                 }
 

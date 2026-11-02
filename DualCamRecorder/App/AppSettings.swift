@@ -33,8 +33,8 @@ final class AppSettings: ObservableObject {
     @Published var earlierCameraNamesB: [String] = []
     /// Camera list of the open project (Project settings → Camera list), picked on the Record tab.
     @Published var cameras: [ProjectCamera] = []
-    /// Blackmagic monitor on a DeckLink output (per project): device ("" = off) and what it shows.
-    @Published var monitorDevice = ""
+    /// Blackmagic monitor on a DeckLink output (per project): on / off and what it shows (toolbar).
+    @Published var monitorEnabled = false
     @Published var monitorSource = MonitorSource.a
     /// Backup copy of the project's clips on a second disk (per project).
     @Published var backupEnabled: Bool { didSet { defaults.set(backupEnabled, forKey: "backupEnabled") } }
@@ -97,7 +97,7 @@ final class AppSettings: ObservableObject {
                         forceEightBit: forceEightBit, cameraNameA: cameraNameA, cameraNameB: cameraNameB,
                         earlierCameraNamesA: earlierCameraNamesA, earlierCameraNamesB: earlierCameraNamesB,
                         cameras: cameras, deviceA: deviceA, deviceB: deviceB,
-                        monitorDevice: monitorDevice, monitorSource: monitorSource.rawValue,
+                        monitorEnabled: monitorEnabled, monitorSource: monitorSource.rawValue,
                         backupEnabled: backupEnabled, backupRootPath: backupRootPath)
     }
 
@@ -116,7 +116,7 @@ final class AppSettings: ObservableObject {
             : p.cameras
         deviceA = p.deviceA
         deviceB = p.deviceB
-        monitorDevice = p.monitorDevice
+        monitorEnabled = p.monitorEnabled
         monitorSource = MonitorSource(rawValue: p.monitorSource) ?? .a
         backupEnabled = p.backupEnabled
         backupRootPath = p.backupRootPath

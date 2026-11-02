@@ -44,9 +44,11 @@ final class AppModel: ObservableObject {
         recorder.channelB.onPicture = { [weak monitor = self.monitor] picture in monitor?.submit(picture, role: .b) }
         recorder.channelA.$format.sink { [weak monitor = self.monitor] f in monitor?.setFormat(f, for: .a) }.store(in: &cancellables)
         recorder.channelB.$format.sink { [weak monitor = self.monitor] f in monitor?.setFormat(f, for: .b) }.store(in: &cancellables)
-        settings.$monitorDevice.combineLatest(settings.$monitorSource, recorder.$outputDevices)
-            .sink { [weak monitor = self.monitor] id, source, devices in
-                monitor?.configure(deviceID: id, source: source, available: devices.contains { $0.identifier == id })
+        // (The output is the first device found with one – the UltraStudio Monitor.)
+        settings.$monitorEnabled.combineLatest(settings.$monitorSource, recorder.$outputDevices)
+            .sink { [weak monitor = self.monitor] enabled, source, devices in
+                let found = devices.first?.identifier
+                monitor?.configure(deviceID: enabled ? (found ?? "not-found") : "", source: source, available: found != nil)
             }
             .store(in: &cancellables)
 
@@ -404,6 +406,9 @@ struct ContentView: View {
                 .keyboardShortcut("w", modifiers: [.command, .shift])
                 .help("Luma waveform over each picture (⇧⌘W)")
             }
+            if settings.monitorEnabled {
+                ToolbarItem(placement: .primaryAction) { monitorMenu }
+            }
             ToolbarItem(placement: .primaryAction) {
                 Button {
                     openWindow(id: "help")
@@ -425,6 +430,33 @@ struct ContentView: View {
                 .help(screensOnly ? "Show all controls (⌘F)" : "Hide everything except the pictures (⌘F)")
             }
         }
+    }
+
+    /// What goes to the Blackmagic monitor (Project settings → Monitor output turns it on).
+    private var monitorMenu: some View {
+        let names = settings.cameraNames
+        let title: String
+        switch settings.monitorSource {
+        case .a: title = "Monitor \(names.a)"
+        case .b: title = "Monitor \(names.b)"
+        case .both: title = "Monitor \(names.a)|\(names.b)"
+        }
+        return Menu {
+            Picker("Show on the monitor", selection: $settings.monitorSource) {
+                Text("Camera \(names.a)").tag(MonitorSource.a)
+                if settings.twoCameras {
+                    Text("Camera \(names.b)").tag(MonitorSource.b)
+                    Text("Both side by side (\(names.a) | \(names.b))").tag(MonitorSource.both)
+                }
+            }
+            .pickerStyle(.inline)
+            Divider()
+            Text(model.monitor.status)
+        } label: {
+            Label(title, systemImage: model.monitor.failed ? "exclamationmark.triangle" : "display")
+                .labelStyle(.titleAndIcon)
+        }
+        .help("What goes to the Blackmagic monitor – \(model.monitor.status)")
     }
 
     /// R → Record, P → Playback, E → Edit (plain keys, ignored while typing in a text field).

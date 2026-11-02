@@ -70,14 +70,17 @@ Rozhranie aplikácie je **v angličtine** (Record / Playback / Slate …); tento
 - V PDF reporte je pod každým klipom riadok na kameru (prepínač **Camera settings** v exporte);
   vtedy je na strane o klip menej (5 na šírku / 7 na výšku).
 
-### Výstup na monitor (Project settings → Monitor output)
-- **Device**: DeckLink zariadenie s video výstupom (napr. **UltraStudio Monitor 3G**, UltraStudio HD Mini) –
-  na jeho SDI/HDMI výstup sa pripojí Blackmagic monitor. UltraStudio Recorder 3G vie len nahrávať, výstup nemá.
-- **Show**: kamera A, kamera B alebo obe vedľa seba (**A | B**, každá na polovicu, čierne pruhy hore a dole).
+### Výstup na monitor (Project settings → Monitor output, tlačidlo Monitor v hornej lište)
+- Na SDI/HDMI výstup **UltraStudio Monitor 3G** sa pripojí Blackmagic monitor. V Project settings sa výstup len zapne
+  („Send the picture to a Blackmagic monitor“) – použije sa prvé nájdené zariadenie s video výstupom
+  (UltraStudio Recorder 3G výstup nemá). Kým nie je pripojené, prepínač sa nedá zapnúť; keď je zapnutý, zariadenie
+  sa použije hneď, ako sa objaví.
+- Čo ide na monitor, sa vyberá tlačidlom **Monitor** v hornej lište (vedľa Waveform, je tam len pri zapnutom výstupe):
+  kamera A, kamera B alebo obe vedľa seba (**A | B**, každá na polovicu, čierne pruhy hore a dole).
 - Na záložke Record ide živý obraz kamier, na Playback prehrávaný klip (pri pauze ostane posledná snímka).
-- Formát výstupu = formát kamier (napr. 1080p25, 8-bit 4:2:2); keď ho zariadenie nevie, ukáže to chybu v nastaveniach.
-- Nastavenie sa ukladá s projektom (`monitorDevice`, `monitorSource` v `PROJECT.JSON`).
-- Neotestované so skutočným výstupným zariadením – obraz (A, B, A | B, 10-bit vstup, Playback) overený len testom bez hardvéru.
+- Formát výstupu = formát kamier (napr. 1080p25, 8-bit 4:2:2); keď ho zariadenie nevie, ukáže chybu (menu Monitor a nastavenia).
+- Ukladá sa s projektom (`monitorEnabled`, `monitorSource` v `PROJECT.JSON`).
+- Neotestované so skutočným UltraStudio Monitor – obraz (A, B, A | B, 10-bit vstup, Playback) overený len testom bez hardvéru.
 
 ### Dočasné vypnutie jednej kamery (Record, ⌥1 / ⌥2)
 - V projekte s dvoma kamerami je nadpis **Camera A / Camera B** nad obrazom tlačidlo so značkou **ON / OFF**. Vypnutá kamera
