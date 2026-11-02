@@ -156,3 +156,26 @@ struct TrailingIconLabelStyle: LabelStyle {
         }
     }
 }
+
+/// BENJONI logo – two mirrored B (drawn as a vector, so it is sharp at any size). Fill it with a color.
+struct BenjoniLogo: Shape {
+    func path(in rect: CGRect) -> Path {
+        // Drawn on the original 294 × 245 artwork: stroke 16, bowls with radius 42, bars 29 apart.
+        let size = CGSize(width: 294, height: 245)
+        let stroke: CGFloat = 16, half = stroke / 2, radius: CGFloat = 42
+        var b = Path()   // right B: bar and two bowls (stroke centre lines)
+        let bar = 169.0
+        b.move(to: CGPoint(x: bar, y: 0))
+        b.addLine(to: CGPoint(x: bar, y: size.height))
+        for (top, bottom) in [(half, 101 - half), (144 + half, size.height - half)] {
+            b.addPath(UnevenRoundedRectangle(bottomTrailingRadius: radius, topTrailingRadius: radius, style: .circular)
+                .path(in: CGRect(x: bar, y: top, width: size.width - half - bar, height: bottom - top)))
+        }
+        var logo = b.strokedPath(StrokeStyle(lineWidth: stroke))
+        logo.addPath(logo.applying(CGAffineTransform(a: -1, b: 0, c: 0, d: 1, tx: 2 * 146.5, ty: 0)))   // left B, mirrored
+
+        let scale = min(rect.width / size.width, rect.height / size.height)
+        let x = rect.midX - size.width * scale / 2, y = rect.midY - size.height * scale / 2
+        return logo.applying(CGAffineTransform(a: scale, b: 0, c: 0, d: scale, tx: x, ty: y))
+    }
+}
