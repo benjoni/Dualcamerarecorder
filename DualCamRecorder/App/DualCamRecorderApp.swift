@@ -273,6 +273,7 @@ struct ContentView: View {
         .onAppear { installTabKeys() }
         #if DEBUG
         .task { await runSnapshotsIfRequested() }
+        .task { await runDiskTestIfRequested() }
         #endif
         .onDisappear {
             if let tabKeyMonitor { NSEvent.removeMonitor(tabKeyMonitor) }
@@ -353,6 +354,7 @@ struct ContentView: View {
                 }
             }
         }
+        .overlay { DiskAlertOverlay(recorder: model.recorder) }
         .sheet(isPresented: $exportingPDF) {
             ExportPDFSheet(library: model.library, settings: settings)
         }
@@ -547,6 +549,49 @@ extension ContentView {
             try? PDFReport.write(clips: clips, production: settings.slate.production, options: options,
                                  to: URL(fileURLWithPath: dir).appendingPathComponent(portrait ? "report_portrait.pdf" : "report.pdf"))
         }
+        exit(0)
+    }
+
+    /// Debug only: `-diskTestProject <name> -diskTestDir <folder>` opens the project, starts recording, writes
+    /// `recording` into the folder and waits for the project's disk to be detached (from outside); then saves
+    /// disk_alert.png and result.txt and quits.
+    @MainActor
+    func runDiskTestIfRequested() async {
+        let args = UserDefaults.standard
+        guard let dir = args.string(forKey: "diskTestDir"), let name = args.string(forKey: "diskTestProject") else { return }
+        let out = URL(fileURLWithPath: dir)
+        try? await Task.sleep(nanoseconds: 2_000_000_000)
+        guard let entry = projects.projects.first(where: { $0.project.name == name }) else { exit(2) }
+        model.open(entry)
+        try? await Task.sleep(nanoseconds: 3_000_000_000)
+        model.recorder.startRecording()
+        try? "\(model.recorder.isRecording) \(model.recorder.errorMessage ?? "")".write(to: out.appendingPathComponent("recording"), atomically: true, encoding: .utf8)
+        if args.integer(forKey: "debugWriteDelay") > 0 {   // slow disk: no detach, pictures during and after the take
+            try? await Task.sleep(nanoseconds: 5_000_000_000)
+            saveWindowPicture(to: out.appendingPathComponent("slow_write.png"))
+            let during = model.recorder.writeWarning ?? "none"
+            model.recorder.stopRecording()
+            try? await Task.sleep(nanoseconds: 3_000_000_000)
+            saveWindowPicture(to: out.appendingPathComponent("slow_after.png"))
+            let stats = [model.recorder.channelA.stats, model.recorder.channelB.stats]
+                .map { "written \($0.framesWritten) dropped(write) \($0.writerDropped)" }
+            try? ([ "during: \(during)", "after: \(model.recorder.writeWarning ?? "none")",
+                    "lastTake: \(model.recorder.lastTakeMessage ?? "")"] + stats)
+                .joined(separator: "\n").write(to: out.appendingPathComponent("result.txt"), atomically: true, encoding: .utf8)
+            exit(0)
+        }
+        for _ in 0..<600 {
+            try? await Task.sleep(nanoseconds: 100_000_000)
+            if let alert = model.recorder.diskAlert, !alert.details.isEmpty, !model.recorder.isRecording { break }
+        }
+        try? await Task.sleep(nanoseconds: 1_000_000_000)
+        saveWindowPicture(to: out.appendingPathComponent("disk_alert.png"))
+        let alert = model.recorder.diskAlert
+        let result = ["alert: \(alert.map { "\($0.volumeName) take \($0.take) after \($0.stoppedAfter)" } ?? "none")",
+                      "state: \(model.recorder.state)", "lastTake: \(model.recorder.lastTakeMessage ?? "")",
+                      "error: \(model.recorder.errorMessage ?? "")", "slate take now: \(settings.slate.take)"]
+            + (alert?.details ?? [])
+        try? result.joined(separator: "\n").write(to: out.appendingPathComponent("result.txt"), atomically: true, encoding: .utf8)
         exit(0)
     }
 

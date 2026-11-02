@@ -84,8 +84,9 @@ final class MovieWriter {
             throw MovieWriterError.cannotCreate(error.localizedDescription)
         }
         writer.metadata = metadata
-        // Fragments keep the file recoverable if the app/computer dies mid-take.
-        writer.movieFragmentInterval = CMTime(seconds: 10, preferredTimescale: 600)
+        // Fragments keep the file recoverable if the app/computer dies or the disk is pulled mid-take
+        // (everything up to the last fragment can be played).
+        writer.movieFragmentInterval = CMTime(seconds: 2, preferredTimescale: 600)
 
         let videoSettings: [String: Any] = [
             AVVideoCodecKey: flavor.codec,
@@ -211,8 +212,11 @@ final class MovieWriter {
 
     func finish(endTime: CMTime?, completion: @escaping (Error?) -> Void) {
         guard sessionStarted, writer.status == .writing else {
-            writer.cancelWriting()
-            try? FileManager.default.removeItem(at: url)
+            // A failed take with frames (disk full / pulled out) keeps its file: it plays up to the last fragment.
+            if writer.status != .failed || videoFramesWritten == 0 {
+                writer.cancelWriting()
+                try? FileManager.default.removeItem(at: url)
+            }
             completion(writer.error ?? MovieWriterError.cannotStart("no frames were written"))
             return
         }

@@ -33,6 +33,7 @@ struct RecordView: View {
         }
         .padding(8)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .overlay(alignment: .top) { WriteWarningBanner(recorder: controller) }
         .background(Color.black)
         .background {
             ZStack {
@@ -63,6 +64,7 @@ struct RecordView: View {
                     ShortcutButton(key: "2", modifiers: [.option]) { controller.toggleCamera(.b) }
                 }
             }
+            WriteWarningBanner(recorder: controller)
             Divider()
             transportBar
             Divider()
@@ -337,6 +339,18 @@ struct CameraScreen: View {
         ZStack(alignment: .topLeading) {
             PreviewView(renderer: channel.preview)
                 .aspectRatio(16.0 / 9.0, contentMode: .fit)
+                // No picture: the BENJONI logo on black instead of an empty / frozen screen.
+                .overlay {
+                    if !channel.hasSource || !channel.hasSignal {
+                        GeometryReader { geo in
+                            BenjoniLogo()
+                                .fill(Color.white.opacity(0.85))
+                                .frame(height: geo.size.height * 0.32)
+                                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        }
+                        .background(Color.black)
+                    }
+                }
                 .clipShape(RoundedRectangle(cornerRadius: 6))
                 // Luma waveform over the lower part of the picture.
                 .overlay {

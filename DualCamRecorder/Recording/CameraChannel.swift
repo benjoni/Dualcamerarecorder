@@ -31,6 +31,8 @@ struct ChannelStats: Equatable {
     var writerDropped = 0         // encoder/disk could not keep up
     var framesWritten = 0
     var noSignalFrames = 0
+    /// Most frames waiting for the writer in the last 0.1 s (0 … 10; 10 = frames are being dropped).
+    var writeBacklog = 0
 
     var totalDropped: Int { inputDropped + writerDropped }
 }
@@ -71,6 +73,7 @@ final class CameraChannel: ObservableObject, VideoSourceDelegate {
     private var qHasSignal = false
     private var lastPublishNanos: UInt64 = 0
     private var lastFrameSize: (width: Int, height: Int)?
+    private var backlogPeak = 0
     private var take: TakeState?
 
     private struct TakeState {
@@ -84,6 +87,10 @@ final class CameraChannel: ObservableObject, VideoSourceDelegate {
         var completion: (ChannelTakeResult) -> Void
         var statsAtStart: ChannelStats
     }
+
+    #if DEBUG
+    private static let debugWriteDelay = useconds_t(max(0, UserDefaults.standard.integer(forKey: "debugWriteDelay")))
+    #endif
 
     init(role: CameraRole) {
         self.role = role
@@ -212,13 +219,19 @@ final class CameraChannel: ObservableObject, VideoSourceDelegate {
 
     private func process(_ frame: CapturedFrame) {
         qStats.framesCaptured += 1
+        backlogPeak = max(backlogPeak, backlog.withLock { $0 })
         qStats.inputDropped += frame.droppedBefore
         if !frame.hasSignal { qStats.noSignalFrames += 1 }
         qHasSignal = frame.hasSignal
         lastFrameSize = (CVPixelBufferGetWidth(frame.pixelBuffer), CVPixelBufferGetHeight(frame.pixelBuffer))
         if let audio = frame.audio { qPeak = max(qPeak, Self.peak(of: audio)) }
 
-        if take != nil { record(frame) }
+        if take != nil {
+            #if DEBUG
+            if Self.debugWriteDelay > 0 { usleep(Self.debugWriteDelay) }   // -debugWriteDelay <µs>: a slow disk
+            #endif
+            record(frame)
+        }
         publishIfNeeded()
     }
 
@@ -297,6 +310,8 @@ final class CameraChannel: ObservableObject, VideoSourceDelegate {
         let now = HostClock.nowNanos
         guard now - lastPublishNanos > 100_000_000 else { return }  // 10 Hz UI updates
         lastPublishNanos = now
+        qStats.writeBacklog = take != nil ? backlogPeak : 0
+        backlogPeak = 0
         let s = qStats
         let signal = qHasSignal
         let db: Float = qPeak > 0 ? 20 * log10(qPeak) : -120

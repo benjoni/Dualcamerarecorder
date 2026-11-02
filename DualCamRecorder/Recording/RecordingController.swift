@@ -10,6 +10,16 @@ import Foundation
 import Combine
 import AppKit
 
+/// Big red warning: the disk being recorded to went away during a take.
+struct DiskAlert: Equatable {
+    var volumeName: String
+    var take: Int
+    var stoppedAfter: TimeInterval
+    var at = Date()
+    /// What was saved where – filled in when the cameras have finished.
+    var details: [String] = []
+}
+
 struct DeviceOption: Identifiable, Hashable {
     let id: String
     let title: String
@@ -42,6 +52,10 @@ final class RecordingController: NSObject, ObservableObject, DLDeviceBrowserDele
     @Published private(set) var marks = TakeMarks()
     /// Slate snapshot of the take being recorded (scene/shot/take frozen at REC).
     @Published private(set) var recordingSlate: SlateInfo?
+    /// The recording disk was disconnected – the take was stopped (shown until OK).
+    @Published private(set) var diskAlert: DiskAlert?
+    /// The disk cannot keep up: shown while recording and after STOP until the next REC.
+    @Published private(set) var writeWarning: String?
 
     let sdkStatus: String
 
@@ -53,6 +67,11 @@ final class RecordingController: NSObject, ObservableObject, DLDeviceBrowserDele
     private var activity: NSObjectProtocol?
     private var recordStartHost: UInt64 = 0
     private var recordFolder: URL?
+    /// Volume of the running take's folder and its name.
+    private var recordVolume: (url: URL, name: String)?
+    private var diskLost = false
+    private var droppedAtLastTick: [CameraRole: Int] = [:]
+    private var unmountObservers: [NSObjectProtocol] = []
 
     init(settings: AppSettings) {
         self.settings = settings
@@ -77,6 +96,15 @@ final class RecordingController: NSObject, ObservableObject, DLDeviceBrowserDele
         channelA.objectWillChange.sink { [weak self] _ in self?.objectWillChange.send() }.store(in: &cancellables)
         channelB.objectWillChange.sink { [weak self] _ in self?.objectWillChange.send() }.store(in: &cancellables)
 
+        // An external disk ejected or pulled out while recording stops the take at once.
+        let workspace = NSWorkspace.shared.notificationCenter
+        for name in [NSWorkspace.willUnmountNotification, NSWorkspace.didUnmountNotification] {
+            unmountObservers.append(workspace.addObserver(forName: name, object: nil, queue: .main) { [weak self] note in
+                guard let url = note.userInfo?[NSWorkspace.volumeURLUserInfoKey] as? URL else { return }
+                self?.volumeWentAway(url)
+            })
+        }
+
         timer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { [weak self] _ in self?.tick() }
         refreshNextTake()
         updateDiskSpace()
@@ -86,6 +114,7 @@ final class RecordingController: NSObject, ObservableObject, DLDeviceBrowserDele
 
     deinit {
         if let activity { ProcessInfo.processInfo.endActivity(activity) }
+        unmountObservers.forEach { NSWorkspace.shared.notificationCenter.removeObserver($0) }
     }
 
     // MARK: - Devices
@@ -263,6 +292,10 @@ final class RecordingController: NSObject, ObservableObject, DLDeviceBrowserDele
         expectedResults = armed.count
         recordStartHost = startHost
         recordFolder = folder
+        recordVolume = Self.volume(of: folder)
+        diskLost = false
+        writeWarning = nil
+        droppedAtLastTick = [:]
         marks = TakeMarks()
         recordingSlate = slate
         state = .recording(take: take, started: Date())
@@ -333,6 +366,15 @@ final class RecordingController: NSObject, ObservableObject, DLDeviceBrowserDele
             lastStartOffsetMs = nil
         }
         let errors = pendingResults.compactMap { r in r.error.map { "Cam\(r.role.rawValue): \($0)" } }
+        // Disk pulled out: slate and IN/OUT go to a rescue folder on this Mac.
+        let saveFolder = diskLost ? Self.rescueFolder(for: recordFolder) : recordFolder
+        if diskLost, let saveFolder {
+            try? FileManager.default.createDirectory(at: saveFolder, withIntermediateDirectories: true)
+        }
+        // A camera recorded when its file has frames (a failed file keeps what reached the disk).
+        let recorded: (CameraRole) -> Bool = { role in
+            self.pendingResults.contains { $0.role == role && ($0.error == nil || $0.framesWritten > 0) }
+        }
         let summary = pendingResults.sorted { $0.role.rawValue < $1.role.rawValue }
             .map { "\($0.url.lastPathComponent) (\($0.framesWritten) frames)" }
             .joined(separator: ", ")
@@ -340,7 +382,7 @@ final class RecordingController: NSObject, ObservableObject, DLDeviceBrowserDele
 
         // Save IN/OUT. The file timeline starts at the first written frame, which is within
         // ½ frame of the common start instant – correct for that small difference.
-        if !marks.isEmpty, let folder = recordFolder, let take = activeTake {
+        if !marks.isEmpty, let folder = saveFolder, let take = activeTake {
             var m = marks
             let firsts = pendingResults.compactMap(\.firstFrameHostNanos)
             if let first = firsts.min() {
@@ -355,13 +397,13 @@ final class RecordingController: NSObject, ObservableObject, DLDeviceBrowserDele
             }
         }
         // Save the slate (note / "good" may have been edited during the take) and advance the take number.
-        if var slate = recordingSlate, let folder = recordFolder, let take = activeTake,
-           pendingResults.contains(where: { $0.error == nil }) {
+        if var slate = recordingSlate, let folder = saveFolder, let take = activeTake,
+           recorded(.a) || recorded(.b) {
             slate.note = settings.slate.note
             slate.good = settings.slate.good
             // Camera clip numbers: a camera that did not record this take is stored as 0.
-            let recordedA = pendingResults.contains { $0.role == .a && $0.error == nil }
-            let recordedB = pendingResults.contains { $0.role == .b && $0.error == nil }
+            let recordedA = recorded(.a)
+            let recordedB = recorded(.b)
             let clipA = slate.cameraClipA
             let clipB = slate.cameraClipB
             if !recordedA { slate.cameraClipA = "" }
@@ -385,10 +427,32 @@ final class RecordingController: NSObject, ObservableObject, DLDeviceBrowserDele
 
             // Script-friendly log of all clips in the project folder.
             let names = settings.cameraNames
-            DispatchQueue.global(qos: .utility).async { ClipLog.rebuild(folder: folder, names: names) }
+            if !diskLost {
+                DispatchQueue.global(qos: .utility).async { ClipLog.rebuild(folder: folder, names: names) }
+            }
         }
         recordingSlate = nil
-        if !errors.isEmpty { errorMessage = errors.joined(separator: "\n") }
+        if diskLost {
+            var details = pendingResults.sorted { $0.role.rawValue < $1.role.rawValue }.map { r in
+                r.framesWritten > 0
+                    ? "\(r.url.lastPathComponent): \(r.framesWritten) frames were sent to the disk – what reached it plays up to about 2 s before the disconnection."
+                    : "\(r.url.lastPathComponent): nothing was written."
+            }
+            if let saveFolder {
+                details.append("Slate and IN/OUT of the take are saved on this Mac in \(saveFolder.path) – copy them into the project folder with the clips.")
+            }
+            details.append("Reconnect the disk (or choose another folder) before the next take.")
+            diskAlert?.details = details
+            lastTakeMessage = "Take stopped – recording disk disconnected"
+        } else if !errors.isEmpty {
+            errorMessage = errors.joined(separator: "\n")
+        }
+        if writeWarning != nil {
+            let lost = pendingResults.sorted { $0.role.rawValue < $1.role.rawValue }
+                .map { "Cam\($0.role.rawValue) lost \(channel($0.role).stats.writerDropped) frames" }
+            writeWarning = "Last take: disk too slow – " + lost.joined(separator: ", ")
+        }
+        diskLost = false
 
         state = .idle
         pendingResults = []
@@ -428,8 +492,75 @@ final class RecordingController: NSObject, ObservableObject, DLDeviceBrowserDele
     private func tick() {
         if case .recording(_, let started) = state {
             elapsed = Date().timeIntervalSince(started)
+            // Fallback for a disk that disappears without an unmount notice.
+            if let folder = recordFolder, !FileManager.default.fileExists(atPath: folder.path) {
+                recordingDiskDisconnected()
+            } else {
+                checkWriteSpeed()
+            }
         }
         updateDiskSpace()
+    }
+
+    // MARK: - Recording disk
+
+    private static func volume(of folder: URL) -> (url: URL, name: String)? {
+        guard let values = try? folder.resourceValues(forKeys: [.volumeURLKey, .volumeNameKey]),
+              let url = values.volume else { return nil }
+        return (url.standardizedFileURL, values.volumeName ?? url.lastPathComponent)
+    }
+
+    /// `~/Movies/DualCamRecorder Rescue/<project folder>` – for the slate of a take whose disk went away.
+    private static func rescueFolder(for folder: URL?) -> URL? {
+        guard let folder else { return nil }
+        let movies = FileManager.default.urls(for: .moviesDirectory, in: .userDomainMask).first
+            ?? FileManager.default.homeDirectoryForCurrentUser
+        return movies.appendingPathComponent("DualCamRecorder Rescue", isDirectory: true)
+            .appendingPathComponent(folder.lastPathComponent, isDirectory: true)
+    }
+
+    private func volumeWentAway(_ url: URL) {
+        guard isRecording, let volume = recordVolume,
+              url.standardizedFileURL.path == volume.url.path, volume.url.path != "/" else { return }
+        recordingDiskDisconnected()
+    }
+
+    /// Stops the take at once and shows the big red warning.
+    func recordingDiskDisconnected() {
+        guard isRecording, !diskLost, let take = activeTake else { return }
+        diskLost = true
+        diskAlert = DiskAlert(volumeName: recordVolume?.name ?? settings.recordFolderURL.lastPathComponent,
+                              take: take, stoppedAfter: elapsed)
+        if case .recording = state { stopRecording() }
+        NSSound(named: "Basso")?.play()
+        NSApp.activate(ignoringOtherApps: true)
+    }
+
+    func dismissDiskAlert() {
+        diskAlert = nil
+        updateDiskSpace()
+    }
+
+    /// Frames waiting for the writer or dropped by it while recording = the disk is too slow.
+    private func checkWriteSpeed() {
+        var problems: [String] = []
+        for role in CameraRole.allCases where channel(role).isRecording {
+            let stats = channel(role).stats
+            let newDrops = stats.writerDropped - (droppedAtLastTick[role] ?? 0)
+            droppedAtLastTick[role] = stats.writerDropped
+            if newDrops > 0 {
+                problems.append("Cam\(role.rawValue) lost \(stats.writerDropped) frames")
+            } else if stats.writeBacklog >= 5 {
+                problems.append("Cam\(role.rawValue) is falling behind")
+            }
+        }
+        guard !problems.isEmpty else { return }
+        writeWarning = "Disk too slow – " + problems.joined(separator: ", ")
+    }
+
+    func dismissWriteWarning() {
+        guard !isRecording else { return }
+        writeWarning = nil
     }
 
     private func updateDiskSpace() {

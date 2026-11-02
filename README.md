@@ -29,6 +29,20 @@ Rozhranie aplikácie je **v angličtine** (Record / Playback / Slate …); tento
   skryje (súbory ostanú); 🔍 ho ukáže vo Finderi.
 - Tlačidlo **Projects** v lište sa vráti na úvod (nie počas nahrávania).
 
+### Obraz bez signálu
+- Kamera bez vstupu (Unassigned) alebo bez signálu (No signal) ukazuje namiesto čierneho / zamrznutého
+  obrazu logo BENJONI (kreslené vektorovo, `BenjoniLogo` v `Components.swift`).
+
+### Strážca nahrávacieho disku
+- Ak sa disk, na ktorý sa nahráva, počas záberu odpojí (vytiahnutý kábel, Eject), záber sa **okamžite
+  zastaví** a cez celé okno sa ukáže veľké červené **Recording disk disconnected** (so zvukom).
+  Súbory sa zapisujú po 2 s fragmentoch – čo sa dostalo na disk, sa dá prehrať. Slate a IN/OUT sa
+  uložia do `~/Movies/DualCamRecorder Rescue/<projekt>/` (treba ich prekopírovať k súborom).
+- Keď disk nestíha (snímky čakajú na zápis alebo sa zahadzujú), pod obrazmi sa ukáže oranžové
+  **Disk too slow – CamA lost N frames**; po STOP ostane ako „Last take: …“ do ďalšieho REC (✕ ho skryje).
+- Overené na obraze disku (`hdiutil detach -force` počas záberu) a s umelo spomaleným zápisom
+  (Debug `-debugWriteDelay <µs>`); s reálnym USB/Thunderbolt diskom zatiaľ nie.
+
 ### Záloha na druhý disk (Project settings → Backup copy)
 - Zapni **Copy clips to a second disk after every take** a vyber disk/priečinok – vytvorí sa v ňom
   priečinok s **názvom projektu**.

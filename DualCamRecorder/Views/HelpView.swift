@@ -69,10 +69,17 @@ struct HelpView: View {
                     term("EDIT.JSON", "The edit – all sequences – saved in the project folder")
                 }
 
+                section("Recording disk") {
+                    sign(Label("Recording disk disconnected", systemImage: "externaldrive.badge.xmark").foregroundStyle(.red).fontWeight(.bold),
+                         "The disk was pulled out or ejected during a take: the take stops at once. What reached the disk plays (up to about 2 s before); slate and IN/OUT are saved in Movies › DualCamRecorder Rescue – copy them to the clips")
+                    sign(Label("Disk too slow", systemImage: "exclamationmark.triangle.fill").foregroundStyle(.orange).fontWeight(.bold),
+                         "Under the pictures: the disk cannot save the frames in time (frames are lost). After STOP it stays as “Last take: …” until the next REC. Use a faster disk (SSD) or ProRes 422 LT")
+                }
+
                 section("Badges and symbols") {
                     sign(Badge(text: "● REC", color: .red), "Camera is recording (red frame around the picture)")
-                    sign(Badge(text: "Unassigned", color: .gray), "No input chosen for this camera – Project settings")
-                    sign(Badge(text: "No signal", color: .orange), "Input chosen, but no picture is coming in")
+                    sign(Badge(text: "Unassigned", color: .gray), "No input chosen for this camera – Project settings (the screen shows the BENJONI logo)")
+                    sign(Badge(text: "No signal", color: .orange), "Input chosen, but no picture is coming in – the screen shows the BENJONI logo")
                     sign(onOff, "Camera on / off – click the title (⌥1 / ⌥2)")
                     sign(Text("Only B records").foregroundStyle(.orange), "One camera is switched off")
                     sign(Badge(text: "LATEST", color: .blue), "The newest clip")
@@ -97,7 +104,7 @@ struct HelpView: View {
                 section("Numbers") {
                     term("Captured / Written", "Frames received from the camera / frames saved to the file")
                     term("Dropped (input)", "Frames the camera input lost – red when above 0")
-                    term("Dropped (write)", "Frames the disk could not save in time – red when above 0")
+                    term("Dropped (write)", "Frames the disk could not save in time – red when above 0 (also the orange “Disk too slow”)")
                     term("Start offset B−A", "After STOP: how much later camera B started than camera A, in milliseconds")
                     term("A/B out of sync", "Playback: the two clips drifted apart by more than one frame")
                     term("IN · OUT · DUR", "Marked points and the length between them")
