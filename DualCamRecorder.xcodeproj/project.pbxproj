@@ -6,6 +6,7 @@
 	objectVersion = 56;
 	objects = {
 /* Begin PBXBuildFile section */
+		223B6DEEA9F5601207F903DD /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = D3C39FC67874F521555F0401 /* Assets.xcassets */; };
 		0EB300BCE1A456A16C129D71 /* AppSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 65B2A27984C255B7C483E047 /* AppSettings.swift */; };
 		48FCDAA4CAF4337EB0D7D93D /* BackupManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = F26B18EEDBBAC2D21DB1389B /* BackupManager.swift */; };
 		3D6B891F11CC0CE302C654E7 /* DualCamRecorderApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 01DEF721423275B1A7F6323A /* DualCamRecorderApp.swift */; };
@@ -56,6 +57,7 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		D3C39FC67874F521555F0401 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		65B2A27984C255B7C483E047 /* AppSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppSettings.swift; sourceTree = "<group>"; };
 		F26B18EEDBBAC2D21DB1389B /* BackupManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackupManager.swift; sourceTree = "<group>"; };
 		01DEF721423275B1A7F6323A /* DualCamRecorderApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DualCamRecorderApp.swift; sourceTree = "<group>"; };
@@ -135,6 +137,7 @@
 				26432D7ACCDE6A80CAE3E2B1 /* Preview */,
 				A2B6AD46AD5B1EB0037ED029 /* Recording */,
 				4EB27E3FD8D0E961E5FF5146 /* Views */,
+				D3C39FC67874F521555F0401 /* Assets.xcassets */,
 			);
 			path = DualCamRecorder;
 			sourceTree = "<group>";
@@ -327,6 +330,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				223B6DEEA9F5601207F903DD /* Assets.xcassets in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -445,6 +449,7 @@
 		B373EA90B6F23CCAEDAF6FEE /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "-";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
@@ -477,6 +482,7 @@
 		03DD51312A9DE8E4A570DD7D /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "-";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;

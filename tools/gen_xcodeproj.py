@@ -22,6 +22,8 @@ SOURCE_EXT = {".swift": "sourcecode.swift", ".mm": "sourcecode.cpp.objcpp", ".m"
               ".cpp": "sourcecode.cpp.cpp"}
 HEADER_EXT = {".h": "sourcecode.c.h"}
 OTHER_EXT = {".plist": "text.plist.xml", ".entitlements": "text.plist.entitlements", ".md": "net.daringfireball.markdown"}
+# Copied into the app (the asset catalog holds the app icon).
+RESOURCE_EXT = {".xcassets": "folder.assetcatalog"}
 
 
 def oid(*parts):
@@ -39,10 +41,12 @@ def collect():
     tree = {}  # dir -> (subdirs, files)
     base = os.path.join(ROOT, SRC_DIR)
     for dirpath, dirnames, filenames in os.walk(base):
-        dirnames[:] = sorted(d for d in dirnames if not d.startswith("."))
+        # Asset catalogs are one item, not a group.
+        catalogs = [d for d in dirnames if os.path.splitext(d)[1] in RESOURCE_EXT]
+        dirnames[:] = sorted(d for d in dirnames if not d.startswith(".") and d not in catalogs)
         rel = os.path.relpath(dirpath, ROOT)
-        files = sorted(f for f in filenames if not f.startswith(".")
-                       and os.path.splitext(f)[1] in {**SOURCE_EXT, **HEADER_EXT, **OTHER_EXT})
+        files = sorted([f for f in filenames if not f.startswith(".")
+                        and os.path.splitext(f)[1] in {**SOURCE_EXT, **HEADER_EXT, **OTHER_EXT}] + catalogs)
         tree[rel] = (dirnames, files)
     return tree
 
@@ -51,6 +55,7 @@ def main():
     tree = collect()
     objects = []
     sources_build = []
+    resources_build = []
     file_refs = {}
 
     def add(section_lines):
@@ -63,7 +68,7 @@ def main():
         for f in files:
             path = os.path.join(d, f)
             ext = os.path.splitext(f)[1]
-            ftype = SOURCE_EXT.get(ext) or HEADER_EXT.get(ext) or OTHER_EXT.get(ext)
+            ftype = SOURCE_EXT.get(ext) or HEADER_EXT.get(ext) or OTHER_EXT.get(ext) or RESOURCE_EXT.get(ext)
             ref = oid("ref", path)
             file_refs[path] = ref
             file_ref_lines.append(
@@ -72,6 +77,10 @@ def main():
                 bf = oid("build", path)
                 build_files.append(f"\t\t{bf} /* {f} in Sources */ = {{isa = PBXBuildFile; fileRef = {ref} /* {f} */; }};")
                 sources_build.append((bf, f))
+            elif ext in RESOURCE_EXT:
+                bf = oid("build", path)
+                build_files.append(f"\t\t{bf} /* {f} in Resources */ = {{isa = PBXBuildFile; fileRef = {ref} /* {f} */; }};")
+                resources_build.append((bf, f))
 
     fw_build = []
     for fw in FRAMEWORKS:
@@ -179,6 +188,7 @@ def main():
         "MARKETING_VERSION": "1.0",
         "CURRENT_PROJECT_VERSION": "1",
         "GENERATE_INFOPLIST_FILE": "YES",
+        "ASSETCATALOG_COMPILER_APPICON_NAME": "AppIcon",
         "INFOPLIST_KEY_CFBundleDisplayName": "DualCamRecorder",
         "INFOPLIST_KEY_LSApplicationCategoryType": "public.app-category.video",
         "INFOPLIST_KEY_NSHumanReadableCopyright": "",
@@ -227,7 +237,9 @@ def main():
                f"\t\t\tmainGroup = {main_group};\n\t\t\tproductRefGroup = {products_group} /* Products */;\n\t\t\tprojectDirPath = \"\";\n\t\t\tprojectRoot = \"\";\n"
                f"\t\t\ttargets = (\n\t\t\t\t{target} /* {PROJECT} */,\n\t\t\t);\n\t\t}};\n/* End PBXProject section */\n")
     out.append("\n/* Begin PBXResourcesBuildPhase section */\n"
-               f"\t\t{resources_phase} /* Resources */ = {{\n\t\t\tisa = PBXResourcesBuildPhase;\n\t\t\tbuildActionMask = 2147483647;\n\t\t\tfiles = (\n\t\t\t);\n\t\t\trunOnlyForDeploymentPostprocessing = 0;\n\t\t}};\n"
+               f"\t\t{resources_phase} /* Resources */ = {{\n\t\t\tisa = PBXResourcesBuildPhase;\n\t\t\tbuildActionMask = 2147483647;\n\t\t\tfiles = (\n" +
+               "".join(f"\t\t\t\t{bf} /* {f} in Resources */,\n" for bf, f in resources_build) +
+               "\t\t\t);\n\t\t\trunOnlyForDeploymentPostprocessing = 0;\n\t\t};\n"
                "/* End PBXResourcesBuildPhase section */\n")
     out.append("\n/* Begin PBXSourcesBuildPhase section */\n"
                f"\t\t{sources_phase} /* Sources */ = {{\n\t\t\tisa = PBXSourcesBuildPhase;\n\t\t\tbuildActionMask = 2147483647;\n\t\t\tfiles = (\n" +

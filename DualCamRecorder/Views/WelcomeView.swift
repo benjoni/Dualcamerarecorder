@@ -57,14 +57,17 @@ struct WelcomeView: View {
 
     private var sidebar: some View {
         VStack(alignment: .leading, spacing: 18) {
-            VStack(alignment: .leading, spacing: 6) {
-                Image(systemName: "video.badge.waveform")
-                    .font(.system(size: 44))
-                    .foregroundStyle(.red)
+            VStack(alignment: .center, spacing: 6) {
+                Image(nsImage: NSApp.applicationIconImage)   // the app icon (Assets.xcassets)
+                    .resizable()
+                    .frame(width: 96, height: 96)
+                    .padding(-12)   // the icon has a transparent margin
                 Text("DualCamRecorder").font(.largeTitle.weight(.bold))
                 Text("Two-camera SDI recording and synced playback")
                     .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
             }
+            .frame(maxWidth: .infinity)
             .padding(.top, 30)
 
             Button {
