@@ -86,8 +86,8 @@ struct SlateInfo: Codable, Hashable {
         if !cameraClipA.isEmpty { clips.append("A " + cameraClipA) }
         if !cameraClipB.isEmpty { clips.append("B " + cameraClipB) }
         if !clips.isEmpty { lines.append("Camera clip: " + clips.joined(separator: " / ")) }
-        if !setupA.isEmpty { lines.append("Camera A setup: " + setupA.summary) }
-        if !setupB.isEmpty { lines.append("Camera B setup: " + setupB.summary) }
+        if !setupA.isEmpty { lines.append("Camera A settings: " + setupA.summary) }
+        if !setupB.isEmpty { lines.append("Camera B settings: " + setupB.summary) }
         if !note.isEmpty { lines.append("Note: \(note)") }
         return lines.joined(separator: "\n")
     }

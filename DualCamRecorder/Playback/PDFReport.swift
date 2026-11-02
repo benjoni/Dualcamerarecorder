@@ -501,7 +501,7 @@ struct ExportPDFSheet: View {
                 .pickerStyle(.segmented)
                 Toggle("Include pictures (middle of each clip)", isOn: $includePictures)
                 Toggle("Only good takes (★)", isOn: $onlyGood)
-                Toggle("Camera setup (lens, stop, distance, height, tilt …)", isOn: $includeSetup)
+                Toggle("Camera settings (lens, stop, distance, height, tilt …)", isOn: $includeSetup)
                     .disabled(!selectedHaveSetup)
                 LabeledContent("Clips") {
                     Text("\(selectedCount) clip\(selectedCount == 1 ? "" : "s") · \(previewOptions.rowsPerPage) per page")

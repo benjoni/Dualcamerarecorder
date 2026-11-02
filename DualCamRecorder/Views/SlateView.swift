@@ -279,6 +279,13 @@ struct SlatePanel: View {
                          ? "Scene / shot / take are locked while recording – note and “good take” can still be changed."
                          : "Take goes up by 1 after each recording; changing scene or shot resets it to 1.")
                         .font(.callout).foregroundStyle(.secondary)
+                    Toggle(isOn: $settings.showCameraSetup) {
+                        Label("Camera Settings", systemImage: "camera.aperture")
+                    }
+                    .toggleStyle(.button)
+                    .fixedSize()
+                    .padding(.leading, 8)
+                    .help("Shows lens, stop, distance, height, tilt … under both cameras – saved with every clip and printed in the PDF report")
                 }
                 SlateFields(slate: $settings.slate,
                             locked: controller.slateLocked,

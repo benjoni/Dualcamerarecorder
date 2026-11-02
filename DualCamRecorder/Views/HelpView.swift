@@ -65,7 +65,7 @@ struct HelpView: View {
                     sign(HStack(spacing: 6) { Text("A").foregroundStyle(.green); Text("–") }, "Clip list: file of camera A exists, camera B was off")
                     sign(Text("MOS").fontWeight(.semibold), "Slate mark “without sound” – sound is still recorded (Audio Off in Project settings)")
                     sign(Text("INT / EXT · DAY / NIGHT").fontWeight(.semibold), "Slate marks for the clip log and the PDF report")
-                    sign(Label("Setup", systemImage: "camera.aperture"), "Record: camera setup fields – lens, stop, distance, height, tilt, filter, ISO, shutter, WB. Kept for the next takes, saved with every clip, in the PDF report")
+                    sign(Label("Camera Settings", systemImage: "camera.aperture"), "Record (next to Slate): camera settings under both cameras – lens, stop, distance, height, tilt, filter, ISO, shutter, WB. Kept for the next takes, saved with every clip, in the PDF report")
                 }
 
                 section("Numbers") {

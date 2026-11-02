@@ -256,12 +256,6 @@ struct CameraPanel: View {
                         onDecrement: { cameraClipBinding.wrappedValue = CameraClipID.previous(cameraClipBinding.wrappedValue) })
                     .labelsHidden()
                     .disabled(controller.isRecording)
-                Toggle(isOn: $settings.showCameraSetup) {
-                    Label("Setup", systemImage: "camera.aperture")
-                }
-                .toggleStyle(.button)
-                .fixedSize()
-                .help("Camera setup – lens, stop, distance, height, tilt … saved with every clip and printed in the PDF report")
             }
             .frame(maxWidth: pictureWidth ?? .infinity)
 
@@ -410,7 +404,7 @@ struct CameraSetupFields: View {
             }
         }
         .disabled(locked)
-        .help(locked ? "Camera setup is locked while recording" : "Camera setup – kept for the next takes, saved with the clip, printed in the PDF report")
+        .help(locked ? "Camera settings are locked while recording" : "Camera settings – kept for the next takes, saved with the clip, printed in the PDF report")
     }
 
     private func row(_ range: Range<Int>, clear: Bool) -> some View {
@@ -429,7 +423,7 @@ struct CameraSetupFields: View {
             if clear {
                 Button { setup = CameraSetup() } label: { Image(systemName: "xmark.circle") }
                     .buttonStyle(.borderless)
-                    .help("Clear the camera setup")
+                    .help("Clear the camera settings")
                     .disabled(locked || setup.isEmpty)
                     .padding(.bottom, 3)
             }

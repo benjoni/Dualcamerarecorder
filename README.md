@@ -58,14 +58,14 @@ Rozhranie aplikácie je **v angličtine** (Record / Playback / Slate …); tento
 - Čítanie skriptom, napr. `exiftool -Keys:All A007_S12_SH3B_T04.MOV` alebo priamo CSV.
 - V Playback → **Edit slate…** sa dajú hodnoty dodatočne opraviť.
 
-### Nastavenia kamery (Record → Setup)
-- Tlačidlo **Setup** v riadku nad obrazom kamery zapne/vypne pod oboma obrazmi polia
+### Nastavenia kamery (Record → Camera Settings)
+- Jedno tlačidlo **Camera Settings** v riadku **Slate** zapne/vypne pod oboma obrazmi polia
   **Lens, Stop, Distance, Height, Tilt, Filter, ISO, Shutter, WB** (voľný text, jednotky podľa štábu).
 - Hodnoty ostávajú pre ďalšie zábery, kým ich nezmeníš (**Clear** vymaže); počas nahrávania sú zamknuté.
 - Ukladajú sa ku klipu: `C007_SLATE.JSON` → `setupA`, `setupB` (kamera, ktorá nenahrávala, ostane prázdna),
   metadáta `.MOV` (kľúč `sk.dualcam.camera-setup` + riadok v popise), stĺpec `camera_setup` v `CLIPLOG.CSV`.
 - V Playback sa zobrazia pod názvom súboru kamery, opraviť ich ide cez **Edit slate…**; vyhľadávanie ich prehľadáva.
-- V PDF reporte je pod každým klipom riadok na kameru (prepínač **Camera setup** v exporte);
+- V PDF reporte je pod každým klipom riadok na kameru (prepínač **Camera settings** v exporte);
   vtedy je na strane o klip menej (5 na šírku / 7 na výšku).
 
 ### Dočasné vypnutie jednej kamery (Record, ⌥1 / ⌥2)
