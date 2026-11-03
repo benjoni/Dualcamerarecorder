@@ -68,6 +68,8 @@ struct HelpView: View {
                     key("⌫", "Remove the selected piece – the recording stays")
                     key("⌘Z", "Undo the last change")
                     term("Edges", "Drag the left / right edge of a piece to move its IN / OUT")
+                    term("Delete clip", "Playback: Delete clip… (⌘⌫) or right-click in the clip list – both camera files, the slate and IN / OUT go to the Trash (they can be put back). The confirmation names the sequences that use the clip")
+                    term("Playhead", "Click or drag on the ruler above the pieces (or on the empty part of the timeline) – the playhead follows the mouse; grab the red handle or line to drag it, also over the pieces")
                     term("Sequences", "Right side: several cut passages – New starts an empty one. Click shows it on the timeline, double-click renames, right-click: Rename / Duplicate / Delete (the last one is only cleared). Clips are added to the sequence shown; Undo works within it")
                     term("Export MOV…", "The sequence shown, file name <project>_<sequence>.mov; “Clip info in picture” burns in clip and camera")
                     term("EDIT.JSON", "The edit – all sequences – saved in the project folder")

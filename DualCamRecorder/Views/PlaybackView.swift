@@ -17,6 +17,9 @@ struct PlaybackView: View {
     @State private var scrubValue: Double = 0
     @State private var isScrubbing = false
     @State private var editingSlate = false
+    /// Clip waiting for "Move to Trash" in the confirmation.
+    @State private var deletingTake: Take?
+    @State private var deleteError: String?
     /// Clip list search (scene, shot, take, file, cam clip, note, "good", "mos" …).
     @State private var searchText = ""
     /// While typing in the search field, single-key shortcuts (space, I, O, arrows) are switched off.
@@ -81,6 +84,7 @@ struct PlaybackView: View {
                     .aspectRatio(16.0 / 9.0, contentMode: .fit)
                     .overlay { FrameMaskOverlay(mask: settings.maskA) }
                     .overlay { if settings.showWaveform { WaveformOverlay(model: player.waveformA) } }
+                    .overlay { timecodeBadge(.a) }
                     .clipShape(RoundedRectangle(cornerRadius: 6))
             }
             if showCameraB {
@@ -88,6 +92,7 @@ struct PlaybackView: View {
                     .aspectRatio(16.0 / 9.0, contentMode: .fit)
                     .overlay { FrameMaskOverlay(mask: settings.maskB) }
                     .overlay { if settings.showWaveform { WaveformOverlay(model: player.waveformB) } }
+                    .overlay { timecodeBadge(.b) }
                     .clipShape(RoundedRectangle(cornerRadius: 6))
             }
         }
@@ -272,6 +277,9 @@ struct PlaybackView: View {
                             }
                             .padding(.vertical, 2)
                             .tag(take.id)
+                            .contextMenu {
+                                Button("Move to Trash…", role: .destructive) { deletingTake = take }
+                            }
                         }
                     }
                 }
@@ -292,6 +300,7 @@ struct PlaybackView: View {
                 if available && settings.showWaveform {
                     WaveformOverlay(model: waveform)
                 }
+                if available { timecodeBadge(role) }
                 if !available {
                     Text(player.take == nil ? "Select a clip" : "File missing").foregroundStyle(.secondary)
                 }
@@ -310,7 +319,7 @@ struct PlaybackView: View {
             .textSelection(.enabled)
             // Timecode and camera settings lines are always there (empty when missing) – both screens the same size.
             Group {
-                if available, let tc = player.slate?.timecode(role) {
+                if available, let tc = player.timecodeRange(role) {
                     // Camera timecode at the play position, and of the file's first / last frame.
                     HStack(spacing: 14) {
                         Text("TC " + tc.at(seconds: isScrubbing ? scrubValue : player.currentTime,
@@ -334,6 +343,22 @@ struct PlaybackView: View {
                 .help(setup?.summary ?? "")
         }
         .frame(maxWidth: .infinity)
+    }
+
+    /// Camera timecode at the play position in the picture's corner, like on the Record tab.
+    @ViewBuilder
+    private func timecodeBadge(_ role: CameraRole) -> some View {
+        if let tc = player.timecodeRange(role) {
+            Text(tc.at(seconds: isScrubbing ? scrubValue : player.currentTime,
+                       frameDuration: player.frameDuration.seconds).string)
+                .font(.system(.title3, design: .monospaced).weight(.semibold))
+                .foregroundStyle(.white)
+                .padding(.horizontal, 6).padding(.vertical, 2)
+                .background(Color.black.opacity(0.6), in: RoundedRectangle(cornerRadius: 4))
+                .padding(8)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
+                .allowsHitTesting(false)
+        }
     }
 
     /// Thin bar under the slider showing the IN–OUT range.
@@ -386,6 +411,19 @@ struct PlaybackView: View {
             infoBlock
         }
         .frame(maxWidth: .infinity)
+        .alert(deletingTake.map { "Delete \($0.name)\($0.slate.map { " · " + $0.shortLabel } ?? "")?" } ?? "",
+               isPresented: Binding(get: { deletingTake != nil }, set: { if !$0 { deletingTake = nil } }),
+               presenting: deletingTake) { take in
+            Button("Move to Trash", role: .destructive) { delete(take) }
+            Button("Cancel", role: .cancel) {}
+        } message: { take in
+            Text(deleteMessage(take))
+        }
+        .alert("Could not delete the clip", isPresented: Binding(get: { deleteError != nil }, set: { if !$0 { deleteError = nil } })) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text(deleteError ?? "")
+        }
         .sheet(isPresented: $editingSlate) {
             SlateEditSheet(slate: player.slate ?? SlateInfo(),
                            takeName: player.take?.name ?? "",
@@ -474,6 +512,42 @@ struct PlaybackView: View {
             }
             .toggleStyle(SegmentToggleStyle(width: 160, minHeight: 40))
             Button("Edit slate…") { editingSlate = true }
+            Button(role: .destructive) { deletingTake = player.take } label: {
+                Label("Delete clip…", systemImage: "trash")
+            }
+            .keyboardShortcut(shortcut(.delete, [.command]))
+            .help("Move both camera files of this clip and its slate to the Trash (⌘⌫)")
+        }
+    }
+
+    /// Files that go to the Trash, and the sequences that use the clip.
+    private func deleteMessage(_ take: Take) -> String {
+        let names = TakeLibrary.files(of: take).map(\.lastPathComponent).joined(separator: ", ")
+        var text = "These files go to the Trash (they can be put back from there): \(names)."
+        let used = timeline.sequences.filter { $0.segments.contains { $0.take == take.number } }.map(\.name)
+        if !used.isEmpty {
+            text += " The clip is used in the edit (\(used.joined(separator: ", "))) – those pieces will be missing."
+        }
+        return text
+    }
+
+    /// Moves the clip to the Trash, rewrites CLIPLOG.CSV and selects the clip next to it.
+    private func delete(_ take: Take) {
+        let order = visibleTakes
+        let index = order.firstIndex { $0.id == take.id }
+        let next = index.flatMap { i in order.indices.contains(i + 1) ? order[i + 1] : (i > 0 ? order[i - 1] : nil) }
+        if player.take?.id == take.id { player.load(nil) }
+        do {
+            try library.moveToTrash(take)
+        } catch {
+            deleteError = error.localizedDescription
+            library.refresh()
+            return
+        }
+        selection = next?.id
+        if let folder = take.folder {
+            let names = settings.cameraNames
+            DispatchQueue.global(qos: .utility).async { ClipLog.rebuild(folder: folder, names: names) }
         }
     }
 

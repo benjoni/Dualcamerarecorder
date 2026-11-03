@@ -125,7 +125,8 @@ Rozhranie aplikácie je **v angličtine** (Record / Playback / Slate …); tento
 - Zapisuje sa do nahratého MOV ako **timecode stopa** (od timecodu prvej snímky, súvisle ďalej) –
   Resolve / Premiere / Avid / FCP nájdu zdrojový timecode. Overené `ffprobe` (stopa `tmcd`, tag timecode).
 - **TC IN – TC OUT** každého súboru je v slate (C###_SLATE.JSON), v CLIPLOG.CSV (`tc_in`, `tc_out`), v PDF reporte
-  a v Playback (aj timecode na aktuálnej pozícii). Drop-frame (29.97 / 59.94) sa počíta správne.
+  a v Playback (timecode na aktuálnej pozícii aj v rohu obrazu ako v Record; keď ho slate nemá, číta sa
+  z timecode stopy súboru). Drop-frame (29.97 / 59.94) sa počíta správne.
 - Pod časomierou: **TC A / B in sync** alebo „B 3 frames behind A“ (porovnanie v rovnakom okamihu, ±1 snímka je bežná).
 - **CAM REC / CAM STBY** vpravo hore = nahráva kamera sama. Zisťuje sa z príznaku nahrávania v SDI
   (RP188 record trigger), z **user bits timecodu pri kamerách Blackmagic** (Pyxis, URSA, Pocket: bit 0x08 = REC –
@@ -259,8 +260,13 @@ Rozhranie aplikácie je **v angličtine** (Record / Playback / Slate …); tento
 - V záložke **Edit** je vľavo **zoznam klipov** (Clips, ⌘L) s vyhľadávaním, kde má každá kamera klipu
   vlastný riadok (Clip 014 · Camera A, Clip 014 · Camera D). **+**, dvojklik alebo ↵ pridá riadok na koniec
   timeline – s IN / OUT v tej dĺžke, inak celý klip.
+- **Zmazanie klipu** v Playback: „Delete clip…“ (⌘⌫) alebo pravý klik v zozname → Move to Trash. Oba súbory
+  kamier, slate a IN / OUT idú do Koša (dajú sa vrátiť), CLIPLOG.CSV sa prepíše; ak je klip v strihu,
+  potvrdenie napíše v ktorých sekvenciách (tie úseky budú chýbať).
 - **Edit** prehrá celú timeline ako jeden film (medzerník, ← / → po snímke, ↑ / ↓ predchádzajúci /
   nasledujúci úsek, klik do timeline = skok). Nad tlačidlami je popis úseku pod playheadom.
+- **Playhead myšou:** klik alebo ťahanie po pravítku nad úsekmi (aj po prázdnej časti timeline) ho dá
+  pod myš, červený úchyt / čiaru sa dá chytiť a ťahať aj ponad úseky; obraz sa ukazuje počas ťahania.
 - Na timeline: klik vyberie úsek, **ťahanie úseku** zmení poradie (aj ⌥← / ⌥→), **ťahanie okraja**
   posunie IN / OUT (nie za koniec klipu), pri vybranom úseku sa dá prepnúť **Camera A / B**,
   **Remove** (⌫) ho vyhodí, **Undo** (⌘Z) vráti poslednú zmenu. Zoom posuvníkom.

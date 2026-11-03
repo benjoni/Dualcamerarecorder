@@ -149,6 +149,24 @@ final class TakeLibrary: ObservableObject {
         return groups
     }
 
+    /// Files of a clip: both camera movies, its slate and its IN / OUT marks (those that exist).
+    static func files(of take: Take) -> [URL] {
+        var urls = [take.camA, take.camB].compactMap { $0 }
+        if let folder = take.folder {
+            urls += [TakeSlateStore.url(folder: folder, take: take.number), TakeMarksStore.url(folder: folder, take: take.number)]
+        }
+        return urls.filter { FileManager.default.fileExists(atPath: $0.path) }
+    }
+
+    /// Moves all files of the clip to the Trash (they can be put back from there) and re-scans the folder.
+    func moveToTrash(_ take: Take) throws {
+        for url in Self.files(of: take) {
+            try FileManager.default.trashItem(at: url, resultingItemURL: nil)
+        }
+        takes.removeAll { $0.id == take.id }
+        refresh()
+    }
+
     /// Most recently recorded clip (highest clip number), regardless of the sort order.
     var latestTake: Take? { takes.max { $0.number < $1.number } }
 

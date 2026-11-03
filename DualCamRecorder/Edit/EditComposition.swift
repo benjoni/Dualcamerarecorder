@@ -243,6 +243,15 @@ final class EditPlayer: ObservableObject {
         player.seek(to: t, toleranceBefore: .zero, toleranceAfter: .zero)
     }
 
+    /// While the playhead is dragged with the mouse: a fast, approximate seek (the exact frame follows with
+    /// `seek(to:)` when the mouse is let go).
+    func scrub(to seconds: Double) {
+        let t = CMTime(seconds: min(max(0, seconds), duration), preferredTimescale: 60000)
+        currentTime = t.seconds
+        let tolerance = CMTime(seconds: 0.1, preferredTimescale: 600)
+        player.seek(to: t, toleranceBefore: tolerance, toleranceAfter: tolerance)
+    }
+
     /// Playhead to the start of a piece – after a move the picture shows the moved piece, not what slid into its old place.
     /// (The rebuilt movie keeps this position.)
     func seekToStart(of id: TimelineSegment.ID, in timeline: EditTimeline) {

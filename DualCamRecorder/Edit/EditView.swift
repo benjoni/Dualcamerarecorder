@@ -150,7 +150,7 @@ struct EditView: View {
                 .font(.title3)
 
             TimelineStrip(timeline: timeline, edit: edit, selection: $selection, zoom: zoom)
-                .frame(height: 96)
+                .frame(height: 116)
 
             HStack(spacing: 10) {
                 Text("Zoom").foregroundStyle(.secondary)
@@ -362,7 +362,8 @@ struct EditView: View {
 
 // MARK: - Timeline strip
 
-/// Pieces as blocks (width = length), playhead, click to seek, drag to move, edges to trim.
+/// Pieces as blocks (width = length), playhead, click to seek, drag to move, edges to trim. The playhead is
+/// moved with the mouse on the ruler above the blocks, by its handle, or on the empty part of the strip.
 struct TimelineStrip: View {
     @ObservedObject var timeline: EditTimeline
     @ObservedObject var edit: EditPlayer
@@ -372,6 +373,11 @@ struct TimelineStrip: View {
     @State private var dragging: TimelineSegment.ID?
     @State private var dragOffset: CGFloat = 0
     @State private var trimStart: (inPoint: Double, outPoint: Double)?
+    /// The playhead is being dragged with the mouse.
+    @State private var scrubbing = false
+
+    private static let rulerHeight: CGFloat = 20
+    private static let space = "timelineContent"
 
     var body: some View {
         GeometryReader { geo in
@@ -379,30 +385,100 @@ struct TimelineStrip: View {
             let pps = CGFloat(Double(geo.size.width - 24) / total * zoom)
             ScrollView(.horizontal) {
                 ZStack(alignment: .topLeading) {
+                    // Empty part of the strip: click or drag moves the playhead.
                     Rectangle()
                         .fill(Color.gray.opacity(0.12))
                         .contentShape(Rectangle())
-                        .onTapGesture(coordinateSpace: .local) { p in
-                            edit.pause()
-                            edit.seek(to: Double(p.x / pps))
-                            selection = nil
-                        }
+                        .gesture(scrubGesture(pps: pps, deselect: true))
+                    ruler(total: total, pps: pps)
                     let starts = timeline.starts
                     ForEach(Array(timeline.segments.enumerated()), id: \.element.id) { index, segment in
                         block(segment, pps: pps)
-                            .offset(x: CGFloat(starts[index]) * pps + (dragging == segment.id ? dragOffset : 0), y: 8)
+                            .offset(x: CGFloat(starts[index]) * pps + (dragging == segment.id ? dragOffset : 0),
+                                    y: Self.rulerHeight + 6)
                             .zIndex(dragging == segment.id ? 1 : 0)
                     }
-                    Rectangle()
-                        .fill(Color.red)
-                        .frame(width: 2)
-                        .offset(x: CGFloat(edit.currentTime) * pps - 1)
-                        .allowsHitTesting(false)
+                    playhead(height: geo.size.height, pps: pps)
+                        .offset(x: CGFloat(edit.currentTime) * pps - 7)
+                        .zIndex(2)
                 }
                 .frame(width: max(geo.size.width, CGFloat(total) * pps + 24), height: geo.size.height, alignment: .topLeading)
+                .coordinateSpace(name: Self.space)
             }
         }
         .clipShape(RoundedRectangle(cornerRadius: 8))
+    }
+
+    /// Click or drag (anywhere along the strip) puts the playhead under the mouse.
+    private func scrubGesture(pps: CGFloat, deselect: Bool = false) -> some Gesture {
+        DragGesture(minimumDistance: 0, coordinateSpace: .named(Self.space))
+            .onChanged { value in
+                if !scrubbing {
+                    scrubbing = true
+                    edit.pause()
+                    if deselect { selection = nil }
+                }
+                edit.scrub(to: Double(max(0, value.location.x) / pps))
+            }
+            .onEnded { value in
+                scrubbing = false
+                edit.seek(to: min(edit.duration, Double(max(0, value.location.x) / pps)))
+            }
+    }
+
+    /// Time ruler above the blocks with a mark every second (every 5 / 10 s when zoomed out).
+    private func ruler(total: Double, pps: CGFloat) -> some View {
+        let step: Double = pps >= 40 ? 1 : (pps >= 8 ? 5 : 10)
+        return Canvas { context, size in
+            var t = 0.0
+            while t <= total + step {
+                let x = CGFloat(t) * pps
+                let major = Int(t.rounded()) % Int(step * 5) == 0
+                context.fill(Path(CGRect(x: x, y: size.height - (major ? 10 : 5), width: 1, height: major ? 10 : 5)),
+                             with: .color(.secondary.opacity(0.7)))
+                if major {
+                    let s = Int(t.rounded())
+                    context.draw(Text(String(format: "%d:%02d", s / 60, s % 60)).font(.caption2.monospacedDigit())
+                                    .foregroundColor(.secondary),
+                                 at: CGPoint(x: x + 3, y: 1), anchor: .topLeading)
+                }
+                t += step
+            }
+        }
+        .frame(height: Self.rulerHeight)
+        .background(Color.black.opacity(0.35))
+        .contentShape(Rectangle())
+        .gesture(scrubGesture(pps: pps))
+        .onHover { inside in
+            if inside { NSCursor.pointingHand.push() } else { NSCursor.pop() }
+        }
+        .help("Click or drag to move the playhead")
+    }
+
+    /// Red playhead with a handle on the ruler – drag it to any place, also over the pieces.
+    private func playhead(height: CGFloat, pps: CGFloat) -> some View {
+        ZStack(alignment: .top) {
+            Rectangle()
+                .fill(Color.red)
+                .frame(width: 2, height: height)
+            Path { p in
+                p.move(to: CGPoint(x: 0, y: 0))
+                p.addLine(to: CGPoint(x: 14, y: 0))
+                p.addLine(to: CGPoint(x: 14, y: 10))
+                p.addLine(to: CGPoint(x: 7, y: 17))
+                p.addLine(to: CGPoint(x: 0, y: 10))
+                p.closeSubpath()
+            }
+            .fill(Color.red)
+            .frame(width: 14, height: 17)
+        }
+        .frame(width: 14, height: height)
+        .contentShape(Rectangle())
+        .gesture(scrubGesture(pps: pps))
+        .onHover { inside in
+            if inside { NSCursor.resizeLeftRight.push() } else { NSCursor.pop() }
+        }
+        .help("Drag to move the playhead")
     }
 
     private func color(_ role: CameraRole) -> Color {

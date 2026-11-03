@@ -52,6 +52,14 @@ final class SyncPlaybackController: ObservableObject {
     @Published private(set) var marksMessage: String?
     /// Slate of the loaded take (nil for takes recorded without one).
     @Published private(set) var slate: SlateInfo?
+    /// Camera timecode read from the files' timecode tracks (clips whose slate has none).
+    @Published private(set) var fileTimecodeA: TimecodeRange?
+    @Published private(set) var fileTimecodeB: TimecodeRange?
+
+    /// Camera timecode of one file: from the slate, else from the file's timecode track.
+    func timecodeRange(_ role: CameraRole) -> TimecodeRange? {
+        slate?.timecode(role) ?? (role == .a ? fileTimecodeA : fileTimecodeB)
+    }
     private var boundaryObserver: Any?
     private weak var boundaryPlayer: AVPlayer?
 
@@ -126,6 +134,8 @@ final class SyncPlaybackController: ObservableObject {
         currentTime = 0
         duration = 0
         abOffsetMs = nil
+        fileTimecodeA = nil
+        fileTimecodeB = nil
 
         let itemA = take?.camA.map { AVPlayerItem(url: $0) }
         let itemB = take?.camB.map { AVPlayerItem(url: $0) }
@@ -191,7 +201,11 @@ final class SyncPlaybackController: ObservableObject {
                     }
                 }
             }
+            let tcA = itemA != nil && take?.slate?.timecodeA == nil ? await Self.readTimecode(of: itemA!.asset) : nil
+            let tcB = itemB != nil && take?.slate?.timecodeB == nil ? await Self.readTimecode(of: itemB!.asset) : nil
             guard let self, self.generation == gen else { return }
+            self.fileTimecodeA = tcA
+            self.fileTimecodeB = tcB
             self.duration = longest
             if let fd {
                 self.frameDuration = fd
@@ -200,6 +214,40 @@ final class SyncPlaybackController: ObservableObject {
             // Cue the take at IN.
             if let i = self.marks.inPoint { self.seek(seconds: i) }
         }
+    }
+
+    /// TC IN – OUT from the timecode track (`tmcd`, one 32-bit frame number) of a recorded file.
+    private static func readTimecode(of asset: AVAsset) async -> TimecodeRange? {
+        guard let track = try? await asset.loadTracks(withMediaType: .timecode).first,
+              let video = try? await asset.loadTracks(withMediaType: .video).first,
+              let reader = try? AVAssetReader(asset: asset) else { return nil }
+        let output = AVAssetReaderTrackOutput(track: track, outputSettings: nil)
+        guard reader.canAdd(output) else { return nil }
+        reader.add(output)
+        guard reader.startReading() else { return nil }
+        defer { reader.cancelReading() }
+        // A fragmented file first gives empty buffers – take the first one with a sample.
+        var first: CMSampleBuffer?
+        for _ in 0..<50 {
+            guard let buffer = output.copyNextSampleBuffer() else { break }
+            if CMSampleBufferGetNumSamples(buffer) > 0 { first = buffer; break }
+        }
+        guard let sample = first, let block = CMSampleBufferGetDataBuffer(sample),
+              let format = CMSampleBufferGetFormatDescription(sample),
+              CMFormatDescriptionGetMediaSubType(format) == kCMTimeCodeFormatType_TimeCode32 else { return nil }
+        var raw: Int32 = 0
+        guard CMBlockBufferCopyDataBytes(block, atOffset: 0, dataLength: 4, destination: &raw) == noErr else { return nil }
+        let base = max(1, Int(CMTimeCodeFormatDescriptionGetFrameQuanta(format)))
+        let dropFrame = CMTimeCodeFormatDescriptionGetTimeCodeFlags(format) & kCMTimeCodeFlag_DropFrame != 0
+        let start = Timecode(frameNumber: Int(Int32(bigEndian: raw)), base: base, dropFrame: dropFrame)
+        let frames: Int
+        if let count = try? await video.load(.timeRange).duration, let fd = try? await video.load(.minFrameDuration),
+           fd.seconds > 0 {
+            frames = max(1, Int((count.seconds / fd.seconds).rounded()))
+        } else {
+            frames = 1
+        }
+        return TimecodeRange(start: start, end: start.adding(frames: frames - 1, base: base), base: base)
     }
 
     // MARK: - Transport
