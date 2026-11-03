@@ -85,6 +85,14 @@ final class SimulatedSource: VideoSource {
     /// from 01:00:00:00 and the record flag (`-simNoRecFlag YES`: timecode only).
     private static let recCycleSeconds = UserDefaults.standard.integer(forKey: "simCameraRec")
     private static let sendRecFlag = !UserDefaults.standard.bool(forKey: "simNoRecFlag")
+    /// Debug `-simStreamRestart <s>`: stream time starts again from zero every <s> seconds – like a DeckLink
+    /// input that restarts its stream after a format change.
+    private static let streamRestartSeconds = Int64(UserDefaults.standard.integer(forKey: "simStreamRestart"))
+
+    /// Index on the stream timeline (video stream time and audio packet time).
+    private func streamIndex(_ index: Int64) -> Int64 {
+        Self.streamRestartSeconds > 0 ? index % (Self.streamRestartSeconds * Int64(fps)) : index
+    }
 
     /// Timecode and camera REC of frame `index`.
     private func cameraState(index: Int64) -> (timecode: Timecode, recording: Bool?) {
@@ -117,7 +125,7 @@ final class SimulatedSource: VideoSource {
         let hostTime = base + UInt64(index) * frameNanos
         let audio = audioChannels > 0 ? makeAudio(index: index) : nil
         var frame = CapturedFrame(pixelBuffer: pb,
-                                  streamTime: CMTime(value: index, timescale: fps),
+                                  streamTime: CMTime(value: streamIndex(index), timescale: fps),
                                   duration: CMTime(value: 1, timescale: fps),
                                   hostTimeNanos: hostTime,
                                   hasSignal: true,
@@ -240,6 +248,6 @@ final class SimulatedSource: VideoSource {
         }
         let data = samples.withUnsafeBufferPointer { Data(buffer: $0) }
         return CapturedAudio(data: data, sampleFrames: samplesPerFrame, channels: audioChannels,
-                             packetTime: index * Int64(samplesPerFrame))
+                             packetTime: streamIndex(index) * Int64(samplesPerFrame))
     }
 }

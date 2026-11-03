@@ -127,6 +127,11 @@ final class CameraChannel: ObservableObject, VideoSourceDelegate {
         var firstHostNanos: UInt64?
         var lastPTS: CMTime = .zero
         var lastDuration: CMTime = .zero
+        /// Added to the stream time when the input restarted its stream mid-take (format change) – keeps the
+        /// file's timeline going forward instead of jumping back.
+        var ptsOffset: CMTime = .zero
+        /// Picture size of the first written frame (the writer is set up for it).
+        var frameSize: (width: Int, height: Int)?
         var completion: (ChannelTakeResult) -> Void
         var statsAtStart: ChannelStats
         /// Camera timecode of the first written frame and the timecode base (timecode track).
@@ -354,14 +359,32 @@ final class CameraChannel: ObservableObject, VideoSourceDelegate {
             return
         }
 
+        let size = (width: CVPixelBufferGetWidth(frame.pixelBuffer), height: CVPixelBufferGetHeight(frame.pixelBuffer))
+        if let expected = t.frameSize, expected != size {
+            // The camera changed its output format mid-take: close the file with what is recorded so far.
+            let message = "Camera \(role.rawValue): input format changed (\(expected.width)×\(expected.height) → "
+                + "\(size.width)×\(size.height)) – the take was closed"
+            DispatchQueue.main.async { self.lastError = message }
+            finishTake()
+            return
+        }
+
         if t.firstStreamTime == nil {
             t.firstStreamTime = frame.streamTime
             t.firstHostNanos = frame.hostTimeNanos
+            t.frameSize = size
             t.writer.startSession()
         }
         guard let first = t.firstStreamTime else { return }
 
-        let pts = CMTimeSubtract(frame.streamTime, first)
+        var pts = CMTimeAdd(CMTimeSubtract(frame.streamTime, first), t.ptsOffset)
+        if t.writer.videoFramesWritten > 0, CMTimeCompare(pts, t.lastPTS) <= 0 {
+            // Stream time went back (the input restarted its stream after a format change): continue right
+            // after the last written frame.
+            let next = CMTimeAdd(t.lastPTS, t.lastDuration)
+            t.ptsOffset = CMTimeAdd(t.ptsOffset, CMTimeSubtract(next, pts))
+            pts = next
+        }
         if t.writer.appendVideo(frame.pixelBuffer, at: pts) {
             qStats.framesWritten += 1
             t.lastPTS = pts
@@ -385,7 +408,8 @@ final class CameraChannel: ObservableObject, VideoSourceDelegate {
 
         if let audio = frame.audio {
             // Audio packet time and video stream time share the DeckLink stream timeline.
-            let first48k = CMTimeConvertScale(first, timescale: 48_000, method: .roundHalfAwayFromZero).value
+            let first48k = CMTimeConvertScale(CMTimeSubtract(first, t.ptsOffset), timescale: 48_000,
+                                              method: .roundHalfAwayFromZero).value
             var rel = audio.packetTime - first48k
             var skip = 0
             if rel < 0 { skip = Int(-rel); rel = 0 }

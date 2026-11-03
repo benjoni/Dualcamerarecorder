@@ -215,11 +215,29 @@ final class MovieWriter {
                                    sampleCount: 1, sampleTimingEntryCount: 1, sampleTimingArray: &timing,
                                    sampleSizeEntryCount: 1, sampleSizeArray: &size, sampleBufferOut: &sample) == noErr,
               let sample else { return false }
-        return timecodeInput.append(sample)
+        let ok = timecodeInput.append(sample)
+        noteFailure(in: "timecode")
+        return ok
     }
 
     var failed: Bool { writer.status == .failed }
-    var errorDescription: String? { writer.error?.localizedDescription }
+    /// Track whose append made the writer fail first (video / audio / timecode).
+    private(set) var failedTrack: String?
+
+    private func noteFailure(in track: String) {
+        guard failedTrack == nil, writer.status == .failed else { return }
+        failedTrack = track
+        NSLog("DualCamRecorder: writer failed in %@ track (%@): %@", track, url.lastPathComponent, String(describing: writer.error))
+    }
+
+    /// "Cannot Complete Action (audio, -11800 / -12737)" – the track and the underlying codes help find the cause.
+    var errorDescription: String? {
+        guard let error = writer.error as NSError? else { return nil }
+        var codes = ["\(error.code)"]
+        if let underlying = error.userInfo[NSUnderlyingErrorKey] as? NSError { codes.append("\(underlying.code)") }
+        let track = failedTrack.map { "\($0), " } ?? ""
+        return "\(error.localizedDescription) (\(track)\(codes.joined(separator: " / ")))"
+    }
 
     /// Starts the timeline at zero. Call before the first append.
     func startSession() {
@@ -235,6 +253,7 @@ final class MovieWriter {
             videoFramesWritten += 1
             return true
         }
+        noteFailure(in: "video")
         return false
     }
 
@@ -270,6 +289,7 @@ final class MovieWriter {
             audioSamplesWritten += frames
             return true
         }
+        noteFailure(in: "audio")
         return false
     }
 
