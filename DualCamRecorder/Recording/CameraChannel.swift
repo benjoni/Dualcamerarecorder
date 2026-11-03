@@ -65,6 +65,13 @@ final class CameraSignalInfo: ObservableObject {
     var base: Int { Timecode.base(frameDuration: frameDuration) }
 }
 
+/// Numbers and the audio level of one input, updated 10× per second – a separate object, so only the meter and
+/// the numbers redraw, not the whole camera panel and picture (that made the live picture stutter).
+final class ChannelMeters: ObservableObject {
+    @Published fileprivate(set) var stats = ChannelStats()
+    @Published fileprivate(set) var audioLevelDB: Float = -120
+}
+
 final class CameraChannel: ObservableObject, VideoSourceDelegate {
     let role: CameraRole
     let preview = PreviewRenderer()
@@ -78,8 +85,10 @@ final class CameraChannel: ObservableObject, VideoSourceDelegate {
     @Published private(set) var sourceName: String = "—"
     @Published private(set) var format: VideoFormatInfo?
     @Published private(set) var hasSignal = false
-    @Published private(set) var stats = ChannelStats()
-    @Published private(set) var audioLevelDB: Float = -120
+    /// Captured / written / dropped frames and the audio level (observe `meters` to show them).
+    let meters = ChannelMeters()
+    var stats: ChannelStats { meters.stats }
+    var audioLevelDB: Float { meters.audioLevelDB }
     @Published private(set) var isRecording = false
     @Published private(set) var lastError: String?
 
@@ -176,7 +185,7 @@ final class CameraChannel: ObservableObject, VideoSourceDelegate {
         }
         signal.timecode = nil
         signal.cameraRec = .unknown
-        stats = ChannelStats()
+        meters.stats = ChannelStats()
         guard let newSource else {
             sourceName = "—"
             return
@@ -254,7 +263,7 @@ final class CameraChannel: ObservableObject, VideoSourceDelegate {
         queue.async {
             self.qStats = ChannelStats()
             let s = self.qStats
-            DispatchQueue.main.async { self.stats = s }
+            DispatchQueue.main.async { self.meters.stats = s }
         }
     }
 
@@ -510,7 +519,8 @@ final class CameraChannel: ObservableObject, VideoSourceDelegate {
             if let flag = frame.cameraRecording {
                 raw = flag ? .recording : .stopped
                 fromFlag = true
-            } else if frame.timecode != nil, let rec = userBitsRec(frame.timecodeUserBits, detection: detection) {
+            } else if frame.timecode != nil,
+                      let rec = userBitsRec(frame.timecodeUserBits, blackmagic: frame.blackmagicCamera, detection: detection) {
                 raw = rec
                 fromFlag = true
             } else if detection == .recRun, frame.timecode != nil {
@@ -543,11 +553,13 @@ final class CameraChannel: ObservableObject, VideoSourceDelegate {
     }
 
     /// Blackmagic REC from the user bits: only when they are 0 or the REC bit (other cameras put a date or
-    /// reel number there). Used always with the Blackmagic setting, otherwise once the REC bit was seen.
-    private func userBitsRec(_ bits: UInt32, detection: CameraRecDetection) -> CameraRecState? {
+    /// reel number there). Used with the Blackmagic setting, for a camera sending the Blackmagic tally packet
+    /// (from the first frame – its timecode may run in Free Run, so Rec Run would see it recording) and once
+    /// the REC bit was seen.
+    private func userBitsRec(_ bits: UInt32, blackmagic: Bool, detection: CameraRecDetection) -> CameraRecState? {
         let rec = CameraRecDetection.userBitsRec
         guard bits == 0 || bits == rec else { return nil }
-        if bits == rec { qUserBitsRecSeen = true }
+        if bits == rec || blackmagic { qUserBitsRecSeen = true }
         guard detection == .userBits || qUserBitsRecSeen else { return nil }
         return bits == rec ? .recording : .stopped
     }
@@ -563,9 +575,10 @@ final class CameraChannel: ObservableObject, VideoSourceDelegate {
         let db: Float = qPeak > 0 ? 20 * log10(qPeak) : -120
         qPeak = 0
         DispatchQueue.main.async {
-            if self.stats != s { self.stats = s }
+            let meters = self.meters
+            if meters.stats != s { meters.stats = s }
             if self.hasSignal != signal { self.hasSignal = signal }
-            self.audioLevelDB = db
+            if abs(meters.audioLevelDB - db) >= 0.5 { meters.audioLevelDB = db }
         }
     }
 

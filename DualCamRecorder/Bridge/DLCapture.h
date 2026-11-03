@@ -100,6 +100,9 @@ FOUNDATION_EXPORT uint64_t DLHostTimeNanos(void);
 @property (nonatomic, readonly) uint32_t tcUserBits;
 /// Camera record trigger carried in the timecode: -1 = not sent, 0 = stopped, 1 = recording.
 @property (nonatomic, readonly) int8_t recordTrigger;
+/// The frame carries the Blackmagic tally packet (DID 0x51 / SDID 0x52) – a Blackmagic camera, whose REC is
+/// in the timecode user bits.
+@property (nonatomic, readonly) BOOL blackmagicTally;
 /// All ancillary packets of the frame – only when DLCaptureDevice.captureAncillary is on, else nil.
 @property (nonatomic, readonly, nullable) NSArray<DLAncillaryPacket *> *ancillaryPackets;
 @end

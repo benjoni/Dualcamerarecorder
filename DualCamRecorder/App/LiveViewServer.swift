@@ -370,9 +370,13 @@ enum LiveViewPage {
   .label{position:absolute;left:8px;top:6px;background:rgba(0,0,0,.6);padding:2px 7px;border-radius:4px;font-weight:700;font-size:13px}
   .hidden{display:none}
   #offline{display:none;padding:8px 12px;background:#5a1d1d;font-size:13px}
+  .app{display:flex;align-items:center;gap:6px;color:#aaa;font-size:13px;font-weight:600;white-space:nowrap}
+  .logo{height:16px;width:auto;flex:none}
+  footer{display:flex;justify-content:space-between;align-items:center;padding:10px 12px calc(10px + env(safe-area-inset-bottom));color:#777;font-size:12px;font-weight:600}
+  footer .app{color:#777;font-size:12px}
 </style>
 </head><body>
-<header><span id="rec">● REC</span><span id="timer">00:00:00</span><span id="project">DualCamRecorder</span></header>
+<header><span id="rec">● REC</span><span id="timer">00:00:00</span><span id="project">DualCamRecorder</span><span class="app"><svg class="logo" viewBox="0 0 294 245" fill="none" stroke="currentColor" stroke-width="16"><g id="bb"><path d="M169 0V245M169 8H244A42 42 0 0 1 286 50V51A42 42 0 0 1 244 93H169M169 152H244A42 42 0 0 1 286 194V195A42 42 0 0 1 244 237H169"/></g><use href="#bb" transform="matrix(-1 0 0 1 293 0)"/></svg>DualCamRecorder</span></header>
 <div id="offline">Connection to the Mac lost – retrying…</div>
 <div id="slate"></div>
 <div id="files"></div>
@@ -380,6 +384,7 @@ enum LiveViewPage {
   <div class="cam" id="boxA"><img id="camA" alt=""><span class="label" id="nameA">A</span></div>
   <div class="cam" id="boxB"><img id="camB" alt=""><span class="label" id="nameB">B</span></div>
 </main>
+<footer><span class="app"><svg class="logo" viewBox="0 0 294 245" fill="none" stroke="currentColor" stroke-width="16"><g id="bb2"><path d="M169 0V245M169 8H244A42 42 0 0 1 286 50V51A42 42 0 0 1 244 93H169M169 152H244A42 42 0 0 1 286 194V195A42 42 0 0 1 244 237H169"/></g><use href="#bb2" transform="matrix(-1 0 0 1 293 0)"/></svg>Made by BENJONI</span><span>DualCamRecorder</span></footer>
 <script>
 const k = new URLSearchParams(location.search).get('k');
 // MJPEG: the Mac pushes every new picture over one open connection.

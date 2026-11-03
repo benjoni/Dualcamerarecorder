@@ -305,27 +305,7 @@ struct CameraPanel: View {
                 Text(channel.format?.displayString ?? "Format: —")
                     .font(.system(compact ? .callout : .body, design: .monospaced))
                     .lineLimit(1).truncationMode(.tail)
-                AudioMeter(db: channel.audioLevelDB)
-                if compact {
-                    // Numbers in one line.
-                    HStack(spacing: 14) {
-                        inlineStat("Captured", channel.stats.framesCaptured)
-                        inlineStat("Written", channel.stats.framesWritten)
-                        inlineStat("Dropped in", channel.stats.inputDropped, alert: channel.stats.inputDropped > 0)
-                        inlineStat("Dropped write", channel.stats.writerDropped, alert: channel.stats.writerDropped > 0)
-                    }
-                    .font(.callout)
-                    .lineLimit(1)
-                } else {
-                    HStack(spacing: 16) {
-                        stat("Captured", channel.stats.framesCaptured)
-                        stat("Written", channel.stats.framesWritten)
-                        stat("Dropped (input)", channel.stats.inputDropped, alert: channel.stats.inputDropped > 0)
-                        stat("Dropped (write)", channel.stats.writerDropped, alert: channel.stats.writerDropped > 0)
-                    }
-                    .font(.callout)
-                    .lineLimit(1)
-                }
+                ChannelMetersView(meters: channel.meters, compact: compact)
                 if let error = channel.lastError {
                     Text(error).font(.callout).foregroundStyle(.red)
                 }
@@ -366,6 +346,37 @@ struct CameraPanel: View {
     }
 
     static let infoMinWidth: CGFloat = 460
+}
+
+/// Audio meter + captured / written / dropped frames – observes only the 10 Hz meters of the input.
+struct ChannelMetersView: View {
+    @ObservedObject var meters: ChannelMeters
+    var compact: Bool
+
+    var body: some View {
+        let stats = meters.stats
+        AudioMeter(db: meters.audioLevelDB)
+        if compact {
+            // Numbers in one line.
+            HStack(spacing: 14) {
+                inlineStat("Captured", stats.framesCaptured)
+                inlineStat("Written", stats.framesWritten)
+                inlineStat("Dropped in", stats.inputDropped, alert: stats.inputDropped > 0)
+                inlineStat("Dropped write", stats.writerDropped, alert: stats.writerDropped > 0)
+            }
+            .font(.callout)
+            .lineLimit(1)
+        } else {
+            HStack(spacing: 16) {
+                stat("Captured", stats.framesCaptured)
+                stat("Written", stats.framesWritten)
+                stat("Dropped (input)", stats.inputDropped, alert: stats.inputDropped > 0)
+                stat("Dropped (write)", stats.writerDropped, alert: stats.writerDropped > 0)
+            }
+            .font(.callout)
+            .lineLimit(1)
+        }
+    }
 
     private func inlineStat(_ title: String, _ value: Int, alert: Bool = false) -> some View {
         HStack(spacing: 4) {

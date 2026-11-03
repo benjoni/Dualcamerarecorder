@@ -375,7 +375,9 @@ final class RecordingController: NSObject, ObservableObject, DLDeviceBrowserDele
                 startRecording()
                 if isRecording { lastTakeMessage = "Started by the camera" }
             }
-        } else if states.allSatisfy({ $0 == .stopped }), case .recording = state {
+        } else if states.contains(.stopped), case .recording = state {
+            // No trigger camera records any more – one without signal / REC information (unknown) does not
+            // keep the take running.
             stopRecording()
         }
     }
@@ -601,24 +603,40 @@ final class RecordingController: NSObject, ObservableObject, DLDeviceBrowserDele
         writeWarning = nil
     }
 
+    /// Free space of the recording disk, read off the main thread (the call can take tens of ms, which made the
+    /// live pictures stutter when it ran on the main thread twice a second).
     private func updateDiskSpace() {
-        var url = settings.recordFolderURL
-        // Walk up to an existing ancestor so the indicator works before the folder is created.
-        while !FileManager.default.fileExists(atPath: url.path) && url.pathComponents.count > 1 {
-            url.deleteLastPathComponent()
+        guard !diskSpaceQueryRunning else { return }
+        diskSpaceQueryRunning = true
+        let folder = settings.recordFolderURL
+        Self.diskQueue.async {
+            var url = folder
+            // Walk up to an existing ancestor so the indicator works before the folder is created.
+            while !FileManager.default.fileExists(atPath: url.path) && url.pathComponents.count > 1 {
+                url.deleteLastPathComponent()
+            }
+            let values = try? url.resourceValues(forKeys: [.volumeAvailableCapacityForImportantUsageKey,
+                                                           .volumeAvailableCapacityKey,
+                                                           .volumeTotalCapacityKey])
+            let free: Int64?
+            if let important = values?.volumeAvailableCapacityForImportantUsage, important > 0 {
+                free = important
+            } else if let available = values?.volumeAvailableCapacity {
+                free = Int64(available)
+            } else {
+                free = nil
+            }
+            let total = values?.volumeTotalCapacity.map { Int64($0) }
+            DispatchQueue.main.async {
+                self.diskSpaceQueryRunning = false
+                if self.freeBytes != free { self.freeBytes = free }
+                if self.totalBytes != total { self.totalBytes = total }
+            }
         }
-        let values = try? url.resourceValues(forKeys: [.volumeAvailableCapacityForImportantUsageKey,
-                                                       .volumeAvailableCapacityKey,
-                                                       .volumeTotalCapacityKey])
-        if let important = values?.volumeAvailableCapacityForImportantUsage, important > 0 {
-            freeBytes = important
-        } else if let available = values?.volumeAvailableCapacity {
-            freeBytes = Int64(available)
-        } else {
-            freeBytes = nil
-        }
-        totalBytes = values?.volumeTotalCapacity.map { Int64($0) }
     }
+
+    private var diskSpaceQueryRunning = false
+    private static let diskQueue = DispatchQueue(label: "disk-space", qos: .utility)
 
     /// Estimated remaining recording time for all active cameras.
     var estimatedRemaining: TimeInterval? {

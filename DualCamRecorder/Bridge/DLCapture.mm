@@ -131,6 +131,7 @@ static NSError *DLMakeError(NSInteger code, NSString *message)
 @property (nonatomic, readwrite) BOOL tcDropFrame;
 @property (nonatomic, readwrite) uint32_t tcUserBits;
 @property (nonatomic, readwrite) int8_t recordTrigger;
+@property (nonatomic, readwrite) BOOL blackmagicTally;
 @property (nonatomic, readwrite, nullable) NSArray<DLAncillaryPacket *> *ancillaryPackets;
 - (instancetype)initWithPixelBuffer:(CVPixelBufferRef)pixelBuffer;
 @end
@@ -615,25 +616,30 @@ public:
                 tc->Release();
             }
 
-            // 5) Raw ancillary packets for the SDI data log.
-            if (mOwner.captureAncillary) {
-                NSMutableArray<DLAncillaryPacket *> *packets = [NSMutableArray array];
+            // 5) Ancillary packets: the Blackmagic tally packet is looked for in every frame; all packets are
+            //    copied only for the SDI data log.
+            {
+                const BOOL capture = mOwner.captureAncillary;
+                NSMutableArray<DLAncillaryPacket *> *packets = capture ? [NSMutableArray array] : nil;
                 IDeckLinkVideoFrameAncillaryPackets *anc = nullptr;
                 if (videoFrame->QueryInterface(IID_IDeckLinkVideoFrameAncillaryPackets, (void **)&anc) == S_OK && anc) {
                     IDeckLinkAncillaryPacketIterator *it = nullptr;
                     if (anc->GetPacketIterator(&it) == S_OK && it) {
                         IDeckLinkAncillaryPacket *packet = nullptr;
                         while (it->Next(&packet) == S_OK && packet) {
-                            const void *bytes = nullptr;
-                            uint32_t size = 0;
-                            DLAncillaryPacket *p = [DLAncillaryPacket new];
-                            p.did = packet->GetDID();
-                            p.sdid = packet->GetSDID();
-                            p.lineNumber = packet->GetLineNumber();
-                            p.dataStreamIndex = packet->GetDataStreamIndex();
-                            p.data = (packet->GetBytes(bmdAncillaryPacketFormatUInt8, &bytes, &size) == S_OK && bytes)
-                                ? [NSData dataWithBytes:bytes length:size] : [NSData data];
-                            [packets addObject:p];
+                            if (packet->GetDID() == 0x51 && packet->GetSDID() == 0x52) frame.blackmagicTally = YES;
+                            if (capture) {
+                                const void *bytes = nullptr;
+                                uint32_t size = 0;
+                                DLAncillaryPacket *p = [DLAncillaryPacket new];
+                                p.did = packet->GetDID();
+                                p.sdid = packet->GetSDID();
+                                p.lineNumber = packet->GetLineNumber();
+                                p.dataStreamIndex = packet->GetDataStreamIndex();
+                                p.data = (packet->GetBytes(bmdAncillaryPacketFormatUInt8, &bytes, &size) == S_OK && bytes)
+                                    ? [NSData dataWithBytes:bytes length:size] : [NSData data];
+                                [packets addObject:p];
+                            }
                             packet->Release();
                             packet = nullptr;
                         }

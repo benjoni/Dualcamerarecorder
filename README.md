@@ -129,12 +129,12 @@ Rozhranie aplikácie je **v angličtine** (Record / Playback / Slate …); tento
 - Pod časomierou: **TC A / B in sync** alebo „B 3 frames behind A“ (porovnanie v rovnakom okamihu, ±1 snímka je bežná).
 - **CAM REC / CAM STBY** vpravo hore = nahráva kamera sama. Zisťuje sa z príznaku nahrávania v SDI
   (RP188 record trigger), z **user bits timecodu pri kamerách Blackmagic** (Pyxis, URSA, Pocket: bit 0x08 = REC –
-  voľba „Blackmagic (REC in timecode user bits)“; ostatné voľby ho prevezmú po prvom REC kamery; overené
-  s Blackmagic Pyxis), alebo (voľba „Flag or Rec Run timecode“) z bežiaceho timecodu – kamera musí mať
+  voľba „Blackmagic (REC in timecode user bits)“; kameru Blackmagic appka spozná aj sama podľa tally paketu
+  DID 51 / SDID 52 v signáli a vtedy číta user bits pri každej voľbe okrem Off; overené s Blackmagic Pyxis), alebo (voľba „Flag or Rec Run timecode“) z bežiaceho timecodu – kamera musí mať
   nastavený **Rec Run** timecode (pri Free Run beží stále, napr. Pyxis – vtedy Rec Run nepoužívať).
 - Oranžové upozornenie: „Camera is NOT recording“ (appka nahráva, kamera nie) / „Camera is recording – the app is not“.
 - **Record with the camera** (Off / A / B / Any camera): REC kamery spustí nahrávanie v appke, STOP ho zastaví
-  (pri Any až keď stoja všetky). Appka začne cca 0,3 s po kamere (rozpoznanie + spoločný štart A/B) – presný
+  (pri Any keď už žiadna nenahráva – kamera bez signálu / bez informácie o REC take nedrží). Appka začne cca 0,3 s po kamere (rozpoznanie + spoločný štart A/B) – presný
   posun ukáže timecode.
 - **SDI data log** (Start / Stop pri každej kamere): do priečinka projektu zapíše `SDI_LOG_<kamera>_<čas>.TXT` –
   timecode, user bits, príznak REC a všetky ancillary (VANC) pakety, len keď sa zmenia. Na kamere stlačiť

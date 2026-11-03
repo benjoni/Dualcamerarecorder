@@ -60,6 +60,7 @@ final class DeckLinkSource: NSObject, VideoSource, DLCaptureDeviceDelegate {
             captured.timecodeUserBits = frame.tcUserBits
         }
         if frame.recordTrigger >= 0 { captured.cameraRecording = frame.recordTrigger == 1 }
+        captured.blackmagicCamera = frame.blackmagicTally
         captured.ancillary = frame.ancillaryPackets?.map {
             AncillaryPacket(did: $0.did, sdid: $0.sdid, line: $0.lineNumber, stream: $0.dataStreamIndex, data: $0.data)
         }

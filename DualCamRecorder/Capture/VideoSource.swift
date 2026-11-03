@@ -59,6 +59,8 @@ struct CapturedFrame {
     var timecodeUserBits: UInt32 = 0
     /// Camera's record trigger from the signal (nil: the camera does not send one).
     var cameraRecording: Bool? = nil
+    /// Blackmagic camera (its tally packet is in the signal): REC is in the timecode user bits.
+    var blackmagicCamera = false
     /// All ancillary packets – only while the SDI data log runs.
     var ancillary: [AncillaryPacket]? = nil
 }

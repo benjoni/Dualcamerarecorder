@@ -222,9 +222,15 @@ struct DualCamRecorderApp: App {
 
     var body: some Scene {
         WindowGroup("DualCamRecorder") {
-            ContentView(model: model, settings: model.settings, projects: model.projects)
-                .frame(minWidth: 1100, minHeight: 700)
-                .preferredColorScheme(.dark)
+            // GeometryReader: the window's minimum size is just the frame below. Without it SwiftUI measures the
+            // whole window content on every change (timecode, meters, stats …) – up to 40 % of the main thread,
+            // which made the live pictures stutter.
+            GeometryReader { geo in
+                ContentView(model: model, settings: model.settings, projects: model.projects)
+                    .frame(width: geo.size.width, height: geo.size.height)
+            }
+            .frame(minWidth: 1100, minHeight: 700)
+            .preferredColorScheme(.dark)
         }
         .defaultSize(width: 1500, height: 950)
         .commands {
