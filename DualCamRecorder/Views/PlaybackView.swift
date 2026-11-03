@@ -119,9 +119,9 @@ struct PlaybackView: View {
                     .transition(.move(edge: .leading))
                 Divider()
             }
-            VStack(spacing: 12) {
+            VStack(spacing: 8) {
                 header
-                HStack(spacing: 12) {
+                HStack(alignment: .top, spacing: 8) {
                     if showCameraA {
                         playerPane(title: "Camera \(player.take?.cameraName(.a, current: settings.cameraNames) ?? settings.cameraNames.a)", role: .a, file: player.take?.camA, available: player.take?.camA != nil, content: PlayerView(player: player.playerA), waveform: player.waveformA)
                     }
@@ -129,10 +129,10 @@ struct PlaybackView: View {
                         playerPane(title: "Camera \(player.take?.cameraName(.b, current: settings.cameraNames) ?? settings.cameraNames.b)", role: .b, file: player.take?.camB, available: player.take?.camB != nil, content: PlayerView(player: player.playerB), waveform: player.waveformB)
                     }
                 }
+                .frame(maxHeight: .infinity)
                 transport
-                Spacer(minLength: 0)
             }
-            .padding()
+            .padding(.horizontal, 10).padding(.vertical, 8)
             .frame(minWidth: 700)
         }
         .animation(.easeInOut(duration: 0.2), value: showClipList)
@@ -177,6 +177,24 @@ struct PlaybackView: View {
                 Text(library.takes.isEmpty ? "No clips in this folder yet." : "No clip selected.")
                     .foregroundStyle(.secondary)
             }
+            Spacer(minLength: 0)
+            // Clip · day · scene · shot · take in big letters.
+            if let take = player.take {
+                Text([take.name, player.slate?.shortLabel].compactMap { $0 }.joined(separator: " · "))
+                    .font(.system(size: 28, weight: .bold))
+                    .lineLimit(1).minimumScaleFactor(0.6)
+                if take.id == library.latestTake?.id {
+                    Text("LATEST")
+                        .font(.title3.weight(.bold))
+                        .padding(.horizontal, 10).padding(.vertical, 4)
+                        .background(Color.blue.opacity(0.85), in: RoundedRectangle(cornerRadius: 6))
+                        .foregroundStyle(.white)
+                }
+            }
+            Spacer(minLength: 0)
+            // Invisible copy of the Clips button keeps the title centered.
+            Label(showClipList ? "Hide clips" : "Clips", systemImage: "sidebar.left")
+                .font(.title3).padding(.horizontal, 16).hidden()
         }
         .frame(maxWidth: .infinity)
     }
@@ -290,24 +308,30 @@ struct PlaybackView: View {
             }
             .font(.callout.monospaced()).foregroundStyle(.secondary)
             .textSelection(.enabled)
-            if available, let tc = player.slate?.timecode(role) {
-                // Camera timecode at the play position, and of the file's first / last frame.
-                HStack(spacing: 14) {
-                    Text("TC " + tc.at(seconds: isScrubbing ? scrubValue : player.currentTime,
-                                       frameDuration: player.frameDuration.seconds).string)
-                        .foregroundStyle(.primary).fontWeight(.semibold)
-                    Text("IN \(tc.start.string)  ·  OUT \(tc.end.string)")
-                }
-                .font(.callout.monospaced()).foregroundStyle(.secondary)
-                .textSelection(.enabled)
-                .help("Camera timecode (from the SDI signal) – the file has it as its timecode track")
-            }
-            if let setup = player.slate?.setup(role), !setup.isEmpty {
-                Text(setup.summary)
-                    .font(.callout).foregroundStyle(.secondary)
-                    .lineLimit(2).multilineTextAlignment(.center)
+            // Timecode and camera settings lines are always there (empty when missing) – both screens the same size.
+            Group {
+                if available, let tc = player.slate?.timecode(role) {
+                    // Camera timecode at the play position, and of the file's first / last frame.
+                    HStack(spacing: 14) {
+                        Text("TC " + tc.at(seconds: isScrubbing ? scrubValue : player.currentTime,
+                                           frameDuration: player.frameDuration.seconds).string)
+                            .foregroundStyle(.primary).fontWeight(.semibold)
+                        Text("IN \(tc.start.string)  ·  OUT \(tc.end.string)")
+                    }
                     .textSelection(.enabled)
+                    .help("Camera timecode (from the SDI signal) – the file has it as its timecode track")
+                } else {
+                    Text(" ")
+                }
             }
+            .font(.callout.monospaced()).foregroundStyle(.secondary)
+            .lineLimit(1)
+            let setup = (player.slate?.setup(role)).flatMap { $0.isEmpty ? nil : $0 }
+            Text(setup.map(\.summary) ?? " ")
+                .font(.callout).foregroundStyle(.secondary)
+                .lineLimit(1).truncationMode(.tail)
+                .textSelection(.enabled)
+                .help(setup?.summary ?? "")
         }
         .frame(maxWidth: .infinity)
     }
@@ -352,66 +376,104 @@ struct PlaybackView: View {
             }
             rangeBar
 
-            // Clip · day · scene · shot · take in big letters above the transport buttons.
-            if let take = player.take {
-                HStack(spacing: 14) {
-                    Text([take.name, player.slate?.shortLabel].compactMap { $0 }.joined(separator: " · "))
-                        .font(.system(size: 34, weight: .bold))
-                        .lineLimit(1).minimumScaleFactor(0.6)
-                    if take.id == library.latestTake?.id {
-                        Text("LATEST")
-                            .font(.title3.weight(.bold))
-                            .padding(.horizontal, 10).padding(.vertical, 4)
-                            .background(Color.blue.opacity(0.85), in: RoundedRectangle(cornerRadius: 6))
-                            .foregroundStyle(.white)
-                    }
-                }
-                .padding(.top, 6)
+            ViewThatFits(in: .horizontal) {
+                wideButtons
+                mediumButtons
+                stackedButtons
             }
-
-            // Buttons, one group under another; audio last.
-            VStack(spacing: 10) {
-                transportRow
-                markRow
-                addRow
-                audioButtons
-            }
-            .buttonStyle(BigButtonStyle())
-            .font(.title2)
-            .padding(.top, 4)
             .disabled(player.take == nil)
 
-            // Info under the buttons.
             infoBlock
-                .padding(.top, 6)
-
-            // Good take + edit slate at the very bottom.
-            HStack(spacing: 10) {
-                SegmentGroup {
-                    Toggle(isOn: Binding(
-                        get: { player.slate?.good ?? false },
-                        set: { good in
-                            var slate = player.slate ?? SlateInfo()
-                            slate.good = good
-                            saveSlate(slate)
-                        })) {
-                        Label("Good take", systemImage: player.slate?.good == true ? "star.fill" : "star")
-                    }
-                    .help("Good (circled) take")
-                }
-                .toggleStyle(SegmentToggleStyle(width: 180, minHeight: 40))
-                Button("Edit slate…") { editingSlate = true }
-                    .buttonStyle(BigButtonStyle())
-            }
-            .font(.title2)
-            .disabled(player.take == nil)
-            .padding(.top, 6)
         }
         .frame(maxWidth: .infinity)
         .sheet(isPresented: $editingSlate) {
             SlateEditSheet(slate: player.slate ?? SlateInfo(),
                            takeName: player.take?.name ?? "",
                            onSave: { saveSlate($0) })
+        }
+    }
+
+    /// Two rows – IN/OUT · transport · speed, then loop · add to timeline · audio · good take / slate –
+    /// so the screens above get as much height as possible.
+    private var wideButtons: some View {
+        VStack(spacing: 8) {
+            HStack(spacing: 0) {
+                markButtons.fixedSize()
+                Spacer(minLength: 16)
+                transportButtons.fixedSize()
+                Spacer(minLength: 16)
+                speedControl.fixedSize()
+            }
+            HStack(spacing: 0) {
+                loopControl.fixedSize()
+                Spacer(minLength: 16)
+                addRow.fixedSize()
+                Spacer(minLength: 16)
+                audioButtons.fixedSize()
+                Spacer(minLength: 16)
+                takeButtons.fixedSize()
+            }
+        }
+        .buttonStyle(BigButtonStyle())
+        .font(.title3)
+    }
+
+    /// Medium window: transport · speed, IN/OUT · loop, add to timeline · audio · good take / slate.
+    private var mediumButtons: some View {
+        VStack(spacing: 8) {
+            HStack(spacing: 0) {
+                Spacer(minLength: 0)
+                transportButtons.fixedSize()
+                Spacer(minLength: 16)
+                speedControl.fixedSize()
+            }
+            HStack(spacing: 0) {
+                markButtons.fixedSize()
+                Spacer(minLength: 16)
+                loopControl.fixedSize()
+            }
+            HStack(spacing: 0) {
+                addRow.fixedSize()
+                Spacer(minLength: 16)
+                audioButtons.fixedSize()
+                Spacer(minLength: 16)
+                takeButtons.fixedSize()
+            }
+        }
+        .buttonStyle(BigButtonStyle())
+        .font(.title3)
+    }
+
+    /// Narrow window: one group under another.
+    private var stackedButtons: some View {
+        VStack(spacing: 10) {
+            transportRow
+            markRow
+            addRow
+            audioButtons
+            takeButtons.padding(.top, 6)
+        }
+        .buttonStyle(BigButtonStyle())
+        .font(.title2)
+    }
+
+    /// Good take + edit slate.
+    private var takeButtons: some View {
+        HStack(spacing: 10) {
+            SegmentGroup {
+                Toggle(isOn: Binding(
+                    get: { player.slate?.good ?? false },
+                    set: { good in
+                        var slate = player.slate ?? SlateInfo()
+                        slate.good = good
+                        saveSlate(slate)
+                    })) {
+                    Label("Good take", systemImage: player.slate?.good == true ? "star.fill" : "star")
+                }
+                .help("Good (circled) take")
+            }
+            .toggleStyle(SegmentToggleStyle(width: 160, minHeight: 40))
+            Button("Edit slate…") { editingSlate = true }
         }
     }
 
