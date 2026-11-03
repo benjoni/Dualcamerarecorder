@@ -72,6 +72,34 @@ final class SimulatedSource: VideoSource {
         timer = nil
     }
 
+    var captureAncillary = false
+
+    /// Time of day at the epoch, in frames – the free-run timecode the simulated camera sends.
+    private static let epochTimeOfDayFrames: Int = {
+        let c = Calendar.current.dateComponents([.hour, .minute, .second, .nanosecond], from: Date())
+        let seconds = Double((c.hour ?? 0) * 3600 + (c.minute ?? 0) * 60 + (c.second ?? 0)) + Double(c.nanosecond ?? 0) / 1e9
+        return Int(seconds * 25)
+    }()
+
+    /// Debug `-simCameraRec <s>`: the camera records <s> seconds, stands <s> seconds … with rec-run timecode
+    /// from 01:00:00:00 and the record flag (`-simNoRecFlag YES`: timecode only).
+    private static let recCycleSeconds = UserDefaults.standard.integer(forKey: "simCameraRec")
+    private static let sendRecFlag = !UserDefaults.standard.bool(forKey: "simNoRecFlag")
+
+    /// Timecode and camera REC of frame `index`.
+    private func cameraState(index: Int64) -> (timecode: Timecode, recording: Bool?) {
+        let base = Int(fps)
+        let n = Int(index)
+        guard Self.recCycleSeconds > 0 else {
+            return (Timecode(frameNumber: Self.epochTimeOfDayFrames + n, base: base), nil)
+        }
+        let half = Self.recCycleSeconds * base
+        let cycles = n / (2 * half), within = n % (2 * half)
+        let recording = within >= half
+        let recorded = cycles * half + max(0, within - half)
+        return (Timecode(frameNumber: 3600 * base + recorded, base: base), Self.sendRecFlag ? recording : nil)
+    }
+
     // MARK: - Frame generation
 
     private func tick() {
@@ -88,13 +116,26 @@ final class SimulatedSource: VideoSource {
         guard let pb = renderFrame(index: index) else { return }
         let hostTime = base + UInt64(index) * frameNanos
         let audio = audioChannels > 0 ? makeAudio(index: index) : nil
-        let frame = CapturedFrame(pixelBuffer: pb,
+        var frame = CapturedFrame(pixelBuffer: pb,
                                   streamTime: CMTime(value: index, timescale: fps),
                                   duration: CMTime(value: 1, timescale: fps),
                                   hostTimeNanos: hostTime,
                                   hasSignal: true,
                                   droppedBefore: dropped,
                                   audio: audio)
+        let camera = cameraState(index: index)
+        frame.timecode = camera.timecode
+        frame.cameraRecording = camera.recording
+        if captureAncillary {
+            // Like a real signal: an ATC packet with the timecode and a "vendor" packet whose byte follows REC.
+            let tc = camera.timecode
+            frame.ancillary = [
+                AncillaryPacket(did: 0x60, sdid: 0x60, line: 9, stream: 0,
+                                data: Data([UInt8(tc.frames), UInt8(tc.seconds), UInt8(tc.minutes), UInt8(tc.hours)])),
+                AncillaryPacket(did: 0x51, sdid: 0x53, line: 13, stream: 0,
+                                data: Data([0x01, (camera.recording ?? false) ? 0x01 : 0x00, 0x00])),
+            ]
+        }
         delegate?.videoSource(self, didCapture: frame)
     }
 
@@ -152,9 +193,8 @@ final class SimulatedSource: VideoSource {
 
         let f = Int64(fps)
         let frameInSecond = index % f
-        let totalSeconds = index / f
-        let tc = String(format: "%02lld:%02lld:%02lld:%02lld",
-                        (totalSeconds / 3600) % 24, (totalSeconds / 60) % 60, totalSeconds % 60, frameInSecond)
+        let camera = cameraState(index: index)
+        let tc = camera.timecode.string + (camera.recording == true ? "  REC" : "")
 
         // Sync flash: first frame of every second.
         if frameInSecond == 0 {

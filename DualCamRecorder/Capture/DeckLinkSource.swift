@@ -31,6 +31,11 @@ final class DeckLinkSource: NSObject, VideoSource, DLCaptureDeviceDelegate {
         device.stop()
     }
 
+    var captureAncillary: Bool {
+        get { device.captureAncillary }
+        set { device.captureAncillary = newValue }
+    }
+
     // MARK: DLCaptureDeviceDelegate
 
     func captureDevice(_ device: DLCaptureDevice, didCaptureFrame frame: DLCaptureFrame) {
@@ -42,13 +47,22 @@ final class DeckLinkSource: NSObject, VideoSource, DLCaptureDeviceDelegate {
                                   packetTime: frame.audioPacketTime)
         }
         let timeScale = CMTimeScale(clamping: frame.timeScale)
-        let captured = CapturedFrame(pixelBuffer: frame.pixelBuffer,
+        var captured = CapturedFrame(pixelBuffer: frame.pixelBuffer,
                                      streamTime: CMTime(value: frame.streamTime, timescale: timeScale),
                                      duration: CMTime(value: frame.frameDuration, timescale: timeScale),
                                      hostTimeNanos: frame.hostTimeNanos,
                                      hasSignal: frame.hasSignal,
                                      droppedBefore: Int(frame.droppedBefore),
                                      audio: audio)
+        if frame.hasTimecode {
+            captured.timecode = Timecode(hours: Int(frame.tcHours), minutes: Int(frame.tcMinutes), seconds: Int(frame.tcSeconds),
+                                         frames: Int(frame.tcFrames), dropFrame: frame.tcDropFrame)
+            captured.timecodeUserBits = frame.tcUserBits
+        }
+        if frame.recordTrigger >= 0 { captured.cameraRecording = frame.recordTrigger == 1 }
+        captured.ancillary = frame.ancillaryPackets?.map {
+            AncillaryPacket(did: $0.did, sdid: $0.sdid, line: $0.lineNumber, stream: $0.dataStreamIndex, data: $0.data)
+        }
         delegate?.videoSource(self, didCapture: captured)
     }
 

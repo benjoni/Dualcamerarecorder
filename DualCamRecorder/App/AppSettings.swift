@@ -40,6 +40,13 @@ final class AppSettings: ObservableObject {
     /// Applied before the screen, monitor, phones and the recorded file.
     @Published var orientationA = PictureOrientation()
     @Published var orientationB = PictureOrientation()
+    /// Aspect ratio mask over each camera's picture (per project) – Record and Playback screens only.
+    @Published var maskA = FrameMask()
+    @Published var maskB = FrameMask()
+    /// Camera's own REC read from the SDI signal (per input) and recording together with the camera (per project).
+    @Published var recDetectionA = CameraRecDetection.flag
+    @Published var recDetectionB = CameraRecDetection.flag
+    @Published var cameraTrigger = CameraTrigger.off
     /// Backup copy of the project's clips on a second disk (per project).
     @Published var backupEnabled: Bool { didSet { defaults.set(backupEnabled, forKey: "backupEnabled") } }
     @Published var backupRootPath: String { didSet { defaults.set(backupRootPath, forKey: "backupRootPath") } }
@@ -88,6 +95,22 @@ final class AppSettings: ObservableObject {
         if role == .a { orientationA = o } else { orientationB = o }
     }
 
+    func mask(_ role: CameraRole) -> FrameMask {
+        role == .a ? maskA : maskB
+    }
+
+    func setMask(_ m: FrameMask, for role: CameraRole) {
+        if role == .a { maskA = m } else { maskB = m }
+    }
+
+    func recDetection(_ role: CameraRole) -> CameraRecDetection {
+        role == .a ? recDetectionA : recDetectionB
+    }
+
+    func setRecDetection(_ d: CameraRecDetection, for role: CameraRole) {
+        if role == .a { recDetectionA = d } else { recDetectionB = d }
+    }
+
     /// Temporary on/off of each camera in a two-camera project (not saved – both are on when a project opens).
     @Published var cameraAOn = true
     @Published var cameraBOn = true
@@ -111,6 +134,8 @@ final class AppSettings: ObservableObject {
                         cameras: cameras, deviceA: deviceA, deviceB: deviceB,
                         monitorEnabled: monitorEnabled, monitorSource: monitorSource.rawValue,
                         orientationA: orientationA, orientationB: orientationB,
+                        maskA: maskA, maskB: maskB,
+                        recDetectionA: recDetectionA, recDetectionB: recDetectionB, cameraTrigger: cameraTrigger,
                         backupEnabled: backupEnabled, backupRootPath: backupRootPath)
     }
 
@@ -133,6 +158,11 @@ final class AppSettings: ObservableObject {
         monitorSource = MonitorSource(rawValue: p.monitorSource) ?? .a
         orientationA = p.orientationA
         orientationB = p.orientationB
+        maskA = p.maskA
+        maskB = p.maskB
+        recDetectionA = p.recDetectionA
+        recDetectionB = p.recDetectionB
+        cameraTrigger = p.cameraTrigger
         backupEnabled = p.backupEnabled
         backupRootPath = p.backupRootPath
     }

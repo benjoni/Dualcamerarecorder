@@ -285,6 +285,7 @@ struct ContentView: View {
         #if DEBUG
         .task { await runSnapshotsIfRequested() }
         .task { await runDiskTestIfRequested() }
+        .task { await runTriggerTestIfRequested() }
         #endif
         .onDisappear {
             if let tabKeyMonitor { NSEvent.removeMonitor(tabKeyMonitor) }
@@ -525,6 +526,40 @@ extension ContentView {
             try? await Task.sleep(nanoseconds: 3_000_000_000)
             saveWindowPicture(to: URL(fileURLWithPath: dir).appendingPathComponent("\(label).png"))
         }
+        // Masks: 2.35 at 75 % on A, custom 1.33 on B – Record and Playback, a demo picture, the settings popover.
+        let savedMasks = (settings.maskA, settings.maskB)
+        var maskA = FrameMask(); maskA.ratio = .r235; maskA.opacity = 0.75
+        var maskB = FrameMask(); maskB.ratio = .custom; maskB.customRatio = 1.33
+        settings.maskA = maskA
+        settings.maskB = maskB
+        for (index, label) in ["record", "playback"].enumerated() {
+            tab = index
+            try? await Task.sleep(nanoseconds: 3_000_000_000)
+            saveWindowPicture(to: URL(fileURLWithPath: dir).appendingPathComponent("\(label)_mask.png"))
+        }
+        let maskDemos: [(String, FrameMask)] = [("185", { var m = FrameMask(); m.ratio = .r185; return m }()),
+                                               ("200", { var m = FrameMask(); m.ratio = .r200; m.opacity = 0.5; return m }()),
+                                               ("235", maskA), ("133", maskB)]
+        for (label, mask) in maskDemos {
+            let view = NSHostingView(rootView: Image("DemoWide").resizable().frame(width: 960, height: 540)
+                .overlay { FrameMaskOverlay(mask: mask) })
+            view.frame = NSRect(x: 0, y: 0, width: 960, height: 540)
+            view.layoutSubtreeIfNeeded()
+            if let rep = view.bitmapImageRepForCachingDisplay(in: view.bounds) {
+                view.cacheDisplay(in: view.bounds, to: rep)
+                try? rep.representation(using: .png, properties: [:])?.write(to: URL(fileURLWithPath: dir).appendingPathComponent("mask_demo_\(label).png"))
+            }
+        }
+        let popover = NSHostingView(rootView: FrameMaskSettings(mask: .constant(maskB), title: "Mask – Camera A")
+            .background(Color(nsColor: .windowBackgroundColor)).preferredColorScheme(.dark))
+        popover.frame = NSRect(origin: .zero, size: popover.fittingSize)
+        popover.layoutSubtreeIfNeeded()
+        if let rep = popover.bitmapImageRepForCachingDisplay(in: popover.bounds) {
+            popover.cacheDisplay(in: popover.bounds, to: rep)
+            try? rep.representation(using: .png, properties: [:])?.write(to: URL(fileURLWithPath: dir).appendingPathComponent("mask_settings.png"))
+        }
+        settings.maskA = savedMasks.0
+        settings.maskB = savedMasks.1
         // Overlay tab: the window and the composed picture in each mode.
         tab = 3
         try? await Task.sleep(nanoseconds: 3_000_000_000)
@@ -559,8 +594,8 @@ extension ContentView {
         }
         // Project settings sheet, drawn off screen.
         let sheet = NSHostingView(rootView: ProjectSettingsView(model: model, settings: settings, recorder: model.recorder, backup: model.backup, monitor: model.monitor)
-            .frame(width: 720, height: 900).preferredColorScheme(.dark))
-        sheet.frame = NSRect(x: 0, y: 0, width: 720, height: 900)
+            .frame(width: 720, height: 1700).preferredColorScheme(.dark))
+        sheet.frame = NSRect(x: 0, y: 0, width: 720, height: 1700)
         sheet.layoutSubtreeIfNeeded()
         try? await Task.sleep(nanoseconds: 1_000_000_000)
         if let rep = sheet.bitmapImageRepForCachingDisplay(in: sheet.bounds) {
@@ -586,6 +621,62 @@ extension ContentView {
             try? PDFReport.write(clips: clips, production: settings.slate.production, options: options,
                                  to: URL(fileURLWithPath: dir).appendingPathComponent(portrait ? "report_portrait.pdf" : "report.pdf"))
         }
+        exit(0)
+    }
+
+    /// Debug only: `-triggerTestProject <name> -triggerTestDir <folder>` (with `-simCameraRec <s>`): records with the
+    /// camera trigger on – the simulated camera starts and stops the take; then REC in the app while the camera
+    /// stands (warning). Saves pictures, the SDI data log and result.txt (slate timecode) and quits.
+    @MainActor
+    func runTriggerTestIfRequested() async {
+        let args = UserDefaults.standard
+        guard let dir = args.string(forKey: "triggerTestDir"), let name = args.string(forKey: "triggerTestProject") else { return }
+        let out = URL(fileURLWithPath: dir)
+        try? await Task.sleep(nanoseconds: 2_000_000_000)
+        guard let entry = projects.projects.first(where: { $0.project.name == name }) else { exit(2) }
+        model.open(entry)
+        let recorder = model.recorder
+        let saved = (settings.cameraTrigger, settings.recDetectionA, settings.recDetectionB)
+        let detection = CameraRecDetection(rawValue: args.string(forKey: "triggerTestDetection") ?? "") ?? .flag
+        settings.recDetectionA = detection
+        settings.recDetectionB = detection
+        settings.cameraTrigger = .any
+        recorder.channelA.setSDILog(out.appendingPathComponent("sdi_log_A.txt"))
+        var log: [String] = ["detection: \(detection.rawValue)"]
+        func waitFor(_ seconds: Double, _ condition: () -> Bool) async -> Bool {
+            for _ in 0..<Int(seconds * 10) {
+                if condition() { return true }
+                try? await Task.sleep(nanoseconds: 100_000_000)
+            }
+            return condition()
+        }
+        let started = await waitFor(20) { recorder.isRecording }
+        log.append("auto start: \(started)  message: \(recorder.lastTakeMessage ?? "")")
+        try? await Task.sleep(nanoseconds: 1_500_000_000)
+        saveWindowPicture(to: out.appendingPathComponent("trigger_recording.png"))
+        let stopped = await waitFor(20) { !recorder.isRecording }
+        log.append("auto stop: \(stopped)")
+        try? await Task.sleep(nanoseconds: 1_500_000_000)
+        let take = recorder.nextTake - 1
+        if let slate = TakeSlateStore.load(folder: settings.recordFolderURL, take: take) {
+            log.append("take \(take): A \(slate.timecodeA?.label ?? "no TC")  B \(slate.timecodeB?.label ?? "no TC")")
+        }
+        log.append("last take: \(recorder.lastTakeMessage ?? "")  error: \(recorder.errorMessage ?? "")")
+        // REC in the app while the camera stands → warning on the picture.
+        settings.cameraTrigger = .off
+        _ = await waitFor(10) { recorder.channelA.signal.cameraRec == .stopped }
+        recorder.startRecording()
+        try? await Task.sleep(nanoseconds: 1_500_000_000)
+        saveWindowPicture(to: out.appendingPathComponent("trigger_mismatch.png"))
+        recorder.stopRecording()
+        _ = await waitFor(10) { !recorder.isRecording }
+        log.append("manual take \(recorder.nextTake - 1): \(recorder.lastTakeMessage ?? "")")
+        recorder.channelA.setSDILog(nil)
+        settings.cameraTrigger = saved.0
+        settings.recDetectionA = saved.1
+        settings.recDetectionB = saved.2
+        try? await Task.sleep(nanoseconds: 1_000_000_000)
+        try? log.joined(separator: "\n").write(to: out.appendingPathComponent("result.txt"), atomically: true, encoding: .utf8)
         exit(0)
     }
 

@@ -68,6 +68,8 @@ FOUNDATION_EXPORT uint64_t DLHostTimeNanos(void);
 @property (nonatomic, readonly) OSType pixelFormat;           // CoreVideo pixel format of delivered buffers
 @end
 
+@class DLAncillaryPacket;
+
 /// One captured frame. Pixel data is already copied out of DeckLink memory.
 @interface DLCaptureFrame : NSObject
 @property (nonatomic, readonly) CVPixelBufferRef pixelBuffer;
@@ -87,6 +89,28 @@ FOUNDATION_EXPORT uint64_t DLHostTimeNanos(void);
 @property (nonatomic, readonly) int32_t audioChannels;
 /// Audio packet time in 48 kHz units (same stream timeline as streamTime).
 @property (nonatomic, readonly) int64_t audioPacketTime;
+
+/// Timecode embedded by the camera (RP188 any, else VITC). hasTimecode = NO when the signal has none.
+@property (nonatomic, readonly) BOOL hasTimecode;
+@property (nonatomic, readonly) uint8_t tcHours;
+@property (nonatomic, readonly) uint8_t tcMinutes;
+@property (nonatomic, readonly) uint8_t tcSeconds;
+@property (nonatomic, readonly) uint8_t tcFrames;
+@property (nonatomic, readonly) BOOL tcDropFrame;
+@property (nonatomic, readonly) uint32_t tcUserBits;
+/// Camera record trigger carried in the timecode: -1 = not sent, 0 = stopped, 1 = recording.
+@property (nonatomic, readonly) int8_t recordTrigger;
+/// All ancillary packets of the frame – only when DLCaptureDevice.captureAncillary is on, else nil.
+@property (nonatomic, readonly, nullable) NSArray<DLAncillaryPacket *> *ancillaryPackets;
+@end
+
+/// One ancillary (VANC) data packet of a frame, 8-bit user data words.
+@interface DLAncillaryPacket : NSObject
+@property (nonatomic, readonly) uint8_t did;
+@property (nonatomic, readonly) uint8_t sdid;
+@property (nonatomic, readonly) uint32_t lineNumber;
+@property (nonatomic, readonly) uint8_t dataStreamIndex;
+@property (nonatomic, readonly, copy) NSData *data;
 @end
 
 @class DLCaptureDevice;
@@ -118,6 +142,8 @@ FOUNDATION_EXPORT uint64_t DLHostTimeNanos(void);
 @property (nonatomic) BOOL forceEightBit;
 /// Force the SDI connector as the video input (UltraStudio Recorder 3G also has HDMI). Default YES.
 @property (nonatomic) BOOL forceSDIInput;
+/// Deliver every frame's ancillary packets (SDI data log). Can be changed while running.
+@property (atomic) BOOL captureAncillary;
 
 @property (nonatomic, readonly, nullable) DLFormatInfo *currentFormat;
 @property (nonatomic, readonly) BOOL isRunning;

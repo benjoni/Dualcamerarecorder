@@ -96,6 +96,10 @@ struct ProjectSettingsView: View {
                         .font(.callout).foregroundStyle(.secondary)
                 }
 
+                Section("Camera timecode and REC") {
+                    CameraTimecodeSettings(settings: settings, recorder: recorder, folder: settings.recordFolderURL)
+                }
+
                 Section("Recording") {
                     Picker("Codec", selection: $settings.proResFlavor) {
                         ForEach(ProResFlavor.allCases) { Text($0.title).tag($0) }

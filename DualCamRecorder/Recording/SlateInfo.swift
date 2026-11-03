@@ -53,6 +53,11 @@ struct SlateInfo: Codable, Hashable {
     /// Lens / stop / distance / height / tilt … of each camera (empty = not filled in).
     var setupA = CameraSetup()
     var setupB = CameraSetup()
+    /// Camera timecode (TC IN – TC OUT) of each recorded file, from the SDI signal (nil: none).
+    var timecodeA: TimecodeRange?
+    var timecodeB: TimecodeRange?
+
+    func timecode(_ role: CameraRole) -> TimecodeRange? { role == .a ? timecodeA : timecodeB }
 
     func cameraClip(_ role: CameraRole) -> String { role == .a ? cameraClipA : cameraClipB }
     func setup(_ role: CameraRole) -> CameraSetup { role == .a ? setupA : setupB }
@@ -160,6 +165,8 @@ extension SlateInfo {
         cameraClipB = Self.decodeClip(c, .cameraClipB)
         setupA = try c.decodeIfPresent(CameraSetup.self, forKey: .setupA) ?? setupA
         setupB = try c.decodeIfPresent(CameraSetup.self, forKey: .setupB) ?? setupB
+        timecodeA = try? c.decodeIfPresent(TimecodeRange.self, forKey: .timecodeA)
+        timecodeB = try? c.decodeIfPresent(TimecodeRange.self, forKey: .timecodeB)
     }
 }
 

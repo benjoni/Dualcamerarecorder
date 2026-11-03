@@ -5,6 +5,7 @@
 //  CLIPLOG.CSV in the project folder: one row per recorded movie, so scripts can match our files
 //  with the cameras' own internal clips (camera_clip) and the slate.
 //  camera_setup = lens / stop / distance / height / tilt … of that camera ("Lens 32mm · Stop T2.8 · …").
+//  tc_in / tc_out = camera timecode of the file's first and last frame (from the SDI signal).
 //  Rebuilt from the C###_SLATE.JSON files after every take and after editing a slate.
 //
 
@@ -14,7 +15,8 @@ enum ClipLog {
     static let fileName = "CLIPLOG.CSV"
 
     static let header = ["clip", "camera", "camera_name", "file", "camera_clip", "shooting_day", "scene", "shot",
-                         "take", "good", "mos", "int_ext", "day_night", "recorded_at", "production", "note", "camera_setup"]
+                         "take", "good", "mos", "int_ext", "day_night", "recorded_at", "production", "note", "camera_setup",
+                         "tc_in", "tc_out"]
 
     /// Rewrites CLIPLOG.CSV for `folder`. Safe to call from any thread.
     static func rebuild(folder: URL, names: CameraNames) {
@@ -54,6 +56,8 @@ enum ClipLog {
                 s?.production ?? "",
                 s?.note ?? "",
                 s?.setup(entry.role).summary ?? "",
+                s?.timecode(entry.role)?.start.string ?? "",
+                s?.timecode(entry.role)?.end.string ?? "",
             ]
             lines.append(row.map(csvField).joined(separator: ","))
         }

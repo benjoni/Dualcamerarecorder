@@ -44,13 +44,35 @@ struct ChannelTakeResult {
     var firstFrameHostNanos: UInt64?
     var framesWritten: Int
     var error: String?
+    /// Camera timecode of the first and last written frame (nil: the camera sent none).
+    var timecode: TimecodeRange? = nil
+}
+
+/// Timecode and REC state of the camera, updated every frame (separate from CameraChannel so only the
+/// small views showing them redraw).
+final class CameraSignalInfo: ObservableObject {
+    @Published fileprivate(set) var timecode: Timecode?
+    /// Frame duration (s) of the signal carrying `timecode`.
+    @Published fileprivate(set) var frameDuration: Double = 0
+    /// Host time of the frame with `timecode` (comparing the timecode of two cameras).
+    fileprivate(set) var timecodeHostNanos: UInt64 = 0
+    @Published fileprivate(set) var cameraRec = CameraRecState.unknown
+    /// REC comes from the camera's record flag (false: from the running timecode).
+    @Published fileprivate(set) var recFromFlag = false
+    /// SDI data log being written (file name).
+    @Published fileprivate(set) var sdiLog: URL?
+
+    var base: Int { Timecode.base(frameDuration: frameDuration) }
 }
 
 final class CameraChannel: ObservableObject, VideoSourceDelegate {
     let role: CameraRole
     let preview = PreviewRenderer()
+    let signal = CameraSignalInfo()
     /// Every captured picture (capture thread) – the monitor output. Set once at start.
     var onPicture: ((CVPixelBuffer) -> Void)?
+    /// The camera started / stopped recording (main thread).
+    var onCameraRecChange: ((CameraRecState) -> Void)?
 
     // Published on main.
     @Published private(set) var sourceName: String = "—"
@@ -72,6 +94,7 @@ final class CameraChannel: ObservableObject, VideoSourceDelegate {
         var poolKey: (format: OSType, width: Int, height: Int)?
     }
     private let turn = OSAllocatedUnfairLock(initialState: Turn())
+    private let recDetection = OSAllocatedUnfairLock(initialState: CameraRecDetection.flag)
 
     // Pending work on `queue` – used to detect a backlog (disk/encoder too slow).
     private let backlog = OSAllocatedUnfairLock(initialState: 0)
@@ -85,6 +108,16 @@ final class CameraChannel: ObservableObject, VideoSourceDelegate {
     private var lastFrameSize: (width: Int, height: Int)?
     private var backlogPeak = 0
     private var take: TakeState?
+    // Camera timecode / REC (queue).
+    private var qTimecode: Timecode?
+    private var qTimecodeNanos: UInt64 = 0
+    private var qFrameDuration: CMTime = .zero
+    private var qTCMoving = 0
+    private var qTCStill = 0
+    private var qCamRec = CameraRecState.unknown
+    private var qCandidate = CameraRecState.unknown
+    private var qCandidateFrames = 0
+    private var sdiLog: SDIDataLog?
 
     private struct TakeState {
         var writer: MovieWriter
@@ -96,6 +129,10 @@ final class CameraChannel: ObservableObject, VideoSourceDelegate {
         var lastDuration: CMTime = .zero
         var completion: (ChannelTakeResult) -> Void
         var statsAtStart: ChannelStats
+        /// Camera timecode of the first written frame and the timecode base (timecode track).
+        var firstTimecode: Timecode?
+        var timecodeBase = 25
+        var lastTimecode: Timecode?
     }
 
     #if DEBUG
@@ -122,7 +159,12 @@ final class CameraChannel: ObservableObject, VideoSourceDelegate {
             self.qStats = ChannelStats()
             self.lastFrameSize = nil
             self.qHasSignal = false
+            self.qTimecode = nil
+            self.qCamRec = .unknown
+            self.qCandidate = .unknown
         }
+        signal.timecode = nil
+        signal.cameraRec = .unknown
         stats = ChannelStats()
         guard let newSource else {
             sourceName = "—"
@@ -130,6 +172,7 @@ final class CameraChannel: ObservableObject, VideoSourceDelegate {
         }
         sourceName = newSource.displayName
         newSource.delegate = self
+        newSource.captureAncillary = signal.sdiLog != nil
         do {
             try newSource.start()
         } catch {
@@ -199,10 +242,16 @@ final class CameraChannel: ObservableObject, VideoSourceDelegate {
         queue.sync {
             guard take == nil else { failure = "Camera \(role.rawValue) is already recording."; return }
             guard let size = lastFrameSize else { failure = "Camera \(role.rawValue): no picture from the input."; return }
+            // Timecode track when the camera sent timecode in the last second.
+            var track: MovieWriter.TimecodeTrack?
+            if let tc = qTimecode, HostClock.nowNanos - qTimecodeNanos < 1_000_000_000, qFrameDuration.seconds > 0 {
+                track = .init(frameDuration: qFrameDuration, base: Timecode.base(frameDuration: qFrameDuration.seconds),
+                              dropFrame: tc.dropFrame)
+            }
             do {
                 let writer = try MovieWriter(url: url, width: size.width, height: size.height,
                                              flavor: flavor, audioChannels: audioChannels,
-                                             metadata: metadata)
+                                             metadata: metadata, timecode: track)
                 take = TakeState(writer: writer, startHostNanos: startHostNanos, completion: completion,
                                  statsAtStart: qStats)
             } catch {
@@ -279,6 +328,8 @@ final class CameraChannel: ObservableObject, VideoSourceDelegate {
         qHasSignal = frame.hasSignal
         lastFrameSize = (CVPixelBufferGetWidth(frame.pixelBuffer), CVPixelBufferGetHeight(frame.pixelBuffer))
         if let audio = frame.audio { qPeak = max(qPeak, Self.peak(of: audio)) }
+        readCamera(frame)
+        sdiLog?.add(frame)
 
         if take != nil {
             #if DEBUG
@@ -315,6 +366,19 @@ final class CameraChannel: ObservableObject, VideoSourceDelegate {
             qStats.framesWritten += 1
             t.lastPTS = pts
             t.lastDuration = frame.duration
+            // Continuous timecode track counted from the first frame's camera timecode.
+            if t.writer.hasTimecodeTrack, frame.duration.seconds > 0 {
+                if t.firstTimecode == nil, let tc = frame.timecode {
+                    t.firstTimecode = tc
+                    t.timecodeBase = Timecode.base(frameDuration: frame.duration.seconds)
+                }
+                if let start = t.firstTimecode {
+                    let offset = Int((pts.seconds / frame.duration.seconds).rounded())
+                    let tc = start.adding(frames: offset, base: t.timecodeBase)
+                    t.writer.appendTimecode(frameNumber: tc.frameNumber(base: t.timecodeBase), at: pts, duration: frame.duration)
+                    t.lastTimecode = tc
+                }
+            }
         } else {
             qStats.writerDropped += 1
         }
@@ -350,14 +414,84 @@ final class CameraChannel: ObservableObject, VideoSourceDelegate {
         let written = t.writer.videoFramesWritten
         let firstHost = t.firstHostNanos
         let completion = t.completion
+        let timecode = t.firstTimecode.map { TimecodeRange(start: $0, end: t.lastTimecode ?? $0, base: t.timecodeBase) }
         t.writer.finish(endTime: endTime) { error in
             let result = ChannelTakeResult(role: role, url: url, firstFrameHostNanos: firstHost,
-                                           framesWritten: written, error: error?.localizedDescription)
+                                           framesWritten: written, error: error?.localizedDescription,
+                                           timecode: timecode)
             DispatchQueue.main.async {
                 self.isRecording = false
                 completion(result)
             }
         }
+    }
+
+    // MARK: - Camera timecode and REC (queue)
+
+    /// How the camera's REC is read (per project setting).
+    func setRecDetection(_ detection: CameraRecDetection) {
+        recDetection.withLock { $0 = detection }
+    }
+
+    /// Writes the SDI data log (timecode, flags and every ancillary packet that changes) to `url`; nil stops it.
+    func setSDILog(_ url: URL?) {
+        source?.captureAncillary = url != nil
+        let name = role.rawValue
+        queue.async {
+            self.sdiLog?.close()
+            self.sdiLog = url.flatMap { SDIDataLog(url: $0, camera: name) }
+        }
+        signal.sdiLog = url
+    }
+
+    private func readCamera(_ frame: CapturedFrame) {
+        let now = HostClock.nowNanos
+        let detection = recDetection.withLock { $0 }
+        var raw = CameraRecState.unknown
+        var fromFlag = false
+        if let tc = frame.timecode {
+            if let last = qTimecode {
+                if tc != last { qTCMoving += 1; qTCStill = 0 } else { qTCStill += 1; qTCMoving = 0 }
+            }
+            qTimecode = tc
+            qTimecodeNanos = frame.hostTimeNanos
+            qFrameDuration = frame.duration
+        } else if now - qTimecodeNanos > 1_000_000_000 {
+            qTimecode = nil
+            qTCMoving = 0
+            qTCStill = 0
+        }
+        if detection != .off {
+            if let flag = frame.cameraRecording {
+                raw = flag ? .recording : .stopped
+                fromFlag = true
+            } else if detection == .recRun, frame.timecode != nil {
+                raw = qTCMoving >= 2 ? .recording : (qTCStill >= 2 ? .stopped : qCamRec)
+            }
+        }
+        // A change counts after 3 frames in a row (one odd frame does not start / stop anything).
+        if raw == qCandidate { qCandidateFrames += 1 } else { qCandidate = raw; qCandidateFrames = 1 }
+        var changed = false
+        if qCandidate != qCamRec && qCandidateFrames >= 3 {
+            qCamRec = qCandidate
+            changed = true
+        }
+
+        let tc = qTimecode
+        let host = qTimecodeNanos
+        let duration = qFrameDuration.seconds
+        let rec = qCamRec
+        let didChange = changed
+        DispatchQueue.main.async {
+            let info = self.signal
+            if info.timecode != tc { info.timecode = tc }
+            info.timecodeHostNanos = host
+            if info.frameDuration != duration { info.frameDuration = duration }
+            if info.recFromFlag != fromFlag { info.recFromFlag = fromFlag }
+            if info.cameraRec != rec { info.cameraRec = rec }
+            if didChange { self.onCameraRecChange?(rec) }
+        }
+        if changed { sdiLog?.note("Camera REC detected: \(rec == .recording ? "RECORDING" : rec == .stopped ? "STOPPED" : "unknown")\(fromFlag ? " (record flag)" : " (timecode)")") }
     }
 
     private func publishIfNeeded() {

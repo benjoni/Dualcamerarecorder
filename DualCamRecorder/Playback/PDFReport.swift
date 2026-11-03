@@ -285,9 +285,9 @@ private struct ReportRow: View {
             .frame(width: 100, alignment: .leading)
 
             VStack(alignment: .leading, spacing: 2) {
-                fileLine(label(clip.take.camA, names.a), clip.take.camA?.lastPathComponent, s?.cameraClipA)
+                fileLine(label(clip.take.camA, names.a), clip.take.camA?.lastPathComponent, s?.cameraClipA, s?.timecodeA)
                 if showB {
-                    fileLine(label(clip.take.camB, names.b), clip.take.camB?.lastPathComponent, s?.cameraClipB)
+                    fileLine(label(clip.take.camB, names.b), clip.take.camB?.lastPathComponent, s?.cameraClipB, s?.timecodeB)
                 }
             }
             .frame(width: 170, alignment: .leading)
@@ -330,12 +330,15 @@ private struct ReportRow: View {
         .clipShape(RoundedRectangle(cornerRadius: 2))
     }
 
-    private func fileLine(_ cam: String, _ file: String?, _ cameraClip: String?) -> some View {
+    private func fileLine(_ cam: String, _ file: String?, _ cameraClip: String?, _ timecode: TimecodeRange?) -> some View {
         VStack(alignment: .leading, spacing: 0) {
             Text("\(cam): \(file ?? "— camera off")").font(.system(size: 8, design: .monospaced)).lineLimit(1)
                 .foregroundStyle(file == nil ? Color(white: 0.5) : Color.black)
-            if let cameraClip, !cameraClip.isEmpty {
-                Text("  cam clip \(cameraClip)").font(.system(size: 8, weight: .semibold, design: .monospaced)).lineLimit(1)
+            let extra = [cameraClip.flatMap { $0.isEmpty ? nil : "cam clip \($0)" },
+                         timecode.map { "TC \($0.start.string)" }].compactMap { $0 }   // TC IN (OUT = IN + duration)
+            if !extra.isEmpty {
+                Text("  " + extra.joined(separator: "  ")).font(.system(size: 8, weight: .semibold, design: .monospaced)).lineLimit(1)
+                    .minimumScaleFactor(0.8)
             }
         }
     }
@@ -381,9 +384,9 @@ private struct ReportRowPortrait: View {
                 if let marks = inOut {
                     Text(marks).font(.system(size: 8, design: .monospaced))
                 }
-                line(label(clip.take.camA, names.a), clip.take.camA?.lastPathComponent, s?.cameraClipA)
+                line(label(clip.take.camA, names.a), clip.take.camA?.lastPathComponent, s?.cameraClipA, s?.timecodeA)
                 if showB {
-                    line(label(clip.take.camB, names.b), clip.take.camB?.lastPathComponent, s?.cameraClipB)
+                    line(label(clip.take.camB, names.b), clip.take.camB?.lastPathComponent, s?.cameraClipB, s?.timecodeB)
                 }
                 if cameraSetup {
                     ReportSetupLines(clip: clip, names: names, lines: 2)
@@ -423,12 +426,15 @@ private struct ReportRowPortrait: View {
         .clipShape(RoundedRectangle(cornerRadius: 2))
     }
 
-    private func line(_ cam: String, _ file: String?, _ cameraClip: String?) -> some View {
+    private func line(_ cam: String, _ file: String?, _ cameraClip: String?, _ timecode: TimecodeRange?) -> some View {
         HStack(spacing: 8) {
             Text("\(cam): \(file ?? "— camera off")").lineLimit(1)
                 .foregroundStyle(file == nil ? Color(white: 0.5) : Color.black)
             if let cameraClip, !cameraClip.isEmpty {
                 Text("cam clip \(cameraClip)").fontWeight(.semibold).lineLimit(1)
+            }
+            if let timecode {
+                Text("TC \(timecode.start.string)").fontWeight(.semibold).lineLimit(1).minimumScaleFactor(0.8)
             }
         }
         .font(.system(size: 8, design: .monospaced))

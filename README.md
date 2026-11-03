@@ -112,6 +112,34 @@ Rozhranie aplikácie je **v angličtine** (Record / Playback / Slate …); tento
 - Na obraze je žlté **FLIP / FLOP**. Nastavenie je pre každý vstup a ukladá sa do projektu (PROJECT.JSON);
   počas nahrávania sa nedá meniť.
 
+### Maska formátu – 1.85 / 2:1 / 2.35 / Custom (Record aj Playback, tlačidlo Mask nad obrazom)
+- Čierne pruhy cez 16:9 obraz, ktoré ukážu výrez širšieho formátu (hore / dole), alebo užšieho (Custom
+  napr. 1.33 – pruhy vľavo / vpravo). Custom pomer 1.00–3.00, rýchle voľby 1.33 / 1.66 / 2.39.
+- **Opacity** 0–100 % (posuvník, rýchle voľby 25 / 50 / 75 / 100 %); tenká čiara ukazuje okraj výrezu.
+- Pre každú kameru zvlášť, rovnaká v Record aj Playback, ukladá sa do projektu (PROJECT.JSON). Dá sa meniť
+  aj počas nahrávania.
+- Len na obrazovke appky – nahratý súbor, Blackmagic monitor ani telefóny masku nemajú.
+
+### Timecode a REC kamery zo SDI (Project settings → Camera timecode and REC)
+- **Timecode** z SDI signálu kamery (RP188 ATC/LTC, inak VITC) je vpravo dole na obraze v Record.
+- Zapisuje sa do nahratého MOV ako **timecode stopa** (od timecodu prvej snímky, súvisle ďalej) –
+  Resolve / Premiere / Avid / FCP nájdu zdrojový timecode. Overené `ffprobe` (stopa `tmcd`, tag timecode).
+- **TC IN – TC OUT** každého súboru je v slate (C###_SLATE.JSON), v CLIPLOG.CSV (`tc_in`, `tc_out`), v PDF reporte
+  a v Playback (aj timecode na aktuálnej pozícii). Drop-frame (29.97 / 59.94) sa počíta správne.
+- Pod časomierou: **TC A / B in sync** alebo „B 3 frames behind A“ (porovnanie v rovnakom okamihu, ±1 snímka je bežná).
+- **CAM REC / CAM STBY** vpravo hore = nahráva kamera sama. Zisťuje sa z príznaku nahrávania v SDI
+  (RP188 user-bit trigger – napr. kamery Blackmagic), alebo (voľba „Flag or Rec Run timecode“) z bežiaceho
+  timecodu – kamera musí mať nastavený **Rec Run** timecode (pri Free Run beží stále).
+- Oranžové upozornenie: „Camera is NOT recording“ (appka nahráva, kamera nie) / „Camera is recording – the app is not“.
+- **Record with the camera** (Off / A / B / Any camera): REC kamery spustí nahrávanie v appke, STOP ho zastaví
+  (pri Any až keď stoja všetky). Appka začne cca 0,3 s po kamere (rozpoznanie + spoločný štart A/B) – presný
+  posun ukáže timecode.
+- **SDI data log** (Start / Stop pri každej kamere): do priečinka projektu zapíše `SDI_LOG_<kamera>_<čas>.TXT` –
+  timecode, user bits, príznak REC a všetky ancillary (VANC) pakety, len keď sa zmenia. Na kamere stlačiť
+  REC / STOP niekoľkokrát → v logu je vidieť, ktorý paket nesie stav nahrávania (Sony, ARRI … majú vlastné).
+- Testované len so simulovaným vstupom (`-simCameraRec <s>`, `-simNoRecFlag YES`, test `-triggerTestProject`);
+  so skutočnou kamerou a UltraStudio zatiaľ nie.
+
 ### Dočasné vypnutie jednej kamery (Record, ⌥1 / ⌥2)
 - V projekte s dvoma kamerami je nadpis **Camera A / Camera B** nad obrazom tlačidlo so značkou **ON / OFF**. Vypnutá kamera
   zmizne, druhá sa roztiahne na celú šírku a **nahráva sa len ona** (aj Cam clip sa zvýši len jej).

@@ -64,14 +64,24 @@ final class MovieWriter {
     private let videoInput: AVAssetWriterInput
     private let adaptor: AVAssetWriterInputPixelBufferAdaptor
     private let audioInput: AVAssetWriterInput?
+    /// QuickTime timecode track (camera timecode), nil when the camera sends none.
+    private let timecodeInput: AVAssetWriterInput?
+    private let timecodeFormat: CMTimeCodeFormatDescription?
     private let audioChannels: Int
     private var audioFormat: CMAudioFormatDescription?
     private(set) var videoFramesWritten = 0
     private(set) var audioSamplesWritten = 0
     private var sessionStarted = false
 
+    /// Camera timecode of a take: the file gets a timecode track (frame duration, counting base, drop-frame).
+    struct TimecodeTrack {
+        var frameDuration: CMTime
+        var base: Int
+        var dropFrame: Bool
+    }
+
     init(url: URL, width: Int, height: Int, flavor: ProResFlavor, audioChannels: Int,
-         metadata: [AVMetadataItem] = []) throws {
+         metadata: [AVMetadataItem] = [], timecode: TimecodeTrack? = nil) throws {
         self.url = url
         self.audioChannels = audioChannels
         if FileManager.default.fileExists(atPath: url.path) {
@@ -145,6 +155,31 @@ final class MovieWriter {
             audioFormat = fmt
         }
 
+        // Timecode track tied to the video track – editors (Resolve, Premiere, Avid, FCP) read the source timecode.
+        var timecodeInput: AVAssetWriterInput?
+        var timecodeFormat: CMTimeCodeFormatDescription?
+        if let timecode {
+            var flags = kCMTimeCodeFlag_24HourMax
+            if timecode.dropFrame { flags |= kCMTimeCodeFlag_DropFrame }
+            var fd: CMTimeCodeFormatDescription?
+            CMTimeCodeFormatDescriptionCreate(allocator: kCFAllocatorDefault, timeCodeFormatType: kCMTimeCodeFormatType_TimeCode32,
+                                              frameDuration: timecode.frameDuration, frameQuanta: UInt32(timecode.base),
+                                              flags: flags, extensions: nil, formatDescriptionOut: &fd)
+            if let fd {
+                let input = AVAssetWriterInput(mediaType: .timecode, outputSettings: nil, sourceFormatHint: fd)
+                input.expectsMediaDataInRealTime = true
+                let association = AVAssetTrack.AssociationType.timecode.rawValue
+                if writer.canAdd(input) {
+                    writer.add(input)
+                    if videoInput.canAddTrackAssociation(withTrackOf: input, type: association) {
+                        videoInput.addTrackAssociation(withTrackOf: input, type: association)
+                    }
+                    timecodeInput = input
+                    timecodeFormat = fd
+                }
+            }
+        }
+
         guard writer.startWriting() else {
             throw MovieWriterError.cannotStart(writer.error?.localizedDescription ?? "unknown error")
         }
@@ -153,6 +188,34 @@ final class MovieWriter {
         self.adaptor = adaptor
         self.audioInput = audioInput
         self.audioFormat = audioFormat
+        self.timecodeInput = timecodeInput
+        self.timecodeFormat = timecodeFormat
+    }
+
+    var hasTimecodeTrack: Bool { timecodeInput != nil }
+
+    /// One timecode sample (frame number since 00:00:00:00) for the video frame at `pts`.
+    @discardableResult
+    func appendTimecode(frameNumber: Int, at pts: CMTime, duration: CMTime) -> Bool {
+        guard sessionStarted, let timecodeInput, let timecodeFormat,
+              writer.status == .writing, timecodeInput.isReadyForMoreMediaData else { return false }
+        var value = Int32(truncatingIfNeeded: frameNumber).bigEndian
+        var block: CMBlockBuffer?
+        guard CMBlockBufferCreateWithMemoryBlock(allocator: kCFAllocatorDefault, memoryBlock: nil, blockLength: 4,
+                                                 blockAllocator: kCFAllocatorDefault, customBlockSource: nil,
+                                                 offsetToData: 0, dataLength: 4, flags: kCMBlockBufferAssureMemoryNowFlag,
+                                                 blockBufferOut: &block) == noErr, let block,
+              CMBlockBufferReplaceDataBytes(with: &value, blockBuffer: block, offsetIntoDestination: 0, dataLength: 4) == noErr
+        else { return false }
+        var timing = CMSampleTimingInfo(duration: duration, presentationTimeStamp: pts, decodeTimeStamp: .invalid)
+        var size = 4
+        var sample: CMSampleBuffer?
+        guard CMSampleBufferCreate(allocator: kCFAllocatorDefault, dataBuffer: block, dataReady: true,
+                                   makeDataReadyCallback: nil, refcon: nil, formatDescription: timecodeFormat,
+                                   sampleCount: 1, sampleTimingEntryCount: 1, sampleTimingArray: &timing,
+                                   sampleSizeEntryCount: 1, sampleSizeArray: &size, sampleBufferOut: &sample) == noErr,
+              let sample else { return false }
+        return timecodeInput.append(sample)
     }
 
     var failed: Bool { writer.status == .failed }
@@ -223,6 +286,7 @@ final class MovieWriter {
         if let endTime { writer.endSession(atSourceTime: endTime) }
         videoInput.markAsFinished()
         audioInput?.markAsFinished()
+        timecodeInput?.markAsFinished()
         writer.finishWriting { [writer] in
             completion(writer.status == .completed ? nil : writer.error)
         }

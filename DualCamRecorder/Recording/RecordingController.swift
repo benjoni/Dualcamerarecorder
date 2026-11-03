@@ -96,6 +96,12 @@ final class RecordingController: NSObject, ObservableObject, DLDeviceBrowserDele
         channelA.objectWillChange.sink { [weak self] _ in self?.objectWillChange.send() }.store(in: &cancellables)
         channelB.objectWillChange.sink { [weak self] _ in self?.objectWillChange.send() }.store(in: &cancellables)
 
+        // Camera's own REC from the SDI signal: how it is read (project settings) and the camera trigger.
+        settings.$recDetectionA.removeDuplicates().sink { [weak self] d in self?.channelA.setRecDetection(d) }.store(in: &cancellables)
+        settings.$recDetectionB.removeDuplicates().sink { [weak self] d in self?.channelB.setRecDetection(d) }.store(in: &cancellables)
+        channelA.onCameraRecChange = { [weak self] _ in self?.cameraRecChanged() }
+        channelB.onCameraRecChange = { [weak self] _ in self?.cameraRecChanged() }
+
         // An external disk ejected or pulled out while recording stops the take at once.
         let workspace = NSWorkspace.shared.notificationCenter
         for name in [NSWorkspace.willUnmountNotification, NSWorkspace.didUnmountNotification] {
@@ -345,6 +351,32 @@ final class RecordingController: NSObject, ObservableObject, DLDeviceBrowserDele
         settings.slate.take = 1
     }
 
+    // MARK: - Camera trigger
+
+    /// Cameras whose REC starts / stops the app (Project settings → Record with the camera).
+    var triggerRoles: [CameraRole] {
+        switch settings.cameraTrigger {
+        case .off: return []
+        case .a: return settings.isCameraOn(.a) ? [.a] : []
+        case .b: return settings.isCameraOn(.b) ? [.b] : []
+        case .any: return settings.activeRoles
+        }
+    }
+
+    /// A camera started or stopped: REC when one of the trigger cameras records, STOP when all of them stopped.
+    private func cameraRecChanged() {
+        let states = triggerRoles.map { channel($0).signal.cameraRec }
+        guard !states.isEmpty else { return }
+        if states.contains(.recording) {
+            if state == .idle {
+                startRecording()
+                if isRecording { lastTakeMessage = "Started by the camera" }
+            }
+        } else if states.allSatisfy({ $0 == .stopped }), case .recording = state {
+            stopRecording()
+        }
+    }
+
     func stopRecording() {
         guard case .recording(let take, _) = state else { return }
         let stopHost = HostClock.nowNanos
@@ -410,6 +442,9 @@ final class RecordingController: NSObject, ObservableObject, DLDeviceBrowserDele
             if !recordedB { slate.cameraClipB = "" }
             if !recordedA { slate.setupA = CameraSetup() }
             if !recordedB { slate.setupB = CameraSetup() }
+            // Camera timecode of each file (TC IN – TC OUT).
+            slate.timecodeA = recordedA ? pendingResults.first { $0.role == .a }?.timecode : nil
+            slate.timecodeB = recordedB ? pendingResults.first { $0.role == .b }?.timecode : nil
             do {
                 try TakeSlateStore.save(slate, folder: folder, take: take)
             } catch {

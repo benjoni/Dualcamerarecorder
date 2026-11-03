@@ -54,6 +54,13 @@ struct CapturedFrame {
     /// Frames lost by the input before this one.
     var droppedBefore: Int
     var audio: CapturedAudio?
+    /// Timecode the camera embeds in the signal (nil: none).
+    var timecode: Timecode? = nil
+    var timecodeUserBits: UInt32 = 0
+    /// Camera's record trigger from the signal (nil: the camera does not send one).
+    var cameraRecording: Bool? = nil
+    /// All ancillary packets – only while the SDI data log runs.
+    var ancillary: [AncillaryPacket]? = nil
 }
 
 protocol VideoSourceDelegate: AnyObject {
@@ -68,6 +75,8 @@ protocol VideoSourceDelegate: AnyObject {
 protocol VideoSource: AnyObject {
     var delegate: VideoSourceDelegate? { get set }
     var displayName: String { get }
+    /// Deliver the ancillary packets of every frame (SDI data log).
+    var captureAncillary: Bool { get set }
     func start() throws
     func stop()
 }

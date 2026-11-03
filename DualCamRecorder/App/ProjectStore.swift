@@ -47,6 +47,13 @@ struct ProjectSettings: Codable, Equatable {
     /// Flip / flop of each input's picture (also in the recorded files).
     var orientationA = PictureOrientation()
     var orientationB = PictureOrientation()
+    /// Aspect ratio mask over each camera's picture on the screen (Record and Playback; not in the file).
+    var maskA = FrameMask()
+    var maskB = FrameMask()
+    /// How each camera's own REC is read from its SDI signal, and whether the app records together with it.
+    var recDetectionA = CameraRecDetection.flag
+    var recDetectionB = CameraRecDetection.flag
+    var cameraTrigger = CameraTrigger.off
     /// Second copy of all clips on another disk: <backupRootPath>/<project folder name>.
     var backupEnabled = false
     var backupRootPath = ""
@@ -72,6 +79,11 @@ extension ProjectSettings {
         monitorSource = try c.decodeIfPresent(String.self, forKey: .monitorSource) ?? monitorSource
         orientationA = try c.decodeIfPresent(PictureOrientation.self, forKey: .orientationA) ?? orientationA
         orientationB = try c.decodeIfPresent(PictureOrientation.self, forKey: .orientationB) ?? orientationB
+        maskA = try c.decodeIfPresent(FrameMask.self, forKey: .maskA) ?? maskA
+        maskB = try c.decodeIfPresent(FrameMask.self, forKey: .maskB) ?? maskB
+        recDetectionA = (try? c.decodeIfPresent(CameraRecDetection.self, forKey: .recDetectionA)) ?? recDetectionA
+        recDetectionB = (try? c.decodeIfPresent(CameraRecDetection.self, forKey: .recDetectionB)) ?? recDetectionB
+        cameraTrigger = (try? c.decodeIfPresent(CameraTrigger.self, forKey: .cameraTrigger)) ?? cameraTrigger
         backupEnabled = try c.decodeIfPresent(Bool.self, forKey: .backupEnabled) ?? backupEnabled
         backupRootPath = try c.decodeIfPresent(String.self, forKey: .backupRootPath) ?? backupRootPath
     }
@@ -85,6 +97,57 @@ struct PictureOrientation: Codable, Equatable {
     var isTurned: Bool { flip || flop }
     /// "FLIP", "FLOP", "FLIP + FLOP" or "".
     var label: String { [flip ? "FLIP" : nil, flop ? "FLOP" : nil].compactMap { $0 }.joined(separator: " + ") }
+}
+
+/// Black bars over a 16:9 picture showing the frame of a wider (or narrower) format – a framing guide only.
+struct FrameMask: Codable, Equatable {
+    enum Ratio: String, Codable, CaseIterable {
+        case off, r185, r200, r235, custom
+        var title: String {
+            switch self {
+            case .off: return "Off"
+            case .r185: return "1.85"
+            case .r200: return "2:1"
+            case .r235: return "2.35"
+            case .custom: return "Custom"
+            }
+        }
+    }
+    var ratio = Ratio.off
+    /// Width ÷ height used by `custom` (e.g. 2.39, 1.33).
+    var customRatio = 2.39
+    /// Darkness of the bars, 0 … 1.
+    var opacity = 1.0
+
+    static let customRange = 1.0...3.0
+
+    /// Width ÷ height of the masked frame (nil = off).
+    var aspect: Double? {
+        switch ratio {
+        case .off: return nil
+        case .r185: return 1.85
+        case .r200: return 2.0
+        case .r235: return 2.35
+        case .custom: return min(max(customRatio, Self.customRange.lowerBound), Self.customRange.upperBound)
+        }
+    }
+
+    var isOn: Bool { aspect != nil }
+    /// "2.35", "2:1", "2.39" …
+    var label: String {
+        guard let aspect else { return "Mask" }
+        if ratio == .custom { return String(format: "%.2f", aspect) }
+        return ratio.title
+    }
+
+    init() {}
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        ratio = (try? c.decodeIfPresent(Ratio.self, forKey: .ratio)) ?? .off
+        customRatio = try c.decodeIfPresent(Double.self, forKey: .customRatio) ?? customRatio
+        opacity = try c.decodeIfPresent(Double.self, forKey: .opacity) ?? opacity
+    }
 }
 
 struct Project: Codable, Equatable {

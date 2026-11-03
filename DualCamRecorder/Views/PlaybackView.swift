@@ -79,12 +79,14 @@ struct PlaybackView: View {
             if showCameraA {
                 PlayerView(player: player.playerA)
                     .aspectRatio(16.0 / 9.0, contentMode: .fit)
+                    .overlay { FrameMaskOverlay(mask: settings.maskA) }
                     .overlay { if settings.showWaveform { WaveformOverlay(model: player.waveformA) } }
                     .clipShape(RoundedRectangle(cornerRadius: 6))
             }
             if showCameraB {
                 PlayerView(player: player.playerB)
                     .aspectRatio(16.0 / 9.0, contentMode: .fit)
+                    .overlay { FrameMaskOverlay(mask: settings.maskB) }
                     .overlay { if settings.showWaveform { WaveformOverlay(model: player.waveformB) } }
                     .clipShape(RoundedRectangle(cornerRadius: 6))
             }
@@ -262,9 +264,13 @@ struct PlaybackView: View {
     private func playerPane(title: String, role: CameraRole, file: URL?, available: Bool, content: PlayerView,
                             waveform: WaveformModel) -> some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text(title).font(.title3.weight(.bold))
+            HStack(spacing: 10) {
+                Text(title).font(.title3.weight(.bold))
+                FrameMaskButton(settings: settings, role: role)
+            }
             ZStack {
                 content
+                if available { FrameMaskOverlay(mask: settings.mask(role)) }
                 if available && settings.showWaveform {
                     WaveformOverlay(model: waveform)
                 }
@@ -284,6 +290,18 @@ struct PlaybackView: View {
             }
             .font(.callout.monospaced()).foregroundStyle(.secondary)
             .textSelection(.enabled)
+            if available, let tc = player.slate?.timecode(role) {
+                // Camera timecode at the play position, and of the file's first / last frame.
+                HStack(spacing: 14) {
+                    Text("TC " + tc.at(seconds: isScrubbing ? scrubValue : player.currentTime,
+                                       frameDuration: player.frameDuration.seconds).string)
+                        .foregroundStyle(.primary).fontWeight(.semibold)
+                    Text("IN \(tc.start.string)  ·  OUT \(tc.end.string)")
+                }
+                .font(.callout.monospaced()).foregroundStyle(.secondary)
+                .textSelection(.enabled)
+                .help("Camera timecode (from the SDI signal) – the file has it as its timecode track")
+            }
             if let setup = player.slate?.setup(role), !setup.isEmpty {
                 Text(setup.summary)
                     .font(.callout).foregroundStyle(.secondary)

@@ -28,10 +28,10 @@ struct RecordView: View {
     private var screensOnlyBody: some View {
         HStack(spacing: 8) {
             if settings.isCameraOn(.a) {
-                CameraScreen(channel: controller.channelA, showWaveform: settings.showWaveform)
+                CameraScreen(channel: controller.channelA, showWaveform: settings.showWaveform, mask: settings.maskA)
             }
             if settings.isCameraOn(.b) {
-                CameraScreen(channel: controller.channelB, showWaveform: settings.showWaveform)
+                CameraScreen(channel: controller.channelB, showWaveform: settings.showWaveform, mask: settings.maskB)
             }
         }
         .padding(8)
@@ -99,6 +99,10 @@ struct RecordView: View {
             Text("IN \(DisplayFormat.mark(controller.marks.inPoint))  ·  OUT \(DisplayFormat.mark(controller.marks.outPoint))")
                 .font(.system(compact ? .callout : .title3, design: .monospaced))
                 .foregroundStyle(.secondary)
+            if settings.isCameraOn(.a) && settings.isCameraOn(.b) {
+                TimecodeSyncLabel(a: controller.channelA.signal, b: controller.channelB.signal,
+                                  nameA: settings.cameraNames.a, nameB: settings.cameraNames.b)
+            }
         }
         let buttons = HStack(alignment: .center, spacing: 10) {
                 Button(action: controller.toggleRecording) {
@@ -263,6 +267,7 @@ struct CameraPanel: View {
                 .disabled(controller.isRecording)
                 .help("Camera on this input – its name starts the file name (C → C007_S12_SH3B_T04.MOV). The list is in Project settings.")
                 FlipFlopButtons(settings: settings, role: channel.role, locked: controller.isRecording)
+                FrameMaskButton(settings: settings, role: channel.role)
                 Text("Cam clip").font(.caption).foregroundStyle(.secondary).fixedSize()
                 TextField("A001C0001", text: cameraClipBinding)
                     .textFieldStyle(.roundedBorder)
@@ -278,7 +283,7 @@ struct CameraPanel: View {
             }
             .frame(maxWidth: pictureWidth ?? .infinity)
 
-            CameraScreen(channel: channel, showWaveform: showWaveform)
+            CameraScreen(channel: channel, showWaveform: showWaveform, mask: settings.mask(channel.role))
                 .overlay(alignment: .bottomLeading) {
                     let o = settings.orientation(channel.role)
                     if o.isTurned {
@@ -384,6 +389,7 @@ struct CameraPanel: View {
 struct CameraScreen: View {
     @ObservedObject var channel: CameraChannel
     var showWaveform = false
+    var mask = FrameMask()
 
     var body: some View {
         ZStack(alignment: .topLeading) {
@@ -401,6 +407,8 @@ struct CameraScreen: View {
                         .background(Color.black)
                     }
                 }
+                .overlay { if channel.hasSource && channel.hasSignal { FrameMaskOverlay(mask: mask) } }
+                .overlay { if channel.hasSource && channel.hasSignal { CameraSignalOverlay(signal: channel.signal, appRecording: channel.isRecording) } }
                 .clipShape(RoundedRectangle(cornerRadius: 6))
                 // Luma waveform over the lower part of the picture.
                 .overlay {

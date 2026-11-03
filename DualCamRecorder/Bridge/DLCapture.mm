@@ -123,7 +123,27 @@ static NSError *DLMakeError(NSInteger code, NSString *message)
 @property (nonatomic, readwrite) int32_t audioSampleFrames;
 @property (nonatomic, readwrite) int32_t audioChannels;
 @property (nonatomic, readwrite) int64_t audioPacketTime;
+@property (nonatomic, readwrite) BOOL hasTimecode;
+@property (nonatomic, readwrite) uint8_t tcHours;
+@property (nonatomic, readwrite) uint8_t tcMinutes;
+@property (nonatomic, readwrite) uint8_t tcSeconds;
+@property (nonatomic, readwrite) uint8_t tcFrames;
+@property (nonatomic, readwrite) BOOL tcDropFrame;
+@property (nonatomic, readwrite) uint32_t tcUserBits;
+@property (nonatomic, readwrite) int8_t recordTrigger;
+@property (nonatomic, readwrite, nullable) NSArray<DLAncillaryPacket *> *ancillaryPackets;
 - (instancetype)initWithPixelBuffer:(CVPixelBufferRef)pixelBuffer;
+@end
+
+@interface DLAncillaryPacket ()
+@property (nonatomic, readwrite) uint8_t did;
+@property (nonatomic, readwrite) uint8_t sdid;
+@property (nonatomic, readwrite) uint32_t lineNumber;
+@property (nonatomic, readwrite) uint8_t dataStreamIndex;
+@property (nonatomic, readwrite, copy) NSData *data;
+@end
+
+@implementation DLAncillaryPacket
 @end
 
 @implementation DLCaptureFrame
@@ -131,6 +151,7 @@ static NSError *DLMakeError(NSInteger code, NSString *message)
 {
     if ((self = [super init])) {
         _pixelBuffer = CVPixelBufferRetain(pixelBuffer);
+        _recordTrigger = -1;
     }
     return self;
 }
@@ -575,7 +596,55 @@ public:
             frame.hasSignal = (videoFrame->GetFlags() & bmdFrameHasNoInputSource) == 0;
             frame.droppedBefore = dropped;
 
-            // 4) Embedded audio.
+            // 4) Timecode from the camera (RP188 ATC / LTC, else VITC) and its record trigger.
+            IDeckLinkTimecode *tc = nullptr;
+            if ((videoFrame->GetTimecode(bmdTimecodeRP188Any, &tc) == S_OK && tc) ||
+                (videoFrame->GetTimecode(bmdTimecodeVITC, &tc) == S_OK && tc)) {
+                uint8_t h = 0, m = 0, sec = 0, f = 0;
+                if (tc->GetComponents(&h, &m, &sec, &f) == S_OK) {
+                    frame.hasTimecode = YES;
+                    frame.tcHours = h; frame.tcMinutes = m; frame.tcSeconds = sec; frame.tcFrames = f;
+                    BMDTimecodeFlags flags = tc->GetFlags();
+                    frame.tcDropFrame = (flags & bmdTimecodeIsDropFrame) != 0;
+                    if (flags & bmdTimecodeEmbedRecordingTrigger) {
+                        frame.recordTrigger = (flags & bmdTimecodeRecordingTriggered) ? 1 : 0;
+                    }
+                    BMDTimecodeUserBits bits = 0;
+                    if (tc->GetTimecodeUserBits(&bits) == S_OK) frame.tcUserBits = bits;
+                }
+                tc->Release();
+            }
+
+            // 5) Raw ancillary packets for the SDI data log.
+            if (mOwner.captureAncillary) {
+                NSMutableArray<DLAncillaryPacket *> *packets = [NSMutableArray array];
+                IDeckLinkVideoFrameAncillaryPackets *anc = nullptr;
+                if (videoFrame->QueryInterface(IID_IDeckLinkVideoFrameAncillaryPackets, (void **)&anc) == S_OK && anc) {
+                    IDeckLinkAncillaryPacketIterator *it = nullptr;
+                    if (anc->GetPacketIterator(&it) == S_OK && it) {
+                        IDeckLinkAncillaryPacket *packet = nullptr;
+                        while (it->Next(&packet) == S_OK && packet) {
+                            const void *bytes = nullptr;
+                            uint32_t size = 0;
+                            DLAncillaryPacket *p = [DLAncillaryPacket new];
+                            p.did = packet->GetDID();
+                            p.sdid = packet->GetSDID();
+                            p.lineNumber = packet->GetLineNumber();
+                            p.dataStreamIndex = packet->GetDataStreamIndex();
+                            p.data = (packet->GetBytes(bmdAncillaryPacketFormatUInt8, &bytes, &size) == S_OK && bytes)
+                                ? [NSData dataWithBytes:bytes length:size] : [NSData data];
+                            [packets addObject:p];
+                            packet->Release();
+                            packet = nullptr;
+                        }
+                        it->Release();
+                    }
+                    anc->Release();
+                }
+                frame.ancillaryPackets = packets;
+            }
+
+            // 6) Embedded audio.
             if (audioPacket && mAudioChannels > 0) {
                 long sampleFrames = audioPacket->GetSampleFrameCount();
                 void *bytes = nullptr;
