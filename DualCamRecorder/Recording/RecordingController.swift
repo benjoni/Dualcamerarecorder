@@ -353,6 +353,9 @@ final class RecordingController: NSObject, ObservableObject, DLDeviceBrowserDele
 
     // MARK: - Camera trigger
 
+    /// The camera may start a take only while a project is open (not on the project list).
+    var cameraTriggerAllowed = false
+
     /// Cameras whose REC starts / stops the app (Project settings → Record with the camera).
     var triggerRoles: [CameraRole] {
         switch settings.cameraTrigger {
@@ -368,7 +371,7 @@ final class RecordingController: NSObject, ObservableObject, DLDeviceBrowserDele
         let states = triggerRoles.map { channel($0).signal.cameraRec }
         guard !states.isEmpty else { return }
         if states.contains(.recording) {
-            if state == .idle {
+            if state == .idle, cameraTriggerAllowed {
                 startRecording()
                 if isRecording { lastTakeMessage = "Started by the camera" }
             }

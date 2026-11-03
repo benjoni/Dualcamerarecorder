@@ -122,6 +122,7 @@ final class AppModel: ObservableObject {
         timeline.load(folder: opened.folder)
         library.cueLatestOnShow = true
         recorder.refreshNextTake()
+        recorder.cameraTriggerAllowed = true
         configureBackup()
         let folder = opened.folder
         let names = settings.cameraNames
@@ -132,6 +133,7 @@ final class AppModel: ObservableObject {
     /// Back to the welcome page; the current slate is kept with the project.
     func closeProject() {
         guard !recorder.isRecording else { return }
+        recorder.cameraTriggerAllowed = false
         player.load(nil)
         timeline.load(folder: nil)
         projects.closeCurrent(saving: settings.slate)
