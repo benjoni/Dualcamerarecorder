@@ -23,6 +23,8 @@ final class LiveViewServer: ObservableObject {
     @Published private(set) var error: String?
     @Published private(set) var clientCount = 0
     @Published private(set) var accessKey: String
+    /// "dualcam.local" (or the Mac's own name) – stays the same when the IP address changes.
+    @Published private(set) var hostName: String?
     /// Size / rate / JPEG quality of the pictures sent to phones (app-wide setting).
     @Published var quality: LiveViewQuality {
         didSet { UserDefaults.standard.set(quality.rawValue, forKey: "liveViewQuality") }
@@ -37,6 +39,7 @@ final class LiveViewServer: ObservableObject {
     }
     private let shared = OSAllocatedUnfairLock(initialState: Shared())
     private var clientTimer: Timer?
+    private let localName = LocalName()
 
     /// Open MJPEG connections (server queue only). A phone that is still receiving the previous
     /// picture skips the next one, so a slow Wi-Fi never piles up delay.
@@ -59,6 +62,7 @@ final class LiveViewServer: ObservableObject {
             accessKey = Self.randomKey()
             UserDefaults.standard.set(accessKey, forKey: "liveViewKey")
         }
+        localName.onChange = { [weak self] name in self?.hostName = name }
     }
 
     // MARK: - Control (main thread)
@@ -85,6 +89,7 @@ final class LiveViewServer: ObservableObject {
             }
             l.start(queue: queue)
             listener = l
+            localName.start()
             clientTimer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in
                 self?.updateClientCount()
             }
@@ -96,6 +101,7 @@ final class LiveViewServer: ObservableObject {
     func stop() {
         listener?.cancel()
         listener = nil
+        localName.stop()
         clientTimer?.invalidate()
         clientTimer = nil
         isRunning = false
@@ -121,10 +127,17 @@ final class LiveViewServer: ObservableObject {
         return shared.withLock { $0.clients.values.contains { $0 > limit } }
     }
 
-    /// Addresses phones can open (one per active network interface).
-    var urls: [String] {
-        Self.localIPv4Addresses().map { "http://\($0):\(Self.port)/?k=\(accessKey)" }
+    /// Address by name – the one for the QR code (nil: no network).
+    var nameURL: String? {
+        hostName.map { url($0) }
     }
+
+    /// Addresses by IP (one per active network interface) – for phones that cannot open .local names.
+    var ipURLs: [String] {
+        Self.localIPv4Addresses().map { url($0) }
+    }
+
+    private func url(_ host: String) -> String { "http://\(host):\(Self.port)/?k=\(accessKey)" }
 
     // MARK: - Data from the app (any thread)
 

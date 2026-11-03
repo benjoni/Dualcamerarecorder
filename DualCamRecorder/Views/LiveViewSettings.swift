@@ -13,13 +13,15 @@ import CoreImage.CIFilterBuiltins
 struct LiveViewSettingsSection: View {
     @ObservedObject var model: AppModel
     @ObservedObject var server: LiveViewServer
+    /// QR code with the IP address instead of the name (Android phones often cannot open .local).
+    @State private var qrByIP = false
 
     var body: some View {
         Section("Live view on phones") {
             Toggle("Share both cameras with phones on the same Wi-Fi",
                    isOn: Binding(get: { server.isRunning }, set: { model.setLiveView($0) }))
 
-            if server.isRunning, let url = server.urls.first {
+            if server.isRunning, let url = qrByIP ? server.ipURLs.first : (server.nameURL ?? server.ipURLs.first) {
                 HStack(alignment: .top, spacing: 20) {
                     if let qr = Self.qrCode(url) {
                         Image(decorative: qr, scale: 1)
@@ -32,8 +34,27 @@ struct LiveViewSettingsSection: View {
                     VStack(alignment: .leading, spacing: 8) {
                         Text("Scan the QR code with the phone camera, or open:")
                             .foregroundStyle(.secondary)
-                        ForEach(server.urls, id: \.self) { address in
+                        if let nameURL = server.nameURL {
+                            Text(nameURL).font(.callout.monospaced().weight(.semibold)).textSelection(.enabled)
+                            Text("Stays the same when the router gives the Mac a new IP address")
+                                .font(.caption).foregroundStyle(.secondary)
+                            if server.hostName != LocalName.preferred {
+                                Text("For the shorter \(LocalName.preferred): allow DualCamRecorder in System Settings › Privacy & Security › Local Network, then switch the live view off and on (or another Mac on this network already uses the name)")
+                                    .font(.caption).foregroundStyle(.secondary)
+                                    .fixedSize(horizontal: false, vertical: true)
+                            }
+                        }
+                        ForEach(server.ipURLs, id: \.self) { address in
                             Text(address).font(.callout.monospaced()).textSelection(.enabled)
+                        }
+                        if server.nameURL != nil {
+                            Picker("QR code", selection: $qrByIP) {
+                                Text("Name").tag(false)
+                                Text("IP address").tag(true)
+                            }
+                            .pickerStyle(.segmented)
+                            .fixedSize()
+                            .help("iPhone opens the name; some Android phones need the IP address")
                         }
                         Label("\(server.clientCount) phone\(server.clientCount == 1 ? "" : "s") watching",
                               systemImage: "iphone")

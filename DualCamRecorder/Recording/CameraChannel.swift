@@ -15,6 +15,7 @@ import Foundation
 import CoreMedia
 import AVFoundation
 import CoreVideo
+import VideoToolbox
 import Combine
 import os
 
@@ -62,6 +63,15 @@ final class CameraChannel: ObservableObject, VideoSourceDelegate {
 
     private var source: VideoSource?
     private let queue: DispatchQueue
+
+    /// Flip / flop (capture thread): every picture is turned before preview, monitor and writer.
+    private struct Turn {
+        var orientation = PictureOrientation()
+        var session: VTPixelRotationSession?
+        var pool: CVPixelBufferPool?
+        var poolKey: (format: OSType, width: Int, height: Int)?
+    }
+    private let turn = OSAllocatedUnfairLock(initialState: Turn())
 
     // Pending work on `queue` – used to detect a backlog (disk/encoder too slow).
     private let backlog = OSAllocatedUnfairLock(initialState: 0)
@@ -129,6 +139,48 @@ final class CameraChannel: ObservableObject, VideoSourceDelegate {
 
     var hasSource: Bool { source != nil }
 
+    /// Picture turned round from the next frame on (not while recording – see the Record buttons).
+    func setOrientation(_ orientation: PictureOrientation) {
+        turn.withLock { t in
+            guard t.orientation != orientation else { return }
+            t.orientation = orientation
+            if let session = t.session { VTPixelRotationSessionInvalidate(session) }
+            t.session = nil
+            guard orientation.isTurned else { return }
+            var session: VTPixelRotationSession?
+            guard VTPixelRotationSessionCreate(nil, &session) == noErr, let session else { return }
+            VTSessionSetProperty(session, key: kVTPixelRotationPropertyKey_FlipVerticalOrientation,
+                                 value: orientation.flip ? kCFBooleanTrue : kCFBooleanFalse)
+            VTSessionSetProperty(session, key: kVTPixelRotationPropertyKey_FlipHorizontalOrientation,
+                                 value: orientation.flop ? kCFBooleanTrue : kCFBooleanFalse)
+            t.session = session
+        }
+    }
+
+    /// The picture flipped / flopped (same format and size, colour tags kept); unchanged when not turned.
+    private func turned(_ picture: CVPixelBuffer) -> CVPixelBuffer {
+        turn.withLockUnchecked { t in
+            guard let session = t.session else { return picture }
+            let format = CVPixelBufferGetPixelFormatType(picture)
+            let width = CVPixelBufferGetWidth(picture), height = CVPixelBufferGetHeight(picture)
+            if t.poolKey.map({ $0.format != format || $0.width != width || $0.height != height }) ?? true {
+                let attributes: [String: Any] = [kCVPixelBufferPixelFormatTypeKey as String: format,
+                                                 kCVPixelBufferWidthKey as String: width,
+                                                 kCVPixelBufferHeightKey as String: height,
+                                                 kCVPixelBufferIOSurfacePropertiesKey as String: [:]]
+                var pool: CVPixelBufferPool?
+                CVPixelBufferPoolCreate(nil, [kCVPixelBufferPoolMinimumBufferCountKey: 4] as CFDictionary, attributes as CFDictionary, &pool)
+                t.pool = pool
+                t.poolKey = (format, width, height)
+            }
+            var out: CVPixelBuffer?
+            guard let pool = t.pool, CVPixelBufferPoolCreatePixelBuffer(nil, pool, &out) == kCVReturnSuccess, let out,
+                  VTPixelRotationSessionRotateImage(session, picture, out) == noErr else { return picture }
+            CVBufferPropagateAttachments(picture, out)
+            return out
+        }
+    }
+
     func resetCounters() {
         queue.async {
             self.qStats = ChannelStats()
@@ -185,7 +237,9 @@ final class CameraChannel: ObservableObject, VideoSourceDelegate {
 
     // MARK: - VideoSourceDelegate
 
-    func videoSource(_ source: VideoSource, didCapture frame: CapturedFrame) {
+    func videoSource(_ source: VideoSource, didCapture captured: CapturedFrame) {
+        var frame = captured
+        frame.pixelBuffer = turned(captured.pixelBuffer)
         preview.enqueue(frame.pixelBuffer)
         onPicture?(frame.pixelBuffer)
 

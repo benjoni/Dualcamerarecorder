@@ -19,6 +19,8 @@ final class AppModel: ObservableObject {
     let timeline = EditTimeline()
     let backup = BackupManager()
     let liveView = LiveViewServer()
+    /// Overlay tab: a clip frame with a live camera on top.
+    let overlay = OverlayCompositor()
     let monitor = MonitorOutput()
     private var liveViewTimer: Timer?
     private var cancellables = Set<AnyCancellable>()
@@ -40,10 +42,19 @@ final class AppModel: ObservableObject {
         recorder.channelB.preview.onJPEG = { [weak liveView = self.liveView] jpeg in liveView?.updateFrame(camera: "B", jpeg: jpeg) }
 
         // Blackmagic monitor: live pictures and formats of both inputs, device / source from the project settings.
-        recorder.channelA.onPicture = { [weak monitor = self.monitor] picture in monitor?.submit(picture, role: .a) }
-        recorder.channelB.onPicture = { [weak monitor = self.monitor] picture in monitor?.submit(picture, role: .b) }
+        recorder.channelA.onPicture = { [weak monitor = self.monitor, weak overlay = self.overlay] picture in
+            monitor?.submit(picture, role: .a)
+            overlay?.submitLive(picture, role: .a)
+        }
+        recorder.channelB.onPicture = { [weak monitor = self.monitor, weak overlay = self.overlay] picture in
+            monitor?.submit(picture, role: .b)
+            overlay?.submitLive(picture, role: .b)
+        }
         recorder.channelA.$format.sink { [weak monitor = self.monitor] f in monitor?.setFormat(f, for: .a) }.store(in: &cancellables)
         recorder.channelB.$format.sink { [weak monitor = self.monitor] f in monitor?.setFormat(f, for: .b) }.store(in: &cancellables)
+        // Flip / flop of the inputs (project settings, buttons above the pictures).
+        settings.$orientationA.removeDuplicates().sink { [weak recorder = self.recorder] o in recorder?.channelA.setOrientation(o) }.store(in: &cancellables)
+        settings.$orientationB.removeDuplicates().sink { [weak recorder = self.recorder] o in recorder?.channelB.setOrientation(o) }.store(in: &cancellables)
         // (The output is the first device found with one – the UltraStudio Monitor.)
         settings.$monitorEnabled.combineLatest(settings.$monitorSource, recorder.$outputDevices)
             .sink { [weak monitor = self.monitor] enabled, source, devices in
@@ -235,7 +246,7 @@ struct ContentView: View {
     @ObservedObject var model: AppModel
     @ObservedObject var settings: AppSettings
     @ObservedObject var projects: ProjectStore
-    /// 0 Record · 1 Playback · 2 Edit
+    /// 0 Record · 1 Playback · 2 Edit · 3 Overlay
     @State private var tab = 0
     @StateObject private var editPlayer = EditPlayer()
     /// Hide everything except the camera pictures / players (⌘F).
@@ -296,8 +307,10 @@ struct ContentView: View {
                     } else if tab == 1 {
                         PlaybackView(library: model.library, player: model.player, settings: model.settings,
                                      timeline: model.timeline, screensOnly: true)
-                    } else {
+                    } else if tab == 2 {
                         EditView(timeline: model.timeline, edit: editPlayer, library: model.library, settings: model.settings, screensOnly: true)
+                    } else {
+                        OverlayView(compositor: model.overlay, library: model.library, settings: model.settings, screensOnly: true)
                     }
                 }
                 .background {
@@ -306,6 +319,7 @@ struct ContentView: View {
                         ShortcutButton(key: "1", modifiers: [.command]) { tab = 0 }
                         ShortcutButton(key: "2", modifiers: [.command]) { tab = 1 }
                         ShortcutButton(key: "3", modifiers: [.command]) { tab = 2 }
+                        ShortcutButton(key: "4", modifiers: [.command]) { tab = 3 }
                     }
                 }
             } else {
@@ -324,6 +338,10 @@ struct ContentView: View {
                             Label("Edit", systemImage: "scissors")
                         }
                         .help("Edit for the director (E)")
+                        Toggle(isOn: Binding(get: { tab == 3 }, set: { if $0 { tab = 3 } })) {
+                            Label("Overlay", systemImage: "square.on.square")
+                        }
+                        .help("A clip frame with the live camera on top – to line up a new take (O)")
                     }
                     .toggleStyle(SegmentToggleStyle(width: 180, minHeight: 38))
                     .font(.title3.weight(.semibold))
@@ -333,8 +351,10 @@ struct ContentView: View {
                     } else if tab == 1 {
                         PlaybackView(library: model.library, player: model.player, settings: model.settings,
                                      timeline: model.timeline)
-                    } else {
+                    } else if tab == 2 {
                         EditView(timeline: model.timeline, edit: editPlayer, library: model.library, settings: model.settings)
+                    } else {
+                        OverlayView(compositor: model.overlay, library: model.library, settings: model.settings)
                     }
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)   // same corners on Record and Playback
@@ -435,7 +455,7 @@ struct ContentView: View {
     }
 
 
-    /// R → Record, P → Playback, E → Edit (plain keys, ignored while typing in a text field).
+    /// R → Record, P → Playback, E → Edit, O → Overlay (plain keys, ignored while typing in a text field).
     private func installTabKeys() {
         guard tabKeyMonitor == nil else { return }
         tabKeyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
@@ -447,6 +467,7 @@ struct ContentView: View {
             case "r": tab = 0; return nil
             case "p": tab = 1; return nil
             case "e": tab = 2; return nil
+            case "o": tab = 3; return nil
             default: return event
             }
         }
@@ -462,10 +483,15 @@ struct ContentView: View {
         model.recorder.channelA.preview.waveformEnabled = settings.showWaveform && recordVisible
         model.recorder.channelB.preview.waveformEnabled = settings.showWaveform && recordVisible
         model.player.waveformEnabled = settings.showWaveform && playbackVisible
+        model.overlay.isActive = inProject && tab == 3
         // Monitor output: the clip being played on Playback, the cut on Edit, the cameras everywhere else.
         if playbackVisible {
             model.monitor.setPlayback { [weak player = model.player] in
                 player?.monitorFrames() ?? MonitorPlaybackFrames(frameDuration: CMTime(value: 1, timescale: 25))
+            }
+        } else if inProject && tab == 3 {
+            model.monitor.setPlayback { [weak overlay = model.overlay] in
+                overlay?.monitorFrames ?? MonitorPlaybackFrames(frameDuration: CMTime(value: 1, timescale: 25), program: true)
             }
         } else if inProject && tab == 2 {
             model.monitor.setPlayback { [weak edit = editPlayer] in
@@ -498,6 +524,38 @@ extension ContentView {
             tab = index
             try? await Task.sleep(nanoseconds: 3_000_000_000)
             saveWindowPicture(to: URL(fileURLWithPath: dir).appendingPathComponent("\(label).png"))
+        }
+        // Overlay tab: the window and the composed picture in each mode.
+        tab = 3
+        try? await Task.sleep(nanoseconds: 3_000_000_000)
+        saveWindowPicture(to: URL(fileURLWithPath: dir).appendingPathComponent("overlay.png"))
+        for mode in OverlayMode.allCases {
+            model.overlay.mode = mode
+            try? await Task.sleep(nanoseconds: 1_000_000_000)
+            try? model.overlay.debugCompositePNG()?.write(to: URL(fileURLWithPath: dir).appendingPathComponent("overlay_\(mode.rawValue).png"))
+        }
+        // …and with the demo pictures.
+        model.overlay.setDemoLive(OverlayCompositor.assetPicture(named: "DemoClose"))
+        model.overlay.setStill(OverlayCompositor.assetPicture(named: "DemoWide"), frameDuration: CMTime(value: 1, timescale: 25))
+        for mode in OverlayMode.allCases {
+            model.overlay.mode = mode
+            try? await Task.sleep(nanoseconds: 1_000_000_000)
+            try? model.overlay.debugCompositePNG()?.write(to: URL(fileURLWithPath: dir).appendingPathComponent("overlay_demo_\(mode.rawValue).png"))
+        }
+        model.overlay.setDemoLive(nil)
+        model.overlay.mode = .mix
+        tab = 0
+        // Live view for phones: server on, its settings section drawn off screen.
+        model.setLiveView(true)
+        try? await Task.sleep(nanoseconds: 3_000_000_000)
+        let live = NSHostingView(rootView: Form { LiveViewSettingsSection(model: model, server: model.liveView) }
+            .formStyle(.grouped).frame(width: 720, height: 520).preferredColorScheme(.dark))
+        live.frame = NSRect(x: 0, y: 0, width: 720, height: 520)
+        live.layoutSubtreeIfNeeded()
+        try? await Task.sleep(nanoseconds: 500_000_000)
+        if let rep = live.bitmapImageRepForCachingDisplay(in: live.bounds) {
+            live.cacheDisplay(in: live.bounds, to: rep)
+            try? rep.representation(using: .png, properties: [:])?.write(to: URL(fileURLWithPath: dir).appendingPathComponent("live_view.png"))
         }
         // Project settings sheet, drawn off screen.
         let sheet = NSHostingView(rootView: ProjectSettingsView(model: model, settings: settings, recorder: model.recorder, backup: model.backup, monitor: model.monitor)

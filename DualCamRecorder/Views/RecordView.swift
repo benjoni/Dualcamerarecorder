@@ -262,6 +262,7 @@ struct CameraPanel: View {
                 .fixedSize()   // "C · Ronin 4D" never cut
                 .disabled(controller.isRecording)
                 .help("Camera on this input – its name starts the file name (C → C007_S12_SH3B_T04.MOV). The list is in Project settings.")
+                FlipFlopButtons(settings: settings, role: channel.role, locked: controller.isRecording)
                 Text("Cam clip").font(.caption).foregroundStyle(.secondary).fixedSize()
                 TextField("A001C0001", text: cameraClipBinding)
                     .textFieldStyle(.roundedBorder)
@@ -278,6 +279,16 @@ struct CameraPanel: View {
             .frame(maxWidth: pictureWidth ?? .infinity)
 
             CameraScreen(channel: channel, showWaveform: showWaveform)
+                .overlay(alignment: .bottomLeading) {
+                    let o = settings.orientation(channel.role)
+                    if o.isTurned {
+                        Text(o.label).font(.caption.weight(.heavy)).foregroundStyle(.black)
+                            .padding(.horizontal, 6).padding(.vertical, 2)
+                            .background(Color.yellow, in: RoundedRectangle(cornerRadius: 4))
+                            .padding(8)
+                            .help("The picture is turned – also in the recorded file")
+                    }
+                }
                 .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { pictureWidth = $0 }
 
             if settings.showCameraSetup {
@@ -512,5 +523,43 @@ private struct SetupFieldStyle: TextFieldStyle {
             .frame(height: 24)
             .background(RoundedRectangle(cornerRadius: 5).fill(Color.gray.opacity(0.15)))
             .overlay(RoundedRectangle(cornerRadius: 5).strokeBorder(Color.gray.opacity(0.35)))
+    }
+}
+
+/// Flip (upside down) / flop (mirrored) of one input – for a camera mounted upside down or shooting through a mirror.
+/// Turns the picture on the screen, the monitor, the phones and in the recorded file; locked while recording.
+struct FlipFlopButtons: View {
+    @ObservedObject var settings: AppSettings
+    var role: CameraRole
+    var locked: Bool
+
+    var body: some View {
+        let o = settings.orientation(role)
+        HStack(spacing: 2) {
+            toggle("Flip", systemImage: "arrow.up.and.down", on: o.flip,
+                   help: "Flip – turn the picture upside down (camera mounted upside down). Also in the recorded file.") {
+                var n = o; n.flip.toggle(); settings.setOrientation(n, for: role)
+            }
+            toggle("Flop", systemImage: "arrow.left.and.right", on: o.flop,
+                   help: "Flop – mirror the picture left ↔ right (shooting through a mirror). Also in the recorded file.") {
+                var n = o; n.flop.toggle(); settings.setOrientation(n, for: role)
+            }
+        }
+        .disabled(locked)
+    }
+
+    private func toggle(_ title: String, systemImage: String, on: Bool, help: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Label(title, systemImage: systemImage)
+                .labelStyle(.titleOnly)
+                .fontWeight(on ? .bold : .regular)
+                .frame(minWidth: 30)
+                .foregroundStyle(on ? Color.black : Color.primary)
+        }
+        .buttonStyle(.bordered)
+        .tint(on ? .yellow : nil)
+        .background(on ? RoundedRectangle(cornerRadius: 5).fill(Color.yellow) : nil)
+        .help(help)
+        .accessibilityLabel(title)
     }
 }

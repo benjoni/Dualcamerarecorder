@@ -36,6 +36,10 @@ final class AppSettings: ObservableObject {
     /// Blackmagic monitor on a DeckLink output (per project): on / off and what it shows (toolbar).
     @Published var monitorEnabled = false
     @Published var monitorSource = MonitorSource.a
+    /// Picture of each input turned round (per project): flip = upside down, flop = mirrored left–right.
+    /// Applied before the screen, monitor, phones and the recorded file.
+    @Published var orientationA = PictureOrientation()
+    @Published var orientationB = PictureOrientation()
     /// Backup copy of the project's clips on a second disk (per project).
     @Published var backupEnabled: Bool { didSet { defaults.set(backupEnabled, forKey: "backupEnabled") } }
     @Published var backupRootPath: String { didSet { defaults.set(backupRootPath, forKey: "backupRootPath") } }
@@ -76,6 +80,14 @@ final class AppSettings: ObservableObject {
 
     var twoCameras: Bool { cameraCount >= 2 }
 
+    func orientation(_ role: CameraRole) -> PictureOrientation {
+        role == .a ? orientationA : orientationB
+    }
+
+    func setOrientation(_ o: PictureOrientation, for role: CameraRole) {
+        if role == .a { orientationA = o } else { orientationB = o }
+    }
+
     /// Temporary on/off of each camera in a two-camera project (not saved – both are on when a project opens).
     @Published var cameraAOn = true
     @Published var cameraBOn = true
@@ -98,6 +110,7 @@ final class AppSettings: ObservableObject {
                         earlierCameraNamesA: earlierCameraNamesA, earlierCameraNamesB: earlierCameraNamesB,
                         cameras: cameras, deviceA: deviceA, deviceB: deviceB,
                         monitorEnabled: monitorEnabled, monitorSource: monitorSource.rawValue,
+                        orientationA: orientationA, orientationB: orientationB,
                         backupEnabled: backupEnabled, backupRootPath: backupRootPath)
     }
 
@@ -118,6 +131,8 @@ final class AppSettings: ObservableObject {
         deviceB = p.deviceB
         monitorEnabled = p.monitorEnabled
         monitorSource = MonitorSource(rawValue: p.monitorSource) ?? .a
+        orientationA = p.orientationA
+        orientationB = p.orientationB
         backupEnabled = p.backupEnabled
         backupRootPath = p.backupRootPath
     }

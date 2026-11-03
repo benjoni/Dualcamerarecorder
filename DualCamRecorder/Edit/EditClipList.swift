@@ -148,7 +148,7 @@ struct EditClipList: View {
 }
 
 /// Picture from the middle of one camera's file.
-private struct ClipCameraThumbnail: View {
+struct ClipCameraThumbnail: View {
     let url: URL
     let modified: Date
     @State private var image: NSImage?

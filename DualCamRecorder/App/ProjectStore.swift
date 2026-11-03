@@ -44,6 +44,9 @@ struct ProjectSettings: Codable, Equatable {
     /// and what it shows (MonitorSource: a / b / both).
     var monitorEnabled = false
     var monitorSource = MonitorSource.a.rawValue
+    /// Flip / flop of each input's picture (also in the recorded files).
+    var orientationA = PictureOrientation()
+    var orientationB = PictureOrientation()
     /// Second copy of all clips on another disk: <backupRootPath>/<project folder name>.
     var backupEnabled = false
     var backupRootPath = ""
@@ -67,9 +70,21 @@ extension ProjectSettings {
         deviceB = try c.decodeIfPresent(String.self, forKey: .deviceB) ?? deviceB
         monitorEnabled = try c.decodeIfPresent(Bool.self, forKey: .monitorEnabled) ?? monitorEnabled
         monitorSource = try c.decodeIfPresent(String.self, forKey: .monitorSource) ?? monitorSource
+        orientationA = try c.decodeIfPresent(PictureOrientation.self, forKey: .orientationA) ?? orientationA
+        orientationB = try c.decodeIfPresent(PictureOrientation.self, forKey: .orientationB) ?? orientationB
         backupEnabled = try c.decodeIfPresent(Bool.self, forKey: .backupEnabled) ?? backupEnabled
         backupRootPath = try c.decodeIfPresent(String.self, forKey: .backupRootPath) ?? backupRootPath
     }
+}
+
+/// Camera mounted upside down / shooting through a mirror: flip = upside down, flop = mirrored left–right
+/// (both = turned by 180°).
+struct PictureOrientation: Codable, Equatable {
+    var flip = false
+    var flop = false
+    var isTurned: Bool { flip || flop }
+    /// "FLIP", "FLOP", "FLIP + FLOP" or "".
+    var label: String { [flip ? "FLIP" : nil, flop ? "FLOP" : nil].compactMap { $0 }.joined(separator: " + ") }
 }
 
 struct Project: Codable, Equatable {

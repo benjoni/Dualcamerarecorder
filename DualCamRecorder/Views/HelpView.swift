@@ -28,8 +28,8 @@ struct HelpView: View {
                     key("⌘,", "App settings – projects location, live view on phones, DeckLink devices")
                     key("⇧⌘W", "Waveform over the pictures")
                     key("⌘F", "Screens only / show all controls (a low window also gets a compact Record tab by itself)")
-                    key("R  P  E", "Record / Playback / Edit (not while typing in a field)")
-                    key("⌘1  ⌘2  ⌘3", "Record / Playback / Edit (in Screens only)")
+                    key("R  P  E  O", "Record / Playback / Edit / Overlay (not while typing in a field)")
+                    key("⌘1 … ⌘4", "Record / Playback / Edit / Overlay (in Screens only)")
                     key("⌘?", "This help")
                 }
 
@@ -39,6 +39,7 @@ struct HelpView: View {
                     key("⌥1  ⌥2", "Camera A / B on or off – not while recording; the other camera records alone")
                     term("A · Venice ▾", "Menu above each picture: which camera of the project's camera list is on this input. Its name starts the file names (C → C007_…); the camera the other input uses is not offered")
                     term("Camera list", "Project settings: name + model of every camera (A Venice, B Venice, C Ronin 4D …). Add camera / ⊖ removes; renaming a camera renames the input using it")
+                    term("Flip  Flop", "Buttons above each picture: Flip turns the picture upside down (camera mounted upside down), Flop mirrors it left ↔ right (shot through a mirror); both = turned by 180°. The screen, monitor, phones and the recorded file are turned; yellow FLIP / FLOP on the picture. Saved in the project, locked while recording")
                     term("Camera Settings", "Button next to Slate: fields under both cameras. A bare number gets its unit when you leave the field (or ↵ / REC): Lens 32 → 32mm, Stop 2.8 → T2.8, Distance / Height 3.2 → 3.2 m, Tilt / Shutter 180 → 180°, WB 5600 → 5600K. Text with its own unit (AWB, 1/50, 10 ft) stays; ISO and Filter are not changed")
                 }
 
@@ -67,6 +68,23 @@ struct HelpView: View {
                     term("Sequences", "Right side: several cut passages – New starts an empty one. Click shows it on the timeline, double-click renames, right-click: Rename / Duplicate / Delete (the last one is only cleared). Clips are added to the sequence shown; Undo works within it")
                     term("Export MOV…", "The sequence shown, file name <project>_<sequence>.mov; “Clip info in picture” burns in clip and camera")
                     term("EDIT.JSON", "The edit – all sequences – saved in the project folder")
+                }
+
+                section("Live view on phones") {
+                    term("dualcam.local", "App settings (⌘,): the address and QR code for phones on the same Wi-Fi. The name stays the same when the router gives the Mac a new IP address. Needs Local Network access for DualCamRecorder (macOS asks once); otherwise the Mac's own name (Mac-mini.local) is used")
+                    term("IP address", "QR code › IP address: for phones that cannot open .local names (some Android phones)")
+                }
+
+                section("Overlay") {
+                    term("Overlay", "One frame of a recorded clip with a live camera on top – to line up a new take with an earlier one. Click a clip on the left (it starts at its IN mark); Live picks the camera")
+                    key("←  →", "Clip one frame back / forward (also the slider, IN / OUT buttons)")
+                    key("↑  ↓", "Mix: opacity of the live camera ± 10 % (0 = only the clip, 100 = only live)")
+                    term("Mix", "Live over the clip with the opacity")
+                    term("Difference", "Black where live and clip are the same – everything that moved lights up")
+                    term("Wipe", "Clip left, live right – drag the yellow line on the picture")
+                    term("Monitor", "On the Overlay tab the Blackmagic monitor shows the overlay (full picture)")
+                    term("Demo pictures", "Top of the clip list: try the overlay without cameras – a wide shot as the clip, a close-up instead of the live camera")
+                    key("⌘L", "Show / hide the clip list")
                 }
 
                 section("Recording disk") {

@@ -104,6 +104,14 @@ Rozhranie aplikácie je **v angličtine** (Record / Playback / Slate …); tento
 - Ukladá sa s projektom (`monitorEnabled`, `monitorSource` v `PROJECT.JSON`).
 - Neotestované so skutočným UltraStudio Monitor – obraz (A, B, A | B, 10-bit vstup, Playback, strih z Edit) overený len testom bez hardvéru.
 
+### Otočená kamera – Flip / Flop (Record, tlačidlá nad obrazom)
+- **Flip** – obraz hore nohami (kamera namontovaná naopak), **Flop** – zrkadlovo zľava doprava
+  (záber cez zrkadlo); oboje = otočenie o 180°.
+- Otáča sa **originál hneď pri vstupe**: obraz v appke, Blackmagic monitor, telefóny aj **nahratý súbor**
+  (ProRes ostáva 10-bit, farebné značky sa zachovajú). Hardvérové otočenie (VideoToolbox), ~2–3 ms na snímku 1080p.
+- Na obraze je žlté **FLIP / FLOP**. Nastavenie je pre každý vstup a ukladá sa do projektu (PROJECT.JSON);
+  počas nahrávania sa nedá meniť.
+
 ### Dočasné vypnutie jednej kamery (Record, ⌥1 / ⌥2)
 - V projekte s dvoma kamerami je nadpis **Camera A / Camera B** nad obrazom tlačidlo so značkou **ON / OFF**. Vypnutá kamera
   zmizne, druhá sa roztiahne na celú šírku a **nahráva sa len ona** (aj Cam clip sa zvýši len jej).
@@ -195,7 +203,12 @@ Rozhranie aplikácie je **v angličtine** (Record / Playback / Slate …); tento
 
 ### Živý náhľad na telefónoch (Settings → Live view on phones)
 - **Settings (⌘,) → Live view on phones** – zapni prepínač. Zobrazí sa **QR kód**
-  a adresa (napr. `http://192.168.1.23:8090/?k=ab12cd34`) a počet pripojených telefónov.
+  a adresa (napr. `http://dualcam.local:8090/?k=ab12cd34`) a počet pripojených telefónov.
+- Adresa **`dualcam.local`** (Bonjour/mDNS) sa nemení, keď router pridelí Macu inú IP – QR kód
+  vytlačený raz platí stále (kým nezmeníš prístupový kód). Treba povoliť **Lokálnu sieť** pre DualCamRecorder
+  (macOS sa spýta raz; inak Systémové nastavenia › Súkromie a bezpečnosť › Lokálna sieť, potom náhľad vypni a zapni).
+  Bez povolenia, alebo keď meno už používa iný Mac v sieti, sa použije meno Macu (`Mac-mini.local`).
+  Pod adresou je aj IP adresa; prepínač **QR code: Name / IP address** – niektoré Android telefóny `.local` neotvoria.
 - Telefóny v **rovnakej Wi-Fi** (iPhone aj Android, aj viac naraz) naskenujú QR kód a v prehliadači
   vidia obe kamery naživo, ● REC s časom, súbory a klapku; na výšku pod sebou, na šírku vedľa seba.
   Netreba žiadnu aplikáciu.
@@ -230,6 +243,22 @@ Rozhranie aplikácie je **v angličtine** (Record / Playback / Slate …); tento
 - **Export MOV…**: H.264 1080p film celej timeline so zvukom vybranej kamery, voliteľne s popisom
   úseku v ľavom dolnom rohu (Clip · Scene · Shot · Take · Camera). Predvolene `<projekt>_EDIT.mov`
   v priečinku projektu.
+
+### Overlay – compositing (záložka Overlay, O)
+- Jeden obraz: **snímka nahratého klipu** (zastavená) a cez ňu **živá kamera** – na zarovnanie herca / kamery
+  podľa skoršieho záberu.
+- Vľavo zoznam klipov (každá kamera klipu zvlášť, s hľadaním); klip začne na svojej značke IN.
+  Snímka: posuvník, **← / →** po jednej snímke, tlačidlá IN / OUT.
+- **Live**: ktorá živá kamera ide navrch. Režimy:
+  - **Mix** – priehľadnosť živej kamery (0 % len klip, 100 % len živý obraz), **↑ / ↓** po 10 %, tlačidlá 0–100;
+  - **Difference** – kde sa obraz zhoduje, je čierny; svieti len to, čo sa pohlo;
+  - **Wipe** – klip vľavo, živý obraz vpravo, žltú čiaru ťaháš myšou po obraze.
+- Snímka z klipu sa dekóduje a prevádza rovnako ako živý obraz (VideoToolbox → BGRA, bez prepočtu farieb),
+  takže Difference je naozaj čierny. Skladanie na GPU (Core Image), nahrávanie nespomaľuje; v Recorde sa dá
+  nahrávať ďalej. Flip / Flop živej kamery platí aj tu.
+- **Blackmagic monitor** na záložke Overlay ukazuje overlay (celý obraz).
+- **Demo pictures** (hore v zozname) – vyskúšanie bez kamier: široký záber ako klip, detail postavy ako živý obraz
+  (obrázky DemoWide / DemoClose v Assets.xcassets).
 
 ### Export PDF (⇧⌘P)
 - V lište okna tlačidlo **Export PDF…**: report klipov **podľa natáčacích dní** (všetky dni alebo
