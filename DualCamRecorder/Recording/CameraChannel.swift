@@ -115,6 +115,9 @@ final class CameraChannel: ObservableObject, VideoSourceDelegate {
     private var qTCMoving = 0
     private var qTCStill = 0
     private var qCamRec = CameraRecState.unknown
+    /// The input sent the Blackmagic REC bit in the timecode user bits at least once – from then on the
+    /// user bits are its REC (also with "SDI record flag" / "Flag or Rec Run").
+    private var qUserBitsRecSeen = false
     private var qCandidate = CameraRecState.unknown
     private var qCandidateFrames = 0
     private var sdiLog: SDIDataLog?
@@ -153,6 +156,8 @@ final class CameraChannel: ObservableObject, VideoSourceDelegate {
 
     func setSource(_ newSource: VideoSource?) {
         if isRecording { return }
+        retryStart?.cancel()
+        retryStart = nil
         source?.stop()
         source?.delegate = nil
         source = newSource
@@ -167,6 +172,7 @@ final class CameraChannel: ObservableObject, VideoSourceDelegate {
             self.qTimecode = nil
             self.qCamRec = .unknown
             self.qCandidate = .unknown
+            self.qUserBitsRecSeen = false
         }
         signal.timecode = nil
         signal.cameraRec = .unknown
@@ -178,10 +184,25 @@ final class CameraChannel: ObservableObject, VideoSourceDelegate {
         sourceName = newSource.displayName
         newSource.delegate = self
         newSource.captureAncillary = signal.sdiLog != nil
+        start(newSource)
+    }
+
+    /// Pending new attempt to start an input that could not start (e.g. still held by another app).
+    private var retryStart: DispatchWorkItem?
+
+    /// Starts the input; when it fails, tries again every 2 s until it starts or another source is chosen.
+    private func start(_ newSource: VideoSource) {
         do {
             try newSource.start()
+            lastError = nil
         } catch {
-            lastError = error.localizedDescription
+            lastError = error.localizedDescription + " – trying again…"
+            let retry = DispatchWorkItem { [weak self, weak newSource] in
+                guard let self, let newSource, self.source === newSource, !self.isRecording else { return }
+                self.start(newSource)
+            }
+            retryStart = retry
+            DispatchQueue.main.asyncAfter(deadline: .now() + 2, execute: retry)
         }
     }
 
@@ -489,6 +510,9 @@ final class CameraChannel: ObservableObject, VideoSourceDelegate {
             if let flag = frame.cameraRecording {
                 raw = flag ? .recording : .stopped
                 fromFlag = true
+            } else if frame.timecode != nil, let rec = userBitsRec(frame.timecodeUserBits, detection: detection) {
+                raw = rec
+                fromFlag = true
             } else if detection == .recRun, frame.timecode != nil {
                 raw = qTCMoving >= 2 ? .recording : (qTCStill >= 2 ? .stopped : qCamRec)
             }
@@ -516,6 +540,16 @@ final class CameraChannel: ObservableObject, VideoSourceDelegate {
             if didChange { self.onCameraRecChange?(rec) }
         }
         if changed { sdiLog?.note("Camera REC detected: \(rec == .recording ? "RECORDING" : rec == .stopped ? "STOPPED" : "unknown")\(fromFlag ? " (record flag)" : " (timecode)")") }
+    }
+
+    /// Blackmagic REC from the user bits: only when they are 0 or the REC bit (other cameras put a date or
+    /// reel number there). Used always with the Blackmagic setting, otherwise once the REC bit was seen.
+    private func userBitsRec(_ bits: UInt32, detection: CameraRecDetection) -> CameraRecState? {
+        let rec = CameraRecDetection.userBitsRec
+        guard bits == 0 || bits == rec else { return nil }
+        if bits == rec { qUserBitsRecSeen = true }
+        guard detection == .userBits || qUserBitsRecSeen else { return nil }
+        return bits == rec ? .recording : .stopped
     }
 
     private func publishIfNeeded() {

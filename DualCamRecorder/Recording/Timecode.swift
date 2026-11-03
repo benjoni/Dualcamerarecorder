@@ -103,15 +103,21 @@ enum CameraRecDetection: String, Codable, CaseIterable, Identifiable {
     case flag
     /// Flag, or else the timecode: running = recording, standing = stopped (camera set to Rec Run timecode).
     case recRun
+    /// Blackmagic cameras (Pyxis, URSA, Pocket …): REC is bit 0x08 of the timecode user bits.
+    case userBits
     case off
     var id: String { rawValue }
     var title: String {
         switch self {
         case .flag: return "SDI record flag"
         case .recRun: return "Flag or Rec Run timecode"
+        case .userBits: return "Blackmagic (REC in timecode user bits)"
         case .off: return "Off"
         }
     }
+
+    /// Blackmagic REC bit in the timecode user bits.
+    static let userBitsRec: UInt32 = 0x08
 }
 
 /// Start / stop recording in the app together with the camera (per project).

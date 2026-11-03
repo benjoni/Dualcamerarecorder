@@ -120,7 +120,7 @@ struct CameraTimecodeSettings: View {
                 Text("Any camera").tag(CameraTrigger.any)
             }
         }
-        Text("The camera's timecode (RP188 / VITC in the SDI signal) is shown on the picture and written into the recorded files (timecode track, TC IN – OUT in the slate, CSV and PDF). Its own REC is read from the record flag it sends (e.g. Blackmagic cameras); with Rec Run timecode set in the camera, a running timecode also means recording. \"Record with the camera\" starts and stops the app's REC together with the camera.")
+        Text("The camera's timecode (RP188 / VITC in the SDI signal) is shown on the picture and written into the recorded files (timecode track, TC IN – OUT in the slate, CSV and PDF). Its own REC is read from the record flag it sends; Blackmagic cameras (Pyxis, URSA, Pocket) send it in the timecode user bits – choose \"Blackmagic\" (it is also picked up by the other settings after the first REC). With Rec Run timecode set in the camera, a running timecode also means recording – not for cameras whose timecode always runs (Free Run). \"Record with the camera\" starts and stops the app's REC together with the camera.")
             .font(.callout).foregroundStyle(.secondary)
             .fixedSize(horizontal: false, vertical: true)
         ForEach(settings.twoCameras ? [CameraRole.a, .b] : [.a]) { role in
