@@ -249,38 +249,73 @@ struct CameraPanel: View {
         }
     }
 
+    /// Camera on this input (input device is chosen in Project settings).
+    private var cameraPicker: some View {
+        Picker("", selection: Binding(
+            get: { settings.cameraNames.name(channel.role) },
+            set: { controller.setCameraName($0, for: channel.role) })) {
+            ForEach(settings.cameraChoices(for: channel.role)) { camera in
+                Text(camera.title).tag(TakeNaming.sanitize(camera.name))
+            }
+        }
+        .labelsHidden()
+        .fixedSize()   // "C · Ronin 4D" never cut
+        .disabled(controller.isRecording)
+        .help("Camera on this input – its name starts the file name (C → C007_S12_SH3B_T04.MOV). The list is in Project settings.")
+    }
+
+    /// Flip · Flop · Mask.
+    private var picturButtons: some View {
+        HStack {
+            FlipFlopButtons(settings: settings, role: channel.role, locked: controller.isRecording)
+            FrameMaskButton(settings: settings, role: channel.role)
+        }
+        .fixedSize()
+    }
+
+    /// "Cam clip" · clip number field · stepper.
+    private func clipNumber(minFieldWidth: CGFloat) -> some View {
+        HStack {
+            Text("Cam clip").font(.caption).foregroundStyle(.secondary).fixedSize()
+            TextField("A001C0001", text: cameraClipBinding)
+                .textFieldStyle(.roundedBorder)
+                .font(.body.monospaced())
+                .frame(minWidth: minFieldWidth, idealWidth: 190, maxWidth: 230)
+                .disabled(controller.isRecording)
+                .help("Clip name in the camera's own recording (e.g. A001C0023). Its last number goes up by 1 after every take; saved with the clip.")
+            Stepper("",
+                    onIncrement: { cameraClipBinding.wrappedValue = CameraClipID.next(cameraClipBinding.wrappedValue) },
+                    onDecrement: { cameraClipBinding.wrappedValue = CameraClipID.previous(cameraClipBinding.wrappedValue) })
+                .labelsHidden()
+                .disabled(controller.isRecording)
+        }
+    }
+
     var body: some View {
         VStack(alignment: .center, spacing: 8) {
-            HStack {
-                cameraTitles
-                    .fixedSize()   // never squeezed, even when the picture is narrow
-                // Input device is chosen in Project settings.
-                Spacer(minLength: 12)
-                Picker("", selection: Binding(
-                    get: { settings.cameraNames.name(channel.role) },
-                    set: { controller.setCameraName($0, for: channel.role) })) {
-                    ForEach(settings.cameraChoices(for: channel.role)) { camera in
-                        Text(camera.title).tag(TakeNaming.sanitize(camera.name))
+            // One row when there is room; in a narrower window two rows (title · camera, then the
+            // buttons and the clip number) – one row made the window content wider than the window.
+            ViewThatFits(in: .horizontal) {
+                HStack {
+                    cameraTitles
+                        .fixedSize()   // never squeezed, even when the picture is narrow
+                    Spacer(minLength: 12)
+                    cameraPicker
+                    picturButtons
+                    clipNumber(minFieldWidth: 150)
+                }
+                VStack(spacing: 6) {
+                    HStack {
+                        cameraTitles.fixedSize()
+                        Spacer(minLength: 12)
+                        cameraPicker
+                    }
+                    HStack {
+                        picturButtons
+                        Spacer(minLength: 8)
+                        clipNumber(minFieldWidth: 110)
                     }
                 }
-                .labelsHidden()
-                .fixedSize()   // "C · Ronin 4D" never cut
-                .disabled(controller.isRecording)
-                .help("Camera on this input – its name starts the file name (C → C007_S12_SH3B_T04.MOV). The list is in Project settings.")
-                FlipFlopButtons(settings: settings, role: channel.role, locked: controller.isRecording)
-                FrameMaskButton(settings: settings, role: channel.role)
-                Text("Cam clip").font(.caption).foregroundStyle(.secondary).fixedSize()
-                TextField("A001C0001", text: cameraClipBinding)
-                    .textFieldStyle(.roundedBorder)
-                    .font(.body.monospaced())
-                    .frame(minWidth: 150, idealWidth: 190, maxWidth: 230)
-                    .disabled(controller.isRecording)
-                    .help("Clip name in the camera's own recording (e.g. A001C0023). Its last number goes up by 1 after every take; saved with the clip.")
-                Stepper("",
-                        onIncrement: { cameraClipBinding.wrappedValue = CameraClipID.next(cameraClipBinding.wrappedValue) },
-                        onDecrement: { cameraClipBinding.wrappedValue = CameraClipID.previous(cameraClipBinding.wrappedValue) })
-                    .labelsHidden()
-                    .disabled(controller.isRecording)
             }
             .frame(maxWidth: pictureWidth ?? .infinity)
 

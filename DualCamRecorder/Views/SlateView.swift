@@ -163,33 +163,54 @@ struct SlateFields: View {
         }
     }
 
+    @ViewBuilder
     private var goodToggle: some View {
-        SegmentGroup {
+        let toggle = SegmentGroup {
             Toggle(isOn: $slate.good) {
                 Label("Good take", systemImage: slate.good ? "star.fill" : "star")
             }
             .help("Good (circled) take")
         }
-        .toggleStyle(SegmentToggleStyle(width: large ? 180 : 160, minHeight: grouped ? 32 : 30))
-        .padding(.top, grouped ? 22 : 14)
+        if grouped {
+            // An empty title line like the fields have, and the field's height (group padding 2 + 2):
+            // the box sits exactly level with the Note field.
+            VStack(alignment: .leading, spacing: 2) {
+                Text(" ").font(.body)
+                toggle.toggleStyle(SegmentToggleStyle(width: large ? 180 : 160, height: fieldHeight - 4))
+            }
+        } else {
+            toggle
+                .toggleStyle(SegmentToggleStyle(width: 150, minHeight: 30))
+                .padding(.top, 14)
+        }
     }
 
+    /// Height of the text fields in the grouped layout (BigTextFieldStyle).
+    private var fieldHeight: CGFloat { large ? 40 : 32 }
+
     /// EXT / DAY / MOS.
+    @ViewBuilder
     private var extrasGroup: some View {
-        HStack(spacing: 10) {
-            if grouped {
-                // Same rounded box as MOS (system pop-ups are capsules on macOS 26).
-                boxMenu(slate.location.title) {
-                    Picker("", selection: $slate.location) {
-                        ForEach(SlateInfo.Location.allCases) { Text($0.title).tag($0) }
+        if grouped {
+            // An empty title line like the fields have, and the fields' height: level with Scene / Shot / Take.
+            VStack(alignment: .leading, spacing: 2) {
+                Text(" ").font(.body)
+                HStack(spacing: 10) {
+                    boxMenu(slate.location.title) {
+                        Picker("", selection: $slate.location) {
+                            ForEach(SlateInfo.Location.allCases) { Text($0.title).tag($0) }
+                        }
                     }
-                }
-                boxMenu(slate.timeOfDay.title) {
-                    Picker("", selection: $slate.timeOfDay) {
-                        ForEach(SlateInfo.TimeOfDay.allCases) { Text($0.title).tag($0) }
+                    boxMenu(slate.timeOfDay.title) {
+                        Picker("", selection: $slate.timeOfDay) {
+                            ForEach(SlateInfo.TimeOfDay.allCases) { Text($0.title).tag($0) }
+                        }
                     }
+                    mosToggle.toggleStyle(SegmentToggleStyle(width: large ? 106 : 96, height: fieldHeight - 4))
                 }
-            } else {
+            }
+        } else {
+            HStack(spacing: 10) {
                 Picker("", selection: $slate.location) {
                     ForEach(SlateInfo.Location.allCases) { Text($0.title).tag($0) }
                 }
@@ -198,20 +219,22 @@ struct SlateFields: View {
                     ForEach(SlateInfo.TimeOfDay.allCases) { Text($0.title).tag($0) }
                 }
                 .labelsHidden().frame(width: 90)
+                mosToggle.toggleStyle(SegmentToggleStyle(width: 86, height: 24))   // + 2 pt group padding = like EXT / DAY
             }
-            SegmentGroup {
-                Toggle(isOn: $slate.mos) {
-                    Label("MOS", systemImage: "speaker.slash")
-                }
-                .help("Without sound")
-            }
-            .toggleStyle(SegmentToggleStyle(width: large ? 106 : 96, height: grouped ? 32 : 24))   // + 2 pt group padding = like EXT / DAY
+            .padding(.top, 14)
         }
-        .controlSize(large ? .extraLarge : .regular)
-        .padding(.top, grouped ? 22 : 14)
     }
 
-    /// Pop-up menu drawn as a 110 × 36 rounded box like the MOS toggle group.
+    private var mosToggle: some View {
+        SegmentGroup {
+            Toggle(isOn: $slate.mos) {
+                Label("MOS", systemImage: "speaker.slash")
+            }
+            .help("Without sound")
+        }
+    }
+
+    /// Pop-up menu drawn like the text fields next to it (same height, fill and border).
     private func boxMenu<Items: View>(_ title: String, @ViewBuilder items: () -> Items) -> some View {
         Menu {
             items().pickerStyle(.inline).labelsHidden()
@@ -220,9 +243,10 @@ struct SlateFields: View {
                 Text(title)
                 Image(systemName: "chevron.up.chevron.down").font(.caption)
             }
-            .frame(width: 110, height: 36)
-            .background(RoundedRectangle(cornerRadius: 8).fill(Color.gray.opacity(0.2)))
-            .contentShape(RoundedRectangle(cornerRadius: 8))
+            .frame(width: large ? 110 : 96, height: fieldHeight)
+            .background(RoundedRectangle(cornerRadius: 6).fill(Color.gray.opacity(0.15)))
+            .overlay(RoundedRectangle(cornerRadius: 6).strokeBorder(Color.gray.opacity(0.35)))
+            .contentShape(RoundedRectangle(cornerRadius: 6))
         }
         .menuStyle(.button)
         .buttonStyle(.plain)
@@ -280,9 +304,28 @@ struct SlatePanel: View {
 
     var body: some View {
         // Board at the left edge, fields centered in the window (an invisible board on the right balances it).
-        HStack(alignment: .top, spacing: 0) {
-            SlateBoard(slate: displayedSlate, recording: controller.isRecording, large: !compact)
-            Spacer(minLength: 16)
+        // In a narrower window the invisible board goes and the fields center in the room next to the board –
+        // otherwise the whole window content got wider than the window and its left edge was cut off.
+        ViewThatFits(in: .horizontal) {
+            HStack(alignment: .top, spacing: 0) {
+                board
+                Spacer(minLength: 16)
+                fields
+                Spacer(minLength: 16)
+                SlateBoard(slate: displayedSlate, large: !compact).hidden()
+            }
+            HStack(alignment: .top, spacing: 16) {
+                board
+                fields.frame(maxWidth: .infinity)
+            }
+        }
+    }
+
+    private var board: some View {
+        SlateBoard(slate: displayedSlate, recording: controller.isRecording, large: !compact)
+    }
+
+    private var fields: some View {
             VStack(alignment: .center, spacing: 6) {
                 HStack {
                     Text("Slate").font(.title3.weight(.semibold))
@@ -305,9 +348,6 @@ struct SlatePanel: View {
                             large: !compact, centered: true)
                     .font(compact ? .title3 : .title2)
             }
-            Spacer(minLength: 16)
-            SlateBoard(slate: displayedSlate, large: !compact).hidden()
-        }
     }
 
     private var slateHint: String {
