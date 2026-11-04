@@ -108,8 +108,8 @@ struct EditView: View {
                 .keyboardShortcut("k", modifiers: [.command])
                 .help("Show / hide the sequences – several cut passages (⌘K)")
             }
-            .buttonStyle(BigButtonStyle())
-            .font(.title3)
+            .buttonStyle(BigButtonStyle(small: true))   // same size as the Clips button in Playback
+            .font(.callout)
 
             PlayerView(player: edit.player)
                 .aspectRatio(16.0 / 9.0, contentMode: .fit)
