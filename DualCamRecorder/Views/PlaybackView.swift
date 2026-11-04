@@ -25,7 +25,11 @@ struct PlaybackView: View {
     /// While typing in the search field, single-key shortcuts (space, I, O, arrows) are switched off.
     @FocusState private var searchFocused: Bool
     /// Clip list is hidden by default – opened with the "Clips" button (⌘L) and hidden again by the user.
+    #if DEBUG
+    @State private var showClipList = UserDefaults.standard.bool(forKey: "snapshotShowClips")   // -snapshotShowClips YES
+    #else
     @State private var showClipList = false
+    #endif
     /// Set when the tab appears: select the most recent clip as soon as the list is (re)loaded.
     @State private var selectLatestPending = false
 
@@ -451,7 +455,7 @@ struct PlaybackView: View {
             HStack(spacing: 0) {
                 markButtons.fixedSize()
                 Spacer(minLength: 16)
-                transportButtons.fixedSize()
+                transportButtons().fixedSize()
                 Spacer(minLength: 16)
                 speedControl.fixedSize()
             }
@@ -469,12 +473,13 @@ struct PlaybackView: View {
         .font(.title3)
     }
 
-    /// Medium window: transport · speed, IN/OUT · loop, add to timeline · audio · good take / slate.
+    /// Medium window (e.g. a laptop with the clip list open): transport · speed,
+    /// IN/OUT · loop · audio, add to timeline · good take / slate.
     private var mediumButtons: some View {
         VStack(spacing: 8) {
             HStack(spacing: 0) {
                 Spacer(minLength: 0)
-                transportButtons.fixedSize()
+                transportButtons().fixedSize()
                 Spacer(minLength: 16)
                 speedControl.fixedSize()
             }
@@ -482,11 +487,11 @@ struct PlaybackView: View {
                 markButtons.fixedSize()
                 Spacer(minLength: 16)
                 loopControl.fixedSize()
+                Spacer(minLength: 16)
+                audioButtons.fixedSize()
             }
             HStack(spacing: 0) {
                 addRow.fixedSize()
-                Spacer(minLength: 16)
-                audioButtons.fixedSize()
                 Spacer(minLength: 16)
                 takeButtons.fixedSize()
             }
@@ -495,17 +500,25 @@ struct PlaybackView: View {
         .font(.title3)
     }
 
-    /// Narrow window: one group under another.
+    /// Narrow window: smaller groups under each other, none wider than about 600 points.
     private var stackedButtons: some View {
-        VStack(spacing: 10) {
-            transportRow
-            markRow
-            addRow
-            audioButtons
-            takeButtons.padding(.top, 6)
+        VStack(spacing: 8) {
+            transportButtons(playWidth: 110).fixedSize()
+            HStack(spacing: 0) {
+                markButtons.fixedSize()
+                Spacer(minLength: 16)
+                speedControl.fixedSize()
+            }
+            HStack(spacing: 0) {
+                loopControl.fixedSize()
+                Spacer(minLength: 16)
+                audioButtons.fixedSize()
+            }
+            addRow.fixedSize()
+            takeButtons.fixedSize()
         }
         .buttonStyle(BigButtonStyle())
-        .font(.title2)
+        .font(.title3)
     }
 
     /// Good take + edit slate.
@@ -574,7 +587,7 @@ struct PlaybackView: View {
     }
 
     /// Prev · frame back · play · frame forward · Next.
-    private var transportButtons: some View {
+    private func transportButtons(playWidth: CGFloat = 160) -> some View {
         HStack(spacing: 14) {
             Button { selectAdjacentClip(-1) } label: {
                 Label("Prev", systemImage: "backward.end.alt.fill")
@@ -587,7 +600,7 @@ struct PlaybackView: View {
                 .keyboardShortcut(shortcut(.leftArrow))
                 .help("One frame back (←)")
             Button { player.togglePlay() } label: {
-                Image(systemName: player.isPlaying ? "pause.fill" : "play.fill").frame(width: 160)
+                Image(systemName: player.isPlaying ? "pause.fill" : "play.fill").frame(width: playWidth)
             }
             .keyboardShortcut(shortcut(.space))
             .help("Play / pause (space)")
@@ -602,17 +615,6 @@ struct PlaybackView: View {
             .keyboardShortcut(shortcut(.downArrow))
             .disabled(adjacentClip(1) == nil)
             .help("Next clip (↓ or ⌘→)")
-        }
-    }
-
-    /// Transport buttons centered, speed at the right edge (an invisible copy on the left keeps them centered).
-    private var transportRow: some View {
-        HStack(spacing: 0) {
-            speedControl.hidden()
-            Spacer(minLength: 24)
-            transportButtons
-            Spacer(minLength: 24)
-            speedControl
         }
     }
 
@@ -734,17 +736,6 @@ struct PlaybackView: View {
             + (added.count > 1 ? "\(added.count) pieces, " : "") + player.timecode(total)
         DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
             if addedMessageToken == token { addedMessage = nil }
-        }
-    }
-
-    /// IN/OUT buttons centered, loop at the right edge under the speed.
-    private var markRow: some View {
-        HStack(spacing: 0) {
-            loopControl.hidden()
-            Spacer(minLength: 24)
-            markButtons
-            Spacer(minLength: 24)
-            loopControl
         }
     }
 
