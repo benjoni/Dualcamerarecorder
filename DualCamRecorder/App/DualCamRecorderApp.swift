@@ -160,6 +160,12 @@ final class AppModel: ObservableObject {
         }
     }
 
+    private static let boardDate: DateFormatter = {
+        let f = DateFormatter()
+        f.dateFormat = "d. M. yyyy"
+        return f
+    }()
+
     /// Status for the phone page; JPEGs are only produced while a phone is watching.
     private func updateLiveView() {
         let watching = liveView.hasViewers
@@ -191,6 +197,23 @@ final class AppModel: ObservableObject {
             "nameB": names.b,
             "showA": settings.isCameraOn(.a),
             "twoCameras": settings.isCameraOn(.b),
+            // Everything the black slate on the phone shows.
+            "board": [
+                "production": slate.production,
+                "day": slate.shootingDay,
+                "scene": slate.scene,
+                "shot": slate.shot,
+                "take": slate.take,
+                "location": slate.location == .none ? "" : slate.location.rawValue,
+                "time": slate.timeOfDay == .none ? "" : slate.timeOfDay.rawValue,
+                "mos": slate.mos,
+                "good": slate.good,
+                "rehearsal": slate.rehearsal || recorder.isRehearsal,
+                "director": slate.director,
+                "dop": slate.cameraOperator,
+                "note": settings.slate.note,
+                "date": Self.boardDate.string(from: Date()),
+            ] as [String: Any],
         ]
         if let json = try? JSONSerialization.data(withJSONObject: status) {
             liveView.updateStatus(json)

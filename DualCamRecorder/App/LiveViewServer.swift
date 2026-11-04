@@ -374,11 +374,58 @@ enum LiveViewPage {
   .logo{height:16px;width:auto;flex:none}
   footer{display:flex;justify-content:space-between;align-items:center;padding:10px 12px calc(10px + env(safe-area-inset-bottom));color:#777;font-size:12px;font-weight:600}
   footer .app{color:#777;font-size:12px}
+  #slateBtn{background:#2a2a2a;color:#eee;border:1px solid #444;border-radius:6px;padding:4px 10px;font:600 13px -apple-system,system-ui,sans-serif}
+  #slateBtn.on{background:#eee;color:#000}
+  /* Black clapperboard */
+  #board{display:none;margin:6px;background:#0a0a0a;color:#fff;border:1px solid #555;border-radius:8px;padding:12px 14px;cursor:pointer;user-select:none}
+  #board.on{display:block}
+  #board.full{position:fixed;inset:0;margin:0;border:none;border-radius:0;z-index:10;display:flex;flex-direction:column;justify-content:center;
+    padding:max(16px,env(safe-area-inset-top)) max(20px,env(safe-area-inset-right)) max(16px,env(safe-area-inset-bottom)) max(20px,env(safe-area-inset-left))}
+  .sticks{height:16px;background:repeating-linear-gradient(-60deg,#fff 0 18px,#000 18px 36px);transform:rotate(-2deg);margin:2px 0 10px}
+  #board.full .sticks{height:6vmin;background:repeating-linear-gradient(-60deg,#fff 0 7vmin,#000 7vmin 14vmin)}
+  .brow{display:flex;justify-content:space-between;gap:12px;align-items:baseline}
+  .prod{font-weight:800;font-size:16px;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .big{display:flex;gap:22px;margin:8px 0 6px}
+  .cell .t{font:700 10px -apple-system,system-ui,sans-serif;color:#999;letter-spacing:.5px}
+  .cell .v{font:800 44px ui-rounded,-apple-system,system-ui,sans-serif;line-height:1.05;white-space:nowrap}
+  .tags{font-weight:800;font-size:16px;display:flex;gap:10px;flex-wrap:wrap;min-height:20px}
+  .tags .reh{color:#000;background:#ff9500;border-radius:4px;padding:0 6px}
+  .tags .good{color:#ffd60a}
+  .people{display:flex;gap:22px;margin-top:8px}
+  .people .v{font-weight:700;font-size:14px}
+  .note{margin-top:6px;font-size:13px;color:#bbb}
+  .hint{margin-top:8px;font-size:11px;color:#666}
+  #board.full .prod{font-size:4.5vmin}
+  #board.full .big{gap:min(6vmin,4vw);margin:3vmin 0 2vmin}
+  #board.full .cell .t{font-size:max(11px,2.6vmin)}
+  /* Scene · shot · take as big as the screen allows – never wider than the screen. */
+  #board.full .big .cell .v{font-size:min(22vmin,12vw)}
+  #board.full .tags{font-size:max(18px,5vmin);min-height:6vmin}
+  #board.full .people .v{font-size:max(16px,4.5vmin)}
+  #board.full .note{font-size:3.5vmin}
+  #board.full .hint{font-size:2.4vmin}
 </style>
 </head><body>
-<header><span id="rec">● REC</span><span id="timer">00:00:00</span><span id="project">DualCamRecorder</span><span class="app"><svg class="logo" viewBox="0 0 294 245" fill="none" stroke="currentColor" stroke-width="16"><g id="bb"><path d="M169 0V245M169 8H244A42 42 0 0 1 286 50V51A42 42 0 0 1 244 93H169M169 152H244A42 42 0 0 1 286 194V195A42 42 0 0 1 244 237H169"/></g><use href="#bb" transform="matrix(-1 0 0 1 293 0)"/></svg>DualCamRecorder</span></header>
+<header><span id="rec">● REC</span><span id="timer">00:00:00</span><span id="project">DualCamRecorder</span><button id="slateBtn" type="button">Slate</button><span class="app"><svg class="logo" viewBox="0 0 294 245" fill="none" stroke="currentColor" stroke-width="16"><g id="bb"><path d="M169 0V245M169 8H244A42 42 0 0 1 286 50V51A42 42 0 0 1 244 93H169M169 152H244A42 42 0 0 1 286 194V195A42 42 0 0 1 244 237H169"/></g><use href="#bb" transform="matrix(-1 0 0 1 293 0)"/></svg>DualCamRecorder</span></header>
 <div id="offline">Connection to the Mac lost – retrying…</div>
 <div id="slate"></div>
+<div id="board">
+  <div class="sticks"></div>
+  <div class="brow"><span class="prod" id="bProd">PRODUCTION</span><span class="prod" id="bDay"></span></div>
+  <div class="big">
+    <div class="cell"><div class="t">SCENE</div><div class="v" id="bScene">–</div></div>
+    <div class="cell"><div class="t">SHOT</div><div class="v" id="bShot">–</div></div>
+    <div class="cell"><div class="t">TAKE</div><div class="v" id="bTake">1</div></div>
+  </div>
+  <div class="tags" id="bTags"></div>
+  <div class="people">
+    <div class="cell"><div class="t">DIRECTOR</div><div class="v" id="bDir">–</div></div>
+    <div class="cell"><div class="t">DOP</div><div class="v" id="bDop">–</div></div>
+    <div class="cell"><div class="t">DATE</div><div class="v" id="bDate"></div></div>
+  </div>
+  <div class="note" id="bNote"></div>
+  <div class="hint" id="bHint">Tap the slate for full screen</div>
+</div>
 <div id="files"></div>
 <main>
   <div class="cam" id="boxA"><img id="camA" alt=""><span class="label" id="nameA">A</span></div>
@@ -409,6 +456,7 @@ async function status(){
     document.getElementById('project').textContent = s.project || 'DualCamRecorder';
     document.getElementById('slate').textContent = s.slate || '';
     document.getElementById('files').textContent = s.files || '';
+    fillBoard(s.board);
     document.getElementById('nameA').textContent = s.nameA || 'A';
     document.getElementById('nameB').textContent = s.nameB || 'B';
     document.getElementById('boxA').classList.toggle('hidden', s.showA === false);
@@ -420,6 +468,43 @@ async function status(){
     document.getElementById('offline').style.display = 'block';
   }
   setTimeout(status, 1000);
+}
+// Black slate: the Slate button shows / hides it (remembered on this phone), a tap on it toggles full screen.
+const board = document.getElementById('board');
+const slateBtn = document.getElementById('slateBtn');
+function setBoard(on){
+  board.classList.toggle('on', on);
+  slateBtn.classList.toggle('on', on);
+  if (!on) board.classList.remove('full');
+  try { localStorage.setItem('dcrSlate', on ? '1' : '0'); } catch (e) {}
+}
+slateBtn.onclick = () => setBoard(!board.classList.contains('on'));
+board.onclick = () => {
+  const full = !board.classList.contains('full');
+  board.classList.toggle('full', full);
+  document.getElementById('bHint').textContent = full ? 'Tap to close full screen' : 'Tap the slate for full screen';
+};
+try { setBoard(localStorage.getItem('dcrSlate') === '1'); } catch (e) {}
+function fillBoard(b){
+  if (!b) return;
+  const set = (id, v) => { document.getElementById(id).textContent = v; };
+  set('bProd', (b.production || 'PRODUCTION').toUpperCase());
+  set('bDay', b.day ? 'DAY ' + b.day : '');
+  set('bScene', b.scene || '–');
+  set('bShot', b.shot || '–');
+  set('bTake', String(b.take || 1));
+  set('bDir', b.director || '–');
+  set('bDop', b.dop || '–');
+  set('bDate', b.date || '');
+  set('bNote', b.note || '');
+  const tags = document.getElementById('bTags');
+  tags.textContent = '';
+  const add = (text, cls) => { const s = document.createElement('span'); s.textContent = text; if (cls) s.className = cls; tags.appendChild(s); };
+  if (b.location) add(b.location);
+  if (b.time) add(b.time);
+  if (b.mos) add('MOS');
+  if (b.good) add('★ GOOD', 'good');
+  if (b.rehearsal) add('REHEARSAL', 'reh');
 }
 restartStreams(); status();
 </script>
