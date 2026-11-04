@@ -322,15 +322,16 @@ struct SlateEditSheet: View {
                 SlateBoard(slate: slate)
                 VStack(alignment: .leading, spacing: 10) {
                     SlateFields(slate: $slate)
-                    HStack(spacing: 16) {
-                        Text("Camera clip #").foregroundStyle(.secondary)
+                    HStack(spacing: 10) {
+                        Text("Camera clip #").foregroundStyle(.secondary).fixedSize()
                         Text("A")
                         TextField("A001C0001", text: $slate.cameraClipA)
-                            .textFieldStyle(.roundedBorder).font(.body.monospaced()).frame(width: 200)
-                        Text("B")
+                            .textFieldStyle(.roundedBorder).font(.body.monospaced()).frame(width: 170)
+                        Text("B").padding(.leading, 6)
                         TextField("B001C0001", text: $slate.cameraClipB)
-                            .textFieldStyle(.roundedBorder).font(.body.monospaced()).frame(width: 200)
-                        Text("(empty = camera did not record)").font(.callout).foregroundStyle(.secondary)
+                            .textFieldStyle(.roundedBorder).font(.body.monospaced()).frame(width: 170)
+                        Text("empty = camera did not record").font(.callout).foregroundStyle(.secondary)
+                            .fixedSize()
                     }
                     HStack(alignment: .top, spacing: 16) {
                         VStack(alignment: .leading) {
@@ -356,6 +357,8 @@ struct SlateEditSheet: View {
             }
         }
         .padding(20)
-        .frame(minWidth: 900)
+        // Wide enough for the slate board, both cameras' setup fields and the clip numbers – a narrower sheet
+        // cut its left and right edges off.
+        .frame(minWidth: 1100)
     }
 }

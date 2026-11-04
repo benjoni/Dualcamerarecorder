@@ -130,6 +130,7 @@ struct PlaybackView: View {
             }
             VStack(spacing: 8) {
                 header
+                Spacer(minLength: 0)
                 HStack(alignment: .top, spacing: 8) {
                     if showCameraA {
                         playerPane(title: "Camera \(player.take?.cameraName(.a, current: settings.cameraNames) ?? settings.cameraNames.a)", role: .a, file: player.take?.camA, available: player.take?.camA != nil, content: PlayerView(player: player.playerA), waveform: player.waveformA)
@@ -138,8 +139,9 @@ struct PlaybackView: View {
                         playerPane(title: "Camera \(player.take?.cameraName(.b, current: settings.cameraNames) ?? settings.cameraNames.b)", role: .b, file: player.take?.camB, available: player.take?.camB != nil, content: PlayerView(player: player.playerB), waveform: player.waveformB)
                     }
                 }
-                .frame(maxHeight: .infinity)
+                .layoutPriority(1)   // screens first; the controls follow right under them, spare room above and below
                 transport
+                Spacer(minLength: 0)
             }
             .padding(.horizontal, 10).padding(.vertical, 8)
             .frame(minWidth: 700)
@@ -179,8 +181,8 @@ struct PlaybackView: View {
             }
             .keyboardShortcut("l", modifiers: [.command])
             .help("Show / hide the clip list (⌘L)")
-            .buttonStyle(BigButtonStyle())
-            .font(.title3)
+            .buttonStyle(BigButtonStyle(small: true))   // same size as the audio buttons
+            .font(.callout)
 
             if player.take == nil {
                 Text(library.takes.isEmpty ? "No clips in this folder yet." : "No clip selected.")
@@ -453,80 +455,87 @@ struct PlaybackView: View {
         view.buttonStyle(BigButtonStyle(compact: true)).font(.body)
     }
 
-    /// Big transport buttons centered; side controls at the left and right edges.
-    private func transportLine(playWidth: CGFloat = 160) -> some View {
+    /// Controls at the left and right window edges (audio, slate, speed, loop): smallest.
+    private func edge<V: View>(_ view: V) -> some View {
+        view.buttonStyle(BigButtonStyle(small: true)).font(.callout)
+    }
+
+    /// Middle group centered, left group at the left edge, right group at the right edge.
+    private func threeLine<L: View, C: View, R: View>(_ left: L, _ center: C, _ right: R) -> some View {
         HStack(spacing: 12) {
-            side(markButtons).fixedSize().frame(maxWidth: .infinity, alignment: .leading)
-            transportButtons(playWidth: playWidth).fixedSize()
-            side(speedControl).fixedSize().frame(maxWidth: .infinity, alignment: .trailing)
+            left.fixedSize().frame(maxWidth: .infinity, alignment: .leading)
+            center.fixedSize()
+            right.fixedSize().frame(maxWidth: .infinity, alignment: .trailing)
         }
     }
 
-    /// Left group at the left edge, right group at the right edge.
-    private func edgeLine<L: View, R: View>(_ left: L, _ right: R) -> some View {
-        HStack(spacing: 16) {
-            side(left).fixedSize().frame(maxWidth: .infinity, alignment: .leading)
-            side(right).fixedSize().frame(maxWidth: .infinity, alignment: .trailing)
-        }
+    /// Audio · big transport buttons · speed.
+    private func transportLine(playWidth: CGFloat = 160) -> some View {
+        threeLine(edge(audioButtons), transportButtons(playWidth: playWidth), edge(speedControl))
+    }
+
+    /// Set IN / OUT and add to timeline in one centered group.
+    private var marksAndAdd: some View {
+        HStack(spacing: 24) { markButtons; addRow }
     }
 
     /// Wide window: two rows, so the screens above get as much height as possible.
+    /// Audio and slate at the left, IN / OUT and timeline in the middle, speed and loop at the right.
     private var wideButtons: some View {
         VStack(spacing: 8) {
             transportLine()
-            edgeLine(HStack(spacing: 16) { loopControl; addRow },
-                     HStack(spacing: 16) { audioButtons; takeButtons })
+            threeLine(edge(editSlateButton), side(marksAndAdd), edge(loopControl))
+            side(goodTakeToggle).fixedSize()
         }
+        .frame(minWidth: 1250)   // below this the middle row would crowd its neighbours – medium layout instead
         .buttonStyle(BigButtonStyle())
         .font(.title3)
     }
 
-    /// Medium window (e.g. a laptop): transport row, then loop · audio, then timeline · slate.
+    /// Medium window (e.g. a laptop): the timeline buttons get their own centered row.
     private var mediumButtons: some View {
         VStack(spacing: 8) {
             transportLine(playWidth: 130)
-            edgeLine(loopControl, audioButtons)
-            edgeLine(addRow, takeButtons)
+            threeLine(edge(editSlateButton), side(markButtons), edge(loopControl))
+            side(addRow).fixedSize()
+            side(goodTakeToggle).fixedSize()
         }
         .buttonStyle(BigButtonStyle())
         .font(.title3)
     }
 
-    /// Narrow window: transport alone, the side controls in rows under it.
+    /// Narrow window: transport alone, the other groups in rows under it (same sides as in the wider layouts).
     private var stackedButtons: some View {
         VStack(spacing: 8) {
             transportButtons(playWidth: 110).fixedSize()
-            edgeLine(markButtons, speedControl)
-            edgeLine(loopControl, audioButtons)
-            edgeLine(addRow, takeButtons)
+            threeLine(edge(audioButtons), EmptyView(), edge(speedControl))
+            threeLine(edge(editSlateButton), side(markButtons), edge(loopControl))
+            side(addRow).fixedSize()
+            side(goodTakeToggle).fixedSize()
         }
         .buttonStyle(BigButtonStyle())
         .font(.title3)
     }
 
-    /// Good take + edit slate.
-    private var takeButtons: some View {
-        HStack(spacing: 10) {
-            SegmentGroup {
-                Toggle(isOn: Binding(
-                    get: { player.slate?.good ?? false },
-                    set: { good in
-                        var slate = player.slate ?? SlateInfo()
-                        slate.good = good
-                        saveSlate(slate)
-                    })) {
-                    Label("Good take", systemImage: player.slate?.good == true ? "star.fill" : "star")
-                }
-                .help("Good (circled) take")
+    /// Good (circled) take – centered at the bottom of the controls.
+    private var goodTakeToggle: some View {
+        SegmentGroup {
+            Toggle(isOn: Binding(
+                get: { player.slate?.good ?? false },
+                set: { good in
+                    var slate = player.slate ?? SlateInfo()
+                    slate.good = good
+                    saveSlate(slate)
+                })) {
+                Label("Good take", systemImage: player.slate?.good == true ? "star.fill" : "star")
             }
-            .toggleStyle(SegmentToggleStyle(width: 130, minHeight: 32))
-            Button("Edit slate…") { editingSlate = true }
-            Button(role: .destructive) { deletingTake = player.take } label: {
-                Label("Delete clip…", systemImage: "trash")
-            }
-            .keyboardShortcut(shortcut(.delete, [.command]))
-            .help("Move both camera files of this clip and its slate to the Trash (⌘⌫)")
+            .help("Good (circled) take")
         }
+        .toggleStyle(SegmentToggleStyle(width: 130, minHeight: 32))
+    }
+
+    private var editSlateButton: some View {
+        Button("Edit slate…") { editingSlate = true }
     }
 
     /// Files that go to the Trash, and the sequences that use the clip.
@@ -611,7 +620,7 @@ struct PlaybackView: View {
                         set: { if $0 { player.rate = rate } }))
                 }
             }
-            .toggleStyle(SegmentToggleStyle(width: 66, minHeight: 32))
+            .toggleStyle(SegmentToggleStyle(width: 60, minHeight: 24))
         }
     }
 
@@ -654,7 +663,7 @@ struct PlaybackView: View {
                     .help("Hear camera B")
             }
         }
-        .toggleStyle(SegmentToggleStyle(minHeight: 32))
+        .toggleStyle(SegmentToggleStyle(minHeight: 24))
     }
 
     private var markButtons: some View {
@@ -736,7 +745,7 @@ struct PlaybackView: View {
                 Toggle("CLIP", isOn: $player.loopClip)
                     .help("Repeat the whole clip from start to end (IN / OUT ignored)")
             }
-            .toggleStyle(SegmentToggleStyle(width: 84, minHeight: 32))
+            .toggleStyle(SegmentToggleStyle(width: 76, minHeight: 24))
         }
     }
 

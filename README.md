@@ -270,7 +270,7 @@ Rozhranie aplikácie je **v angličtine** (Record / Playback / Slate …); tento
 - V záložke **Edit** je vľavo **zoznam klipov** (Clips, ⌘L) s vyhľadávaním, kde má každá kamera klipu
   vlastný riadok (Clip 014 · Camera A, Clip 014 · Camera D). **+**, dvojklik alebo ↵ pridá riadok na koniec
   timeline – s IN / OUT v tej dĺžke, inak celý klip.
-- **Zmazanie klipu** v Playback: „Delete clip…“ (⌘⌫) alebo pravý klik v zozname → Move to Trash. Oba súbory
+- **Zmazanie klipu** v Playback: pravý klik na klip v zozname klipov → Move to Trash. Oba súbory
   kamier, slate a IN / OUT idú do Koša (dajú sa vrátiť), CLIPLOG.CSV sa prepíše; ak je klip v strihu,
   potvrdenie napíše v ktorých sekvenciách (tie úseky budú chýbať).
 - **Edit** prehrá celú timeline ako jeden film (medzerník, ← / → po snímke, ↑ / ↓ predchádzajúci /

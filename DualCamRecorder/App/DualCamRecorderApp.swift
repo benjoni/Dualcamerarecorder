@@ -571,6 +571,15 @@ extension ContentView {
             popover.cacheDisplay(in: popover.bounds, to: rep)
             try? rep.representation(using: .png, properties: [:])?.write(to: URL(fileURLWithPath: dir).appendingPathComponent("mask_settings.png"))
         }
+        // Edit slate sheet at its minimum width (narrower sheets cut the edges off).
+        let slateSheet = NSHostingView(rootView: SlateEditSheet(slate: SlateInfo(), takeName: "Clip 030", onSave: { _ in })
+            .background(Color(nsColor: .windowBackgroundColor)).preferredColorScheme(.dark))
+        slateSheet.frame = NSRect(x: 0, y: 0, width: 1100, height: 520)   // the sheet's minimum width
+        slateSheet.layoutSubtreeIfNeeded()
+        if let rep = slateSheet.bitmapImageRepForCachingDisplay(in: slateSheet.bounds) {
+            slateSheet.cacheDisplay(in: slateSheet.bounds, to: rep)
+            try? rep.representation(using: .png, properties: [:])?.write(to: URL(fileURLWithPath: dir).appendingPathComponent("slate_sheet.png"))
+        }
         settings.maskA = savedMasks.0
         settings.maskB = savedMasks.1
         // Overlay tab: the window and the composed picture in each mode.

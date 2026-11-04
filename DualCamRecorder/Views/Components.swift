@@ -126,21 +126,24 @@ struct SegmentGroup<Content: View>: View {
 struct BigButtonStyle: ButtonStyle {
     /// Smaller version (side controls next to the big transport buttons).
     var compact = false
+    /// Smallest version (controls at the window edges).
+    var small = false
 
     func makeBody(configuration: Configuration) -> some View {
-        BigButton(configuration: configuration, compact: compact)
+        BigButton(configuration: configuration, compact: compact, small: small)
     }
 
     private struct BigButton: View {
         let configuration: ButtonStyleConfiguration
         let compact: Bool
+        let small: Bool
         @Environment(\.isEnabled) private var isEnabled
 
         var body: some View {
             configuration.label
                 .lineLimit(1)
-                .padding(.horizontal, compact ? 12 : 20)
-                .frame(minHeight: compact ? 32 : 44)
+                .padding(.horizontal, small ? 8 : compact ? 12 : 20)
+                .frame(minHeight: small ? 24 : compact ? 32 : 44)
                 .foregroundStyle(isEnabled ? Color.primary : Color.secondary.opacity(0.6))
                 .background(
                     RoundedRectangle(cornerRadius: 8)
