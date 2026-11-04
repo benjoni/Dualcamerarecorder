@@ -108,32 +108,23 @@ struct RecordView: View {
             }
         }
         let buttons = HStack(alignment: .center, spacing: 10) {
-                Button(action: controller.toggleRecording) {
-                    HStack(spacing: 10) {
-                        Image(systemName: controller.isRecording ? "stop.fill" : "record.circle")
-                            .font(.system(size: compact ? 20 : 28))
-                        Text(recordButtonTitle)
-                            .font((compact ? Font.title3 : .title2).weight(.bold))
-                    }
-                    .frame(width: compact ? 150 : 180, height: buttonHeight)
+                // Idle: grey with a coloured edge. Running: filled with the colour, shows STOP until it is stopped.
+                TransportButton(icon: "record.circle", title: "REC", color: .red,
+                                active: controller.isRecording && !controller.isRehearsal,
+                                stopping: isStopping, compact: compact, height: buttonHeight) {
+                    controller.toggleRecording()
                 }
-                .buttonStyle(.borderedProminent)
-                .tint(controller.isRecording ? .gray : .red)
                 .keyboardShortcut("r", modifiers: [.command])
-                .disabled(isStopping)
+                .disabled(isStopping || controller.isRehearsal)
 
                 // Rehearsal: only the app records (the cameras do not); the take is marked "Rehearsal".
-                Button { controller.startRehearsal() } label: {
-                    HStack(spacing: 8) {
-                        Image(systemName: "theatermasks").font(.system(size: compact ? 16 : 22))
-                        Text("REHEARSAL").font((compact ? Font.callout : .title3).weight(.bold))
-                    }
-                    .frame(width: compact ? 140 : 170, height: buttonHeight)
+                TransportButton(icon: "theatermasks", title: "REHEARSAL", color: .orange,
+                                active: controller.isRehearsal,
+                                stopping: isStopping, compact: compact, height: buttonHeight) {
+                    if controller.isRehearsal { controller.toggleRecording() } else { controller.startRehearsal() }
                 }
-                .buttonStyle(.bordered)
-                .tint(.orange)
                 .keyboardShortcut("r", modifiers: [.command, .shift])
-                .disabled(controller.isRecording)
+                .disabled(isStopping || (controller.isRecording && !controller.isRehearsal))
                 .help("Rehearsal (⇧⌘R): both pictures are recorded only by the app, marked as a rehearsal – no take number, the cameras' clip numbers stay. STOP ends it.")
 
                 Group {
@@ -204,13 +195,6 @@ struct RecordView: View {
         return false
     }
 
-    private var recordButtonTitle: String {
-        switch controller.state {
-        case .idle: return "REC"
-        case .recording: return "STOP"
-        case .stopping: return "Saving…"
-        }
-    }
 
     /// Two-camera projects: switch camera A or B off for a while – the other fills the screen and records alone.
     private var takeLabel: String {
@@ -602,5 +586,40 @@ struct FlipFlopButtons: View {
         .background(on ? RoundedRectangle(cornerRadius: 5).fill(Color.yellow) : nil)
         .help(help)
         .accessibilityLabel(title)
+    }
+}
+
+/// REC / REHEARSAL: grey with a coloured edge when idle; filled with the colour and showing STOP while it runs.
+/// Draws its own background so the colours stay the same when the window is not active.
+private struct TransportButton: View {
+    let icon: String
+    let title: String
+    let color: Color
+    let active: Bool
+    let stopping: Bool
+    let compact: Bool
+    let height: CGFloat
+    let action: () -> Void
+    @Environment(\.isEnabled) private var isEnabled
+
+    var body: some View {
+        let shape = RoundedRectangle(cornerRadius: 8)
+        Button(action: action) {
+            HStack(spacing: 10) {
+                Image(systemName: active ? "stop.fill" : icon)
+                    .font(.system(size: compact ? 20 : 26))
+                Text(active ? (stopping ? "Saving…" : "STOP") : title)
+                    .font((compact ? Font.title3 : .title2).weight(.bold))
+                    .lineLimit(1).minimumScaleFactor(0.7)
+            }
+            .padding(.horizontal, 8)
+            .frame(width: compact ? 150 : 190, height: height)
+            .foregroundStyle(active ? Color.white : color)
+            .background(active ? color : Color(white: 0.22), in: shape)
+            .overlay(shape.strokeBorder(color, lineWidth: 2.5))
+            .contentShape(shape)
+            .opacity(isEnabled || active ? 1 : 0.35)
+        }
+        .buttonStyle(.plain)
     }
 }
