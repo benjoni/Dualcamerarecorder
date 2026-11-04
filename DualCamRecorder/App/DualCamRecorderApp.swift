@@ -298,6 +298,7 @@ struct ContentView: View {
         .task { await runDiskTestIfRequested() }
         .task { await runTriggerTestIfRequested() }
         .task { await runPlaybackEndTestIfRequested() }
+        .task { await runEditExportTestIfRequested() }
         #endif
         .onDisappear {
             if let tabKeyMonitor { NSEvent.removeMonitor(tabKeyMonitor) }
@@ -639,6 +640,35 @@ extension ContentView {
     /// Debug only: `-triggerTestProject <name> -triggerTestDir <folder>` (with `-simCameraRec <s>`): records with the
     /// camera trigger on – the simulated camera starts and stops the take; then REC in the app while the camera
     /// stands (warning). Saves pictures, the SDI data log and result.txt (slate timecode) and quits.
+    /// Debug only: `-editExportTestDir <folder> -editExportTestProject <name>` exports the project's edit with
+    /// "Clip info in picture" on (edit_burnin.mov) and off (edit_plain.mov), saves the Edit tab picture and quits.
+    @MainActor
+    func runEditExportTestIfRequested() async {
+        let args = UserDefaults.standard
+        guard let dir = args.string(forKey: "editExportTestDir"), let name = args.string(forKey: "editExportTestProject") else { return }
+        try? await Task.sleep(nanoseconds: 2_000_000_000)
+        guard let entry = projects.projects.first(where: { $0.project.name == name }) else { exit(2) }
+        model.open(entry)
+        try? await Task.sleep(nanoseconds: 1_000_000_000)
+        tab = 2
+        try? await Task.sleep(nanoseconds: 4_000_000_000)
+        saveWindowPicture(to: URL(fileURLWithPath: dir).appendingPathComponent("edit.png"))
+        var lines = ["segments \(model.timeline.segments.count)"]
+        if let folder = model.timeline.folder {
+            for (file, burnIn) in [("edit_burnin.mov", true), ("edit_plain.mov", false)] {
+                do {
+                    try await EditComposition.export(segments: model.timeline.segments, folder: folder,
+                                                     to: URL(fileURLWithPath: dir).appendingPathComponent(file), burnIn: burnIn) { _ in }
+                    lines.append("\(file) ok")
+                } catch {
+                    lines.append("\(file) \(error.localizedDescription)")
+                }
+            }
+        }
+        try? lines.joined(separator: "\n").write(to: URL(fileURLWithPath: dir).appendingPathComponent("edit_export.txt"), atomically: true, encoding: .utf8)
+        exit(0)
+    }
+
     /// Debug only: `-playbackEndTestDir <folder> -playbackEndTestProject <name>` plays the last second of the
     /// latest clip without loop and logs both players every 50 ms until 3 s after the end (playback_end.txt).
     @MainActor

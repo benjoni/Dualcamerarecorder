@@ -113,6 +113,7 @@ struct EditView: View {
 
             PlayerView(player: edit.player)
                 .aspectRatio(16.0 / 9.0, contentMode: .fit)
+                .overlay { if burnIn && !timeline.segments.isEmpty { burnInPreview } }
                 .clipShape(RoundedRectangle(cornerRadius: 6))
                 .overlay {
                     if timeline.segments.isEmpty {
@@ -194,6 +195,23 @@ struct EditView: View {
         return "\(s.label) · Camera \(s.cameraName)"
     }
 
+    /// "Clip info in picture" as it will be in the exported movie: bottom left, size relative to the picture.
+    private var burnInPreview: some View {
+        GeometryReader { geo in
+            let fontSize = max(9, geo.size.height / 30)
+            Text(currentLabel)
+                .font(.system(size: fontSize, weight: .bold))
+                .foregroundStyle(.white)
+                .lineLimit(1)
+                .padding(.horizontal, fontSize * 0.4).padding(.vertical, fontSize * 0.2)
+                .background(Color.black.opacity(0.6), in: RoundedRectangle(cornerRadius: fontSize * 0.4))
+                .padding(fontSize)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomLeading)
+                .opacity(currentLabel == " " ? 0 : 1)
+        }
+        .allowsHitTesting(false)
+    }
+
     // MARK: - Transport + export
 
     /// Prev · frame back · play · frame forward · Next (icons only, so the row fits next to the clip list).
@@ -220,7 +238,7 @@ struct EditView: View {
                 Toggle("Clip info in picture", isOn: $burnIn)
                     .toggleStyle(.checkbox)
                     .font(.callout)
-                    .help("Clip, scene, shot, take and camera in the bottom left corner of the exported movie")
+                    .help("Clip, scene, shot, take and camera in the bottom left corner – in the picture above and in the exported movie")
                 Button { export() } label: {
                     Label("Export MOV…", systemImage: "square.and.arrow.up").fixedSize()
                 }
