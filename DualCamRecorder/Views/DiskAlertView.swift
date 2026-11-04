@@ -89,7 +89,7 @@ struct WriteWarningBanner: View {
             .foregroundStyle(.black)
             .padding(.horizontal, 16).padding(.vertical, 8)
             .background(Capsule().fill(Color.orange))
-            .help("The disk cannot save the pictures fast enough – use a faster disk (SSD) or a lighter codec (ProRes 422 LT)")
+            .help("The disk cannot save the pictures fast enough – use a faster disk (SSD) or a lighter codec (ProRes 422 LT or H.265)")
             .padding(10)
         }
     }

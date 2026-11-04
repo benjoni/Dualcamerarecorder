@@ -57,6 +57,8 @@ struct ProjectSettings: Codable, Equatable {
     /// Second copy of all clips on another disk: <backupRootPath>/<project folder name>.
     var backupEnabled = false
     var backupRootPath = ""
+    /// H.265 data rate (Mbit/s for 1080p).
+    var hevcMbps = ProResFlavor.defaultHEVCRate
 }
 
 extension ProjectSettings {
@@ -86,6 +88,7 @@ extension ProjectSettings {
         cameraTrigger = (try? c.decodeIfPresent(CameraTrigger.self, forKey: .cameraTrigger)) ?? cameraTrigger
         backupEnabled = try c.decodeIfPresent(Bool.self, forKey: .backupEnabled) ?? backupEnabled
         backupRootPath = try c.decodeIfPresent(String.self, forKey: .backupRootPath) ?? backupRootPath
+        hevcMbps = (try? c.decodeIfPresent(Int.self, forKey: .hevcMbps)) ?? hevcMbps
     }
 }
 

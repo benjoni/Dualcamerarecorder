@@ -45,6 +45,8 @@ struct SlateInfo: Codable, Hashable {
     var mos = false          // without sound
     var note = ""            // note
     var good = false         // good (circled) take
+    /// Rehearsal: recorded only by the app, the cameras did not record (no take number, no camera clip).
+    var rehearsal = false
     var recordedAt: Date?    // set at REC
     /// Clip name/ID in each camera's own (internal) recording, e.g. "A001C0023" (any length).
     /// Its last number goes up by 1 after every take. Empty = that camera did not record this take.
@@ -86,6 +88,7 @@ struct SlateInfo: Codable, Hashable {
         if !flags.isEmpty { lines.append(flags.joined(separator: " · ")) }
         if !director.isEmpty { lines.append("Director: \(director)") }
         if !cameraOperator.isEmpty { lines.append("DoP: \(cameraOperator)") }
+        if rehearsal { lines.append("Rehearsal") }
         if good { lines.append("Good take") }
         var clips: [String] = []
         if !cameraClipA.isEmpty { clips.append("A " + cameraClipA) }
@@ -160,6 +163,7 @@ extension SlateInfo {
         mos = try c.decodeIfPresent(Bool.self, forKey: .mos) ?? mos
         note = try c.decodeIfPresent(String.self, forKey: .note) ?? note
         good = try c.decodeIfPresent(Bool.self, forKey: .good) ?? good
+        rehearsal = (try? c.decodeIfPresent(Bool.self, forKey: .rehearsal)) ?? rehearsal
         recordedAt = try c.decodeIfPresent(Date.self, forKey: .recordedAt)
         cameraClipA = Self.decodeClip(c, .cameraClipA)
         cameraClipB = Self.decodeClip(c, .cameraClipB)

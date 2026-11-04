@@ -129,20 +129,28 @@ struct EditClipList: View {
         .padding(.vertical, 2)
     }
 
-    /// IN → OUT of the clip (only IN → to the end, only OUT → from the start), from this camera's file.
+    /// Every IN → OUT range of the clip as one piece (without ranges the whole clip), from this camera's file.
     private func add(_ row: Row) {
         let take = row.take
         Task { @MainActor in
             guard let length = try? await AVURLAsset(url: row.file).load(.duration).seconds, length > 0 else { return }
-            let inPoint = min(take.marks?.inPoint ?? 0, length)
-            let outPoint = min(take.marks?.outPoint ?? length, length)
-            guard outPoint - inPoint >= EditTimeline.minimumLength else { return }
-            let segment = TimelineSegment(take: take.number, camera: row.role,
-                                          fileA: take.camA?.lastPathComponent, fileB: take.camB?.lastPathComponent,
-                                          inPoint: inPoint, outPoint: outPoint, clipDuration: length,
-                                          label: [take.name, take.slate?.shortLabel].compactMap { $0 }.joined(separator: " · "))
-            timeline.append(segment)
-            onAdded("Added to timeline: \(take.name) · Camera \(segment.cameraName) · \(edit.timecode(segment.duration))")
+            let marks = take.marks ?? TakeMarks()
+            let spans = marks.isEmpty ? [0...length] : marks.spans(duration: length)
+            var added: [TimelineSegment] = []
+            for span in spans {
+                let inPoint = min(span.lowerBound, length), outPoint = min(span.upperBound, length)
+                guard outPoint - inPoint >= EditTimeline.minimumLength else { continue }
+                let segment = TimelineSegment(take: take.number, camera: row.role,
+                                              fileA: take.camA?.lastPathComponent, fileB: take.camB?.lastPathComponent,
+                                              inPoint: inPoint, outPoint: outPoint, clipDuration: length,
+                                              label: [take.name, take.slate?.shortLabel].compactMap { $0 }.joined(separator: " · "))
+                timeline.append(segment)
+                added.append(segment)
+            }
+            guard let segment = added.first else { return }
+            let total = added.reduce(0) { $0 + $1.duration }
+            onAdded("Added to timeline: \(take.name) · Camera \(segment.cameraName) · "
+                    + (added.count > 1 ? "\(added.count) pieces, " : "") + edit.timecode(total))
         }
     }
 }

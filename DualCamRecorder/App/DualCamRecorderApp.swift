@@ -53,6 +53,8 @@ final class AppModel: ObservableObject {
         recorder.channelA.$format.sink { [weak monitor = self.monitor] f in monitor?.setFormat(f, for: .a) }.store(in: &cancellables)
         recorder.channelB.$format.sink { [weak monitor = self.monitor] f in monitor?.setFormat(f, for: .b) }.store(in: &cancellables)
         // Flip / flop of the inputs (project settings, buttons above the pictures).
+        // H.265: start the hardware encoder ahead of the first take.
+        settings.$proResFlavor.filter { $0 == .hevc }.first().sink { _ in HEVCWarmup.run() }.store(in: &cancellables)
         settings.$orientationA.removeDuplicates().sink { [weak recorder = self.recorder] o in recorder?.channelA.setOrientation(o) }.store(in: &cancellables)
         settings.$orientationB.removeDuplicates().sink { [weak recorder = self.recorder] o in recorder?.channelB.setOrientation(o) }.store(in: &cancellables)
         // (The output is the first device found with one – the UltraStudio Monitor.)
@@ -181,6 +183,7 @@ final class AppModel: ObservableObject {
         let status: [String: Any] = [
             "project": projects.current?.project.name ?? "DualCamRecorder",
             "recording": recorder.isRecording,
+            "rehearsal": recorder.isRehearsal,
             "elapsed": DisplayFormat.duration(recorder.elapsed),
             "files": files,
             "slate": slate.shortLabel + (slate.good ? "  ★" : "") + (slate.mos ? "  MOS" : ""),
@@ -700,10 +703,25 @@ extension ContentView {
         guard let entry = projects.projects.first(where: { $0.project.name == name }) else { exit(2) }
         model.open(entry)
         try? await Task.sleep(nanoseconds: 3_000_000_000)
-        model.recorder.startRecording()
+        if args.bool(forKey: "diskTestRehearsal") {   // -diskTestRehearsal YES: a rehearsal instead of REC
+            model.recorder.startRehearsal()
+            try? await Task.sleep(nanoseconds: 1_500_000_000)
+            saveWindowPicture(to: out.appendingPathComponent("rehearsal_record.png"))
+        } else {
+            model.recorder.startRecording()
+        }
         try? "\(model.recorder.isRecording) \(model.recorder.errorMessage ?? "")".write(to: out.appendingPathComponent("recording"), atomically: true, encoding: .utf8)
         if args.integer(forKey: "debugWriteDelay") > 0 {   // slow disk: no detach, pictures during and after the take
-            try? await Task.sleep(nanoseconds: 5_000_000_000)
+            if args.bool(forKey: "diskTestMarks") {
+                // -diskTestMarks YES: two IN / OUT ranges during the take (IN 1 s, OUT 2 s, IN 3 s, OUT 4 s).
+                for (delay, isIn) in [(1.0, true), (1.0, false), (1.0, true), (1.0, false)] {
+                    try? await Task.sleep(nanoseconds: UInt64(delay * 1e9))
+                    if isIn { model.recorder.markIn() } else { model.recorder.markOut() }
+                }
+                try? await Task.sleep(nanoseconds: 1_000_000_000)
+            } else {
+                try? await Task.sleep(nanoseconds: 5_000_000_000)
+            }
             saveWindowPicture(to: out.appendingPathComponent("slow_write.png"))
             let during = model.recorder.writeWarning ?? "none"
             model.recorder.stopRecording()

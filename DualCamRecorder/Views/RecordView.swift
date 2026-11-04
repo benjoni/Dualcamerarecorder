@@ -28,10 +28,12 @@ struct RecordView: View {
     private var screensOnlyBody: some View {
         HStack(spacing: 8) {
             if settings.isCameraOn(.a) {
-                CameraScreen(channel: controller.channelA, showWaveform: settings.showWaveform, mask: settings.maskA)
+                CameraScreen(channel: controller.channelA, showWaveform: settings.showWaveform, mask: settings.maskA,
+                             rehearsal: controller.isRehearsal)
             }
             if settings.isCameraOn(.b) {
-                CameraScreen(channel: controller.channelB, showWaveform: settings.showWaveform, mask: settings.maskB)
+                CameraScreen(channel: controller.channelB, showWaveform: settings.showWaveform, mask: settings.maskB,
+                             rehearsal: controller.isRehearsal)
             }
         }
         .padding(8)
@@ -96,7 +98,8 @@ struct RecordView: View {
             Text(DisplayFormat.duration(controller.elapsed))
                 .font(.system(size: compact ? 24 : 30, weight: .semibold, design: .monospaced))
                 .foregroundStyle(controller.isRecording ? .red : .primary)
-            Text("IN \(DisplayFormat.mark(controller.marks.inPoint))  ·  OUT \(DisplayFormat.mark(controller.marks.outPoint))")
+            Text("IN \(DisplayFormat.mark(controller.marks.inPoint))  ·  OUT \(DisplayFormat.mark(controller.marks.outPoint))"
+                 + (controller.marks.ranges.count > 1 ? "  ·  \(controller.marks.ranges.count) ranges" : ""))
                 .font(.system(compact ? .callout : .title3, design: .monospaced))
                 .foregroundStyle(.secondary)
             if settings.isCameraOn(.a) && settings.isCameraOn(.b) {
@@ -119,24 +122,38 @@ struct RecordView: View {
                 .keyboardShortcut("r", modifiers: [.command])
                 .disabled(isStopping)
 
+                // Rehearsal: only the app records (the cameras do not); the take is marked "Rehearsal".
+                Button { controller.startRehearsal() } label: {
+                    HStack(spacing: 8) {
+                        Image(systemName: "theatermasks").font(.system(size: compact ? 16 : 22))
+                        Text("REHEARSAL").font((compact ? Font.callout : .title3).weight(.bold))
+                    }
+                    .frame(width: compact ? 140 : 170, height: buttonHeight)
+                }
+                .buttonStyle(.bordered)
+                .tint(.orange)
+                .keyboardShortcut("r", modifiers: [.command, .shift])
+                .disabled(controller.isRecording)
+                .help("Rehearsal (⇧⌘R): both pictures are recorded only by the app, marked as a rehearsal – no take number, the cameras' clip numbers stay. STOP ends it.")
+
                 Group {
                     Button { controller.markIn() } label: {
                         Text("IN").font((compact ? Font.title3 : .title2).weight(.bold)).frame(width: compact ? 70 : 90, height: buttonHeight)
                     }
                     .keyboardShortcut("i", modifiers: [.command])
-                    .help("Set IN at the current take time (⌘I)")
+                    .help("Set IN at the current take time (⌘I) – after an OUT it starts another range")
                     Button { controller.markOut() } label: {
                         Text("OUT").font((compact ? Font.title3 : .title2).weight(.bold)).frame(width: compact ? 70 : 90, height: buttonHeight)
                     }
                     .keyboardShortcut("o", modifiers: [.command])
-                    .help("Set OUT at the current take time (⌘O)")
+                    .help("Set OUT at the current take time (⌘O) – closes the range")
                 }
                 .buttonStyle(.bordered)
                 .disabled(!recording)
 
                 Button { controller.clearMarks() } label: { Image(systemName: "xmark.circle").font(.title2) }
                     .buttonStyle(.borderless)
-                    .help("Clear IN/OUT")
+                    .help("Remove the last IN / OUT range")
                     .disabled(!recording || controller.marks.isEmpty)
         }
         return Group {
@@ -283,7 +300,8 @@ struct CameraPanel: View {
             }
             .frame(maxWidth: pictureWidth ?? .infinity)
 
-            CameraScreen(channel: channel, showWaveform: showWaveform, mask: settings.mask(channel.role))
+            CameraScreen(channel: channel, showWaveform: showWaveform, mask: settings.mask(channel.role),
+                         rehearsal: controller.isRehearsal)
                 .overlay(alignment: .bottomLeading) {
                     let o = settings.orientation(channel.role)
                     if o.isTurned {
@@ -401,6 +419,8 @@ struct CameraScreen: View {
     @ObservedObject var channel: CameraChannel
     var showWaveform = false
     var mask = FrameMask()
+    /// The take is a rehearsal: orange frame and badge, no "camera is not recording" warning.
+    var rehearsal = false
 
     var body: some View {
         ZStack(alignment: .topLeading) {
@@ -419,7 +439,7 @@ struct CameraScreen: View {
                     }
                 }
                 .overlay { if channel.hasSource && channel.hasSignal { FrameMaskOverlay(mask: mask) } }
-                .overlay { if channel.hasSource && channel.hasSignal { CameraSignalOverlay(signal: channel.signal, appRecording: channel.isRecording) } }
+                .overlay { if channel.hasSource && channel.hasSignal { CameraSignalOverlay(signal: channel.signal, appRecording: channel.isRecording && !rehearsal) } }
                 .clipShape(RoundedRectangle(cornerRadius: 6))
                 // Luma waveform over the lower part of the picture.
                 .overlay {
@@ -428,12 +448,14 @@ struct CameraScreen: View {
                 // Red frame around the picture while this camera is recording.
                 .overlay(
                     RoundedRectangle(cornerRadius: 6)
-                        .strokeBorder(Color.red, lineWidth: 4)
+                        .strokeBorder(rehearsal ? Color.orange : Color.red, lineWidth: 4)
                         .opacity(channel.isRecording ? 1 : 0)
                         .animation(.easeInOut(duration: 0.15), value: channel.isRecording)
                 )
             HStack(spacing: 6) {
-                if channel.isRecording { Badge(text: "● REC", color: .red) }
+                if channel.isRecording {
+                    Badge(text: rehearsal ? "● REHEARSAL" : "● REC", color: rehearsal ? .orange : .red)
+                }
                 if !channel.hasSource {
                     Badge(text: "Unassigned", color: .gray)
                 } else if !channel.hasSignal {

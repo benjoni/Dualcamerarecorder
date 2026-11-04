@@ -155,7 +155,10 @@ Rozhranie aplikácie je **v angličtine** (Record / Playback / Slate …); tento
 ### Project settings (⚙ v lište projektu, ⌥⌘,)
 - **1 camera / 2 cameras** – pri jednej kamere sa zobrazuje a nahráva len kamera A (cez celú
   šírku), kamera B sa vôbec nespúšťa; Playback ukáže B len pri záberoch, ktoré ju majú.
-- Zariadenie a názov každej kamery, kodek (ProRes 422 / HQ / LT), audio kanály, vynútenie 8-bit.
+- Zariadenie a názov každej kamery, kodek (ProRes 422 / HQ / LT alebo **H.265 (HEVC)** – 8-bit Main, dátový tok
+  5 (predvolene) / 10 / 20 / 45 Mbit/s pre 1080p (väčší obraz úmerne viac; overené na zábere: 5 → 5,1,
+  45 → 45,3 Mbit/s), kľúčová snímka každú sekundu, hardvérový kodér; pri výbere sa kodér vopred zahreje, aby prvý take
+  nestratil snímky), audio kanály, vynútenie 8-bit.
 - Všetko sa ukladá do `PROJECT.JSON` projektu a obnoví sa pri jeho otvorení; nový projekt
   prevezme nastavenia z naposledy otvoreného. Počas nahrávania sa meniť nedajú.
 - Globálne nastavenia (⌘,) obsahujú umiestnenie projektov, živý náhľad na telefóny a informácie o DeckLink.
@@ -201,9 +204,15 @@ Rozhranie aplikácie je **v angličtine** (Record / Playback / Slate …); tento
   QuickTime metadáta do oboch `.mov` (názov, popis, komentár, réžia, kamera A/B, dátum) –
   vidno ich napr. vo Finderi (Informácie) alebo v DaVinci Resolve.
   Posledná klapka sa pamätá aj po reštarte aplikácie.
+- **REHEARSAL** (vedľa REC, **⇧⌘R**) – skúška: oba obrazy nahrá len appka (kamery nenahrávajú), take sa
+  označí ako Rehearsal (oranžový rámček a „● REHEARSAL“, v Playbacku štítok REHEARSAL / REH, v CSV stĺpec
+  `rehearsal`, v PDF a metadátach). Nezvýši číslo take ani Cam clip; „Record with the camera“ sa počas skúšky
+  ignoruje a varovanie „Camera is NOT recording“ sa neukazuje. Ukončí sa tlačidlom STOP.
 - **IN / OUT počas nahrávania** – tlačidlá IN / OUT (**⌘I** / **⌘O**) pri REC označia
-  aktuálny čas záberu. Značky sa po STOP uložia do `C001_MARKS.JSON` vedľa videí
-  (čas v sekundách od začiatku záberu, platí pre CamA aj CamB) a použije ich prehrávanie.
+  aktuálny čas záberu. **Viac úsekov:** IN začne úsek, OUT ho uzavrie, ďalšie IN začne ďalší (IN pri otvorenom
+  úseku len posunie jeho začiatok); × zmaže posledný úsek. Značky sa po STOP uložia do `C001_MARKS.JSON`
+  vedľa videí (`ranges`, čas v sekundách od začiatku záberu, platí pre CamA aj CamB; prvý úsek aj ako starý
+  `inPoint` / `outPoint`) a použije ich prehrávanie, strih aj PDF.
 
 ### Záložka PREHRÁVANIE
 - Pri zábere v zozname je aj „Obraz · Záber · Pokus“ a ★ pri dobrom pokuse; pod prehrávačmi
@@ -225,7 +234,8 @@ Rozhranie aplikácie je **v angličtine** (Record / Playback / Slate …); tento
 - Spoločné **play/pause** (medzerník), **posuvník**, **krokovanie po snímkach** (← / →),
   **rýchlosť 0,5× / 1× / 2×**, výber zvuku A/B, zobrazenie rozdielu pozícií B−A.
 - **IN / OUT:** záber sa po načítaní nastaví na IN. **Loop** (vpravo pod Speed): **NO** prehrá klip raz do konca,
-  **IN/OUT** prehráva úsek IN → OUT dokola (bez OUT až do konca klipu, oba prehrávače zastavia presne na OUT),
+  **IN/OUT** prehráva len označené úseky za sebou a dokola (medzery preskočí; bez OUT až do konca klipu),
+  lišta pod posuvníkom ukazuje všetky úseky,
   **CLIP** (predvolene) prehráva dokola celý klip a IN/OUT ignoruje. IN/OUT sa dá v prehrávaní upraviť
   (I / O na aktuálnej snímke), skočiť na IN/OUT alebo zrušiť – zmeny sa hneď uložia do
   `C###_MARKS.JSON`. Zábery so značkami majú v zozname žltú vlajku.
@@ -254,8 +264,8 @@ Rozhranie aplikácie je **v angličtine** (Record / Playback / Slate …); tento
 - Telefóny vidia vstupy kamier (aj keď je na Macu otvorený Playback), nie prehrávané klipy.
 
 ### Strih pre režiséra (záložka Edit, E)
-- V Playbacku sa označí IN / OUT a tlačidlom **+ Camera A** / **+ Camera B** (⇧A / ⇧B) sa úsek
-  pridá na koniec timeline – vždy len jedna kamera. Bez IN / OUT sa pridá celý klip (len IN → do konca,
+- V Playbacku sa označí IN / OUT a tlačidlom **+ Camera A** / **+ Camera B** (⇧A / ⇧B) sa každý úsek
+  pridá na koniec timeline ako samostatný kúsok – vždy len jedna kamera. Bez IN / OUT sa pridá celý klip (len IN → do konca,
   len OUT → od začiatku). Po pridaní sa na chvíľu ukáže „Added to timeline: …“.
 - V záložke **Edit** je vľavo **zoznam klipov** (Clips, ⌘L) s vyhľadávaním, kde má každá kamera klipu
   vlastný riadok (Clip 014 · Camera A, Clip 014 · Camera D). **+**, dvojklik alebo ↵ pridá riadok na koniec

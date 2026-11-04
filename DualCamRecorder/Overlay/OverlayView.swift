@@ -276,7 +276,7 @@ struct OverlayView: View {
             guard clip == row else { return }
             duration = max(0, length - 1 / max(rate, 1))
             fps = rate > 0 ? rate : 25
-            time = snap(row.take.marks?.inPoint ?? 0)
+            time = snap(row.take.marks?.firstInPoint ?? 0)
         }
     }
 

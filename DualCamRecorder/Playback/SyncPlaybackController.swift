@@ -212,7 +212,7 @@ final class SyncPlaybackController: ObservableObject {
                 self.monitorTaps.withLock { $0.frameDuration = fd }
             }
             // Cue the take at IN.
-            if let i = self.marks.inPoint { self.seek(seconds: i) }
+            if let i = self.marks.firstInPoint { self.seek(seconds: i) }
         }
     }
 
@@ -260,11 +260,18 @@ final class SyncPlaybackController: ObservableObject {
         let gen = generation
         var start = master.currentTime()
         let fdSec = frameDuration.seconds > 0 ? frameDuration.seconds : 0.04
-        if useRange && !marks.isEmpty {
-            let lo = marks.inPoint ?? 0
-            let hi = marks.outPoint ?? duration
-            if start.seconds < lo - fdSec / 2 || start.seconds >= hi - fdSec / 2 {
-                start = frameTime(seconds: lo)
+        // IN/OUT loop: only the marked ranges – inside one it plays on, else from the next one (after the last:
+        // the first again).
+        var rangeEnd: Double?
+        let spans = useRange ? marks.spans(duration: duration) : []
+        if let first = spans.first {
+            let t = start.seconds
+            if let inside = spans.first(where: { t >= $0.lowerBound - fdSec / 2 && t < $0.upperBound - fdSec / 2 }) {
+                rangeEnd = inside.upperBound
+            } else {
+                let next = spans.first { $0.lowerBound > t } ?? first
+                start = frameTime(seconds: next.lowerBound)
+                rangeEnd = next.upperBound
             }
         } else if duration > 0 && start.seconds >= duration - fdSec {
             start = .zero
@@ -273,7 +280,7 @@ final class SyncPlaybackController: ObservableObject {
         let rate = self.rate
         isPlaying = true
         removeBoundaryObserver()
-        if useRange, let out = marks.outPoint, out > start.seconds {
+        if let out = rangeEnd, out < duration - fdSec / 2, out > start.seconds {
             // Stop exactly at OUT.
             let outTime = frameTime(seconds: out)
             boundaryPlayer = master
@@ -308,7 +315,7 @@ final class SyncPlaybackController: ObservableObject {
         for p in activePlayers { p.setRate(0, time: .invalid, atHostTime: hostStop) }
         isPlaying = false
         if loopInOut {
-            play()   // current time is at OUT → play() restarts both players at IN
+            play()   // current time is at OUT → play() goes on with the next range (after the last: the first)
             return
         }
         seek(to: outTime)
@@ -379,8 +386,14 @@ final class SyncPlaybackController: ObservableObject {
 
     func clearMarks() { updateMarks(TakeMarks()) }
 
-    func goToIn() { if let i = marks.inPoint { seek(seconds: i) } }
-    func goToOut() { if let o = marks.outPoint { seek(seconds: o) } }
+    /// Range under the play position, else the last one set.
+    private var currentRange: ClosedRange<Double>? {
+        let spans = marks.spans(duration: duration)
+        return spans.first { $0.contains(currentTime) } ?? spans.last
+    }
+
+    func goToIn() { if let r = currentRange { seek(seconds: r.lowerBound) } }
+    func goToOut() { if let r = currentRange { seek(seconds: r.upperBound) } }
 
     /// Saves edited slate data of the loaded take (C###_SLATE.JSON).
     func updateSlate(_ s: SlateInfo) {

@@ -188,6 +188,14 @@ struct PlaybackView: View {
                 Text([take.name, player.slate?.shortLabel].compactMap { $0 }.joined(separator: " · "))
                     .font(.system(size: 28, weight: .bold))
                     .lineLimit(1).minimumScaleFactor(0.6)
+                if player.slate?.rehearsal == true {
+                    Text("REHEARSAL")
+                        .font(.title3.weight(.bold))
+                        .padding(.horizontal, 10).padding(.vertical, 4)
+                        .background(Color.orange.opacity(0.85), in: RoundedRectangle(cornerRadius: 6))
+                        .foregroundStyle(.black)
+                        .help("Recorded only by the app – the cameras did not record")
+                }
                 if take.id == library.latestTake?.id {
                     Text("LATEST")
                         .font(.title3.weight(.bold))
@@ -255,6 +263,13 @@ struct PlaybackView: View {
                                         Text(take.name).font(.body.weight(.semibold)).foregroundStyle(.primary)
                                         if take.slate?.good == true {
                                             Image(systemName: "star.fill").foregroundStyle(.yellow).help("Good take")
+                                        }
+                                        if take.slate?.rehearsal == true {
+                                            Text("REH").font(.caption2.weight(.bold))
+                                                .padding(.horizontal, 4).padding(.vertical, 1)
+                                                .background(Color.orange, in: RoundedRectangle(cornerRadius: 3))
+                                                .foregroundStyle(.black)
+                                                .help("Rehearsal – recorded only by the app")
                                         }
                                         if let m = take.marks, !m.isEmpty {
                                             Image(systemName: "flag.fill").foregroundStyle(.yellow).help("Has IN/OUT")
@@ -361,18 +376,16 @@ struct PlaybackView: View {
         }
     }
 
-    /// Thin bar under the slider showing the IN–OUT range.
+    /// Thin bar under the slider showing the IN–OUT ranges.
     private var rangeBar: some View {
         GeometryReader { geo in
             let d = max(player.duration, 0.001)
-            let lo = CGFloat((player.marks.inPoint ?? 0) / d)
-            let hi = CGFloat((player.marks.outPoint ?? d) / d)
             ZStack(alignment: .leading) {
                 Capsule().fill(Color.secondary.opacity(0.2))
-                if !player.marks.isEmpty {
+                ForEach(Array(player.marks.spans(duration: player.duration).enumerated()), id: \.offset) { _, span in
                     Capsule().fill(Color.yellow.opacity(0.8))
-                        .frame(width: max(2, (hi - lo) * geo.size.width))
-                        .offset(x: lo * geo.size.width)
+                        .frame(width: max(2, CGFloat((span.upperBound - span.lowerBound) / d) * geo.size.width))
+                        .offset(x: CGFloat(span.lowerBound / d) * geo.size.width)
                 }
             }
         }
@@ -663,12 +676,13 @@ struct PlaybackView: View {
         HStack(spacing: 10) {
             Button("Set IN") { player.setIn() }
                 .keyboardShortcut(shortcut("i"))
-                .help("IN at the current frame (I)")
+                .help("IN at the current frame (I) – after an OUT it starts another range")
             Button("Set OUT") { player.setOut() }
                 .keyboardShortcut(shortcut("o"))
-                .help("OUT at the current frame (O)")
+                .help("OUT at the current frame (O) – closes the range")
             Button("Clear") { player.clearMarks() }
                 .disabled(player.marks.isEmpty)
+                .help("Remove all IN / OUT ranges of this clip")
         }
     }
 
@@ -698,19 +712,26 @@ struct PlaybackView: View {
         role == .a ? player.take?.camA : player.take?.camB
     }
 
+    /// Every IN → OUT range becomes one piece (without ranges: the whole clip).
     private func addToTimeline(_ role: CameraRole) {
         guard let take = player.take, file(of: role) != nil, player.duration > 0 else { return }
-        let inPoint = player.marks.inPoint ?? 0
-        let outPoint = player.marks.outPoint ?? player.duration
-        guard outPoint - inPoint >= EditTimeline.minimumLength else { return }
-        let segment = TimelineSegment(take: take.number, camera: role,
-                                      fileA: take.camA?.lastPathComponent, fileB: take.camB?.lastPathComponent,
-                                      inPoint: inPoint, outPoint: outPoint, clipDuration: player.duration,
-                                      label: [take.name, player.slate?.shortLabel].compactMap { $0 }.joined(separator: " · "))
-        timeline.append(segment)
+        let spans = player.marks.isEmpty ? [0...player.duration] : player.marks.spans(duration: player.duration)
+        let label = [take.name, player.slate?.shortLabel].compactMap { $0 }.joined(separator: " · ")
+        var added: [TimelineSegment] = []
+        for span in spans where span.upperBound - span.lowerBound >= EditTimeline.minimumLength {
+            let segment = TimelineSegment(take: take.number, camera: role,
+                                          fileA: take.camA?.lastPathComponent, fileB: take.camB?.lastPathComponent,
+                                          inPoint: span.lowerBound, outPoint: span.upperBound, clipDuration: player.duration,
+                                          label: label)
+            timeline.append(segment)
+            added.append(segment)
+        }
+        guard let segment = added.first else { return }
+        let total = added.reduce(0) { $0 + $1.duration }
         addedMessageToken += 1
         let token = addedMessageToken
-        addedMessage = "Added to timeline: \(take.name) · Camera \(segment.cameraName) · \(player.timecode(segment.duration))"
+        addedMessage = "Added to timeline: \(take.name) · Camera \(segment.cameraName) · "
+            + (added.count > 1 ? "\(added.count) pieces, " : "") + player.timecode(total)
         DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
             if addedMessageToken == token { addedMessage = nil }
         }
@@ -745,18 +766,20 @@ struct PlaybackView: View {
         }
     }
 
-    /// IN → OUT length; without IN from the start, without OUT to the end of the clip.
+    /// Length of all IN → OUT ranges (without OUT to the end of the clip).
     private var markedDuration: Double? {
         let marks = player.marks
-        guard marks.inPoint != nil || marks.outPoint != nil else { return nil }
-        return max(0, (marks.outPoint ?? player.duration) - (marks.inPoint ?? 0))
+        guard !marks.isEmpty else { return nil }
+        return marks.totalDuration(duration: player.duration)
     }
 
     /// IN/OUT times, slate summary and the A/B offset.
     private var infoBlock: some View {
         VStack(spacing: 4) {
             HStack(spacing: 10) {
-                Text("IN \(player.marks.inPoint.map { player.timecode($0) } ?? "—")  ·  OUT \(player.marks.outPoint.map { player.timecode($0) } ?? "—")  ·  DUR \(markedDuration.map { player.timecode($0) } ?? "—")")
+                // IN / OUT of the last range; DUR of all ranges together.
+                let count = player.marks.ranges.count
+                Text("\(count > 1 ? "\(count) ranges · last " : "")IN \(player.marks.inPoint.map { player.timecode($0) } ?? "—")  ·  OUT \(player.marks.outPoint.map { player.timecode($0) } ?? "—")  ·  DUR \(markedDuration.map { player.timecode($0) } ?? "—")")
                     .font(.system(.title3, design: .monospaced))
                 if let msg = player.marksMessage {
                     Text(msg).font(.callout).foregroundStyle(.red)

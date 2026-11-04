@@ -403,6 +403,8 @@ async function status(){
     if (offline) { offline = false; restartStreams(); }
     document.getElementById('offline').style.display = 'none';
     document.getElementById('rec').classList.toggle('on', !!s.recording);
+    document.getElementById('rec').textContent = s.rehearsal ? '● REHEARSAL' : '● REC';
+    document.getElementById('rec').style.background = s.rehearsal ? '#ff9500' : '#e0201b';
     document.getElementById('timer').textContent = s.elapsed || '00:00:00';
     document.getElementById('project').textContent = s.project || 'DualCamRecorder';
     document.getElementById('slate').textContent = s.slate || '';

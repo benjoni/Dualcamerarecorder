@@ -233,6 +233,8 @@ final class RecordingController: NSObject, ObservableObject, DLDeviceBrowserDele
     // MARK: - Recording
 
     var isRecording: Bool { if case .idle = state { return false } else { return true } }
+    /// The running take is a rehearsal (only the app records).
+    var isRehearsal: Bool { isRecording && recordingSlate?.rehearsal == true }
 
     /// Take currently being written (hidden from the playback list).
     var activeTake: Int? {
@@ -250,7 +252,11 @@ final class RecordingController: NSObject, ObservableObject, DLDeviceBrowserDele
         }
     }
 
-    func startRecording() {
+    /// Rehearsal: both inputs are recorded only by the app; the take is marked "Rehearsal", gets no take number
+    /// of its own and the cameras' clip numbers stay (the cameras do not record).
+    func startRehearsal() { startRecording(rehearsal: true) }
+
+    func startRecording(rehearsal: Bool = false) {
         guard state == .idle else { return }
         errorMessage = nil
         let folder = settings.recordFolderURL
@@ -279,6 +285,11 @@ final class RecordingController: NSObject, ObservableObject, DLDeviceBrowserDele
         settings.slate.setupB = settings.slate.setupB.completed
         var slate = settings.slate
         slate.recordedAt = Date()
+        slate.rehearsal = rehearsal
+        if rehearsal {
+            slate.cameraClipA = ""
+            slate.cameraClipB = ""
+        }
 
         var armed: [CameraChannel] = []
         for role in active {
@@ -286,6 +297,7 @@ final class RecordingController: NSObject, ObservableObject, DLDeviceBrowserDele
             let url = folder.appendingPathComponent(TakeNaming.fileName(take: take, role: role, slate: slate, names: names))
             ch.resetCounters()
             if let failure = ch.arm(url: url, startHostNanos: startHost, flavor: settings.proResFlavor,
+                                    hevcMbps: settings.hevcMbps,
                                     audioChannels: audioChannels,
                                     metadata: slate.metadataItems(camera: role, takeNumber: take, names: names),
                                     completion: { [weak self] result in self?.channelFinished(result) }) {
@@ -306,7 +318,7 @@ final class RecordingController: NSObject, ObservableObject, DLDeviceBrowserDele
         recordingSlate = slate
         state = .recording(take: take, started: Date())
         elapsed = 0
-        lastTakeMessage = nil
+        lastTakeMessage = rehearsal ? "Rehearsal – only the app records" : nil
     }
 
     // MARK: - IN / OUT during recording
@@ -328,9 +340,10 @@ final class RecordingController: NSObject, ObservableObject, DLDeviceBrowserDele
         }
     }
 
+    /// Removes the last IN / OUT range.
     func clearMarks() {
         guard case .recording = state else { return }
-        marks = TakeMarks()
+        marks.removeLast()
     }
 
     // MARK: - Slate
@@ -368,6 +381,7 @@ final class RecordingController: NSObject, ObservableObject, DLDeviceBrowserDele
 
     /// A camera started or stopped: REC when one of the trigger cameras records, STOP when all of them stopped.
     private func cameraRecChanged() {
+        guard !isRehearsal else { return }   // the cameras do not record during a rehearsal
         let states = triggerRoles.map { channel($0).signal.cameraRec }
         guard !states.isEmpty else { return }
         if states.contains(.recording) {
@@ -415,7 +429,7 @@ final class RecordingController: NSObject, ObservableObject, DLDeviceBrowserDele
         let summary = pendingResults.sorted { $0.role.rawValue < $1.role.rawValue }
             .map { "\($0.url.lastPathComponent) (\($0.framesWritten) frames)" }
             .joined(separator: ", ")
-        lastTakeMessage = "Saved: " + summary
+        lastTakeMessage = (recordingSlate?.rehearsal == true ? "Rehearsal saved: " : "Saved: ") + summary
 
         // Save IN/OUT. The file timeline starts at the first written frame, which is within
         // ½ frame of the common start instant – correct for that small difference.
@@ -424,8 +438,7 @@ final class RecordingController: NSObject, ObservableObject, DLDeviceBrowserDele
             let firsts = pendingResults.compactMap(\.firstFrameHostNanos)
             if let first = firsts.min() {
                 let shift = Double(Int64(first) - Int64(recordStartHost)) / 1_000_000_000
-                if let i = m.inPoint { m.inPoint = max(0, i - shift) }
-                if let o = m.outPoint { m.outPoint = max(0, o - shift) }
+                m = m.shifted(by: -shift)
             }
             do {
                 try TakeMarksStore.save(m, folder: folder, take: take)
@@ -456,13 +469,17 @@ final class RecordingController: NSObject, ObservableObject, DLDeviceBrowserDele
                 errorMessage = "Could not save the slate: \(error.localizedDescription)"
             }
             var next = settings.slate
-            next.take = slate.take + 1
             next.note = ""
             next.good = false
             next.recordedAt = nil
-            // The cameras start a new internal clip with every take.
-            if recordedA { next.cameraClipA = CameraClipID.next(clipA) }
-            if recordedB { next.cameraClipB = CameraClipID.next(clipB) }
+            next.rehearsal = false
+            // A rehearsal is not a take: the take number and the cameras' clip numbers stay.
+            if !slate.rehearsal {
+                next.take = slate.take + 1
+                // The cameras start a new internal clip with every take.
+                if recordedA { next.cameraClipA = CameraClipID.next(clipA) }
+                if recordedB { next.cameraClipB = CameraClipID.next(clipB) }
+            }
             settings.slate = next
 
             // Script-friendly log of all clips in the project folder.
@@ -645,9 +662,10 @@ final class RecordingController: NSObject, ObservableObject, DLDeviceBrowserDele
         for ch in [channelA, channelB] where ch.hasSource {
             let fps = ch.format?.frameRate ?? 25
             let pixels = Double((ch.format?.width ?? 1920) * (ch.format?.height ?? 1080))
-            let bitsPerFrame = settings.proResFlavor.approxBitsPerHDFrame * pixels / (1920 * 1080)
+            let videoBits = settings.proResFlavor.approxBitsPerSecondHD(fps: fps, hevcMbps: settings.hevcMbps)
+                * pixels / (1920 * 1080)
             let audioBits = Double(settings.audioChannels) * 24 * 48_000
-            bytesPerSecond += (bitsPerFrame * fps + audioBits) / 8
+            bytesPerSecond += (videoBits + audioBits) / 8
         }
         guard bytesPerSecond > 0 else { return nil }
         return Double(freeBytes) / bytesPerSecond

@@ -270,7 +270,7 @@ final class CameraChannel: ObservableObject, VideoSourceDelegate {
     // MARK: - Recording control (main thread)
 
     /// Creates the writer now (so the first frame does not pay for it) and arms the channel to start at `startHostNanos`.
-    func arm(url: URL, startHostNanos: UInt64, flavor: ProResFlavor, audioChannels: Int,
+    func arm(url: URL, startHostNanos: UInt64, flavor: ProResFlavor, hevcMbps: Int, audioChannels: Int,
              metadata: [AVMetadataItem] = [],
              completion: @escaping (ChannelTakeResult) -> Void) -> String? {
         var failure: String?
@@ -285,7 +285,7 @@ final class CameraChannel: ObservableObject, VideoSourceDelegate {
             }
             do {
                 let writer = try MovieWriter(url: url, width: size.width, height: size.height,
-                                             flavor: flavor, audioChannels: audioChannels,
+                                             flavor: flavor, hevcMbps: hevcMbps, audioChannels: audioChannels,
                                              metadata: metadata, timecode: track)
                 take = TakeState(writer: writer, startHostNanos: startHostNanos, completion: completion,
                                  statsAtStart: qStats)

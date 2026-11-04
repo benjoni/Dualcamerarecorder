@@ -2,7 +2,7 @@
 //  MovieWriter.swift
 //  DualCamRecorder
 //
-//  AVAssetWriter wrapper: ProRes 422 (.mov) video + uncompressed 24-bit LPCM audio.
+//  AVAssetWriter wrapper: ProRes 422 or H.265 (.mov) video + uncompressed 24-bit LPCM audio.
 //  Not thread-safe: use from one serial queue (CameraChannel.queue).
 //
 
@@ -10,11 +10,15 @@ import Foundation
 import AVFoundation
 import CoreMedia
 import CoreVideo
+import VideoToolbox
+import os
 
 enum ProResFlavor: String, CaseIterable, Identifiable {
     case proRes422 = "422"
     case proRes422HQ = "422HQ"
     case proRes422LT = "422LT"
+    /// H.265 / HEVC (8-bit Main) from the Mac's hardware encoder – about a third of ProRes LT on disk.
+    case hevc = "HEVC"
 
     var id: String { rawValue }
 
@@ -23,6 +27,7 @@ enum ProResFlavor: String, CaseIterable, Identifiable {
         case .proRes422: return .proRes422
         case .proRes422HQ: return .proRes422HQ
         case .proRes422LT: return .proRes422LT
+        case .hevc: return .hevc
         }
     }
 
@@ -31,15 +36,63 @@ enum ProResFlavor: String, CaseIterable, Identifiable {
         case .proRes422: return "ProRes 422"
         case .proRes422HQ: return "ProRes 422 HQ"
         case .proRes422LT: return "ProRes 422 LT"
+        case .hevc: return "H.265 (HEVC)"
         }
     }
 
-    /// Approximate bits per 1920×1080 frame (Apple ProRes white paper, 29.97p data rates ÷ 29.97).
-    var approxBitsPerHDFrame: Double {
+    /// H.265 data rates to choose from (Mbit/s for 1920×1080, scaled with the picture size); 5 is the default.
+    static let hevcRates = [5, 10, 20, 45]
+    static let defaultHEVCRate = 5
+
+    /// Approximate video bits per second for 1920×1080 at `fps` (Apple ProRes white paper, 29.97p data
+    /// rates; H.265 at its chosen data rate, whatever the frame rate).
+    func approxBitsPerSecondHD(fps: Double, hevcMbps: Int) -> Double {
         switch self {
-        case .proRes422: return 147_000_000 / 29.97
-        case .proRes422HQ: return 220_000_000 / 29.97
-        case .proRes422LT: return 102_000_000 / 29.97
+        case .proRes422: return 147_000_000 / 29.97 * fps
+        case .proRes422HQ: return 220_000_000 / 29.97 * fps
+        case .proRes422LT: return 102_000_000 / 29.97 * fps
+        case .hevc: return Double(hevcMbps) * 1_000_000
+        }
+    }
+
+    /// Encoder settings beyond the codec (H.265: data rate, 8-bit Main profile, a key frame every second, no B-frames –
+    /// for real-time encoding and frame-accurate cutting).
+    func compressionProperties(width: Int, height: Int, hevcMbps: Int) -> [String: Any]? {
+        guard self == .hevc else { return nil }
+        let bitRate = Double(hevcMbps) * 1_000_000 * Double(width * height) / (1920 * 1080)
+        return [
+            AVVideoAverageBitRateKey: Int(bitRate),
+            AVVideoProfileLevelKey: kVTProfileLevel_HEVC_Main_AutoLevel as String,
+            AVVideoMaxKeyFrameIntervalDurationKey: 1.0,
+            AVVideoAllowFrameReorderingKey: false,
+            kVTCompressionPropertyKey_RealTime as String: true,
+        ]
+    }
+}
+
+/// The first H.265 encoder of the app takes over a second to start (hardware encoder loading) – frames of
+/// the first take were lost. One blank frame is encoded in the background as soon as H.265 is chosen.
+enum HEVCWarmup {
+    private static let done = OSAllocatedUnfairLock(initialState: false)
+
+    static func run() {
+        guard done.withLock({ d -> Bool in defer { d = true }; return !d }) else { return }
+        DispatchQueue.global(qos: .utility).async {
+            var session: VTCompressionSession?
+            guard VTCompressionSessionCreate(allocator: nil, width: 1920, height: 1080, codecType: kCMVideoCodecType_HEVC,
+                                             encoderSpecification: nil, imageBufferAttributes: nil,
+                                             compressedDataAllocator: nil, outputCallback: nil, refcon: nil,
+                                             compressionSessionOut: &session) == noErr, let session else { return }
+            VTSessionSetProperty(session, key: kVTCompressionPropertyKey_RealTime, value: kCFBooleanTrue)
+            VTCompressionSessionPrepareToEncodeFrames(session)
+            var buffer: CVPixelBuffer?
+            CVPixelBufferCreate(nil, 1920, 1080, kCVPixelFormatType_422YpCbCr8, nil, &buffer)
+            if let buffer {
+                VTCompressionSessionEncodeFrame(session, imageBuffer: buffer, presentationTimeStamp: .zero,
+                                                duration: .invalid, frameProperties: nil, infoFlagsOut: nil) { _, _, _ in }
+                VTCompressionSessionCompleteFrames(session, untilPresentationTimeStamp: .invalid)
+            }
+            VTCompressionSessionInvalidate(session)
         }
     }
 }
@@ -80,7 +133,7 @@ final class MovieWriter {
         var dropFrame: Bool
     }
 
-    init(url: URL, width: Int, height: Int, flavor: ProResFlavor, audioChannels: Int,
+    init(url: URL, width: Int, height: Int, flavor: ProResFlavor, hevcMbps: Int = ProResFlavor.defaultHEVCRate, audioChannels: Int,
          metadata: [AVMetadataItem] = [], timecode: TimecodeTrack? = nil) throws {
         self.url = url
         self.audioChannels = audioChannels
@@ -98,7 +151,7 @@ final class MovieWriter {
         // (everything up to the last fragment can be played).
         writer.movieFragmentInterval = CMTime(seconds: 2, preferredTimescale: 600)
 
-        let videoSettings: [String: Any] = [
+        var videoSettings: [String: Any] = [
             AVVideoCodecKey: flavor.codec,
             AVVideoWidthKey: width,
             AVVideoHeightKey: height,
@@ -108,6 +161,9 @@ final class MovieWriter {
                 AVVideoYCbCrMatrixKey: AVVideoYCbCrMatrix_ITU_R_709_2,
             ],
         ]
+        if let compression = flavor.compressionProperties(width: width, height: height, hevcMbps: hevcMbps) {
+            videoSettings[AVVideoCompressionPropertiesKey] = compression
+        }
         let videoInput = AVAssetWriterInput(mediaType: .video, outputSettings: videoSettings)
         videoInput.expectsMediaDataInRealTime = true
         let adaptor = AVAssetWriterInputPixelBufferAdaptor(assetWriterInput: videoInput, sourcePixelBufferAttributes: nil)

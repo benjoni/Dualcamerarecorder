@@ -22,6 +22,8 @@ final class AppSettings: ObservableObject {
     @Published var audioChannels: Int { didSet { defaults.set(audioChannels, forKey: "audioChannels") } }
     @Published var forceEightBit: Bool { didSet { defaults.set(forceEightBit, forKey: "forceEightBit") } }
     @Published var proResFlavor: ProResFlavor { didSet { defaults.set(proResFlavor.rawValue, forKey: "proResFlavor") } }
+    /// H.265 data rate (Mbit/s for 1080p).
+    @Published var hevcMbps: Int { didSet { defaults.set(hevcMbps, forKey: "hevcMbps") } }
     /// Device assignment: DeckLink identifier, `simulatedDeviceID` or "" (none).
     @Published var deviceA: String { didSet { defaults.set(deviceA, forKey: "deviceA") } }
     @Published var deviceB: String { didSet { defaults.set(deviceB, forKey: "deviceB") } }
@@ -70,6 +72,7 @@ final class AppSettings: ObservableObject {
         cameraCount = defaults.object(forKey: "cameraCount") as? Int ?? 2
         forceEightBit = defaults.bool(forKey: "forceEightBit")
         proResFlavor = ProResFlavor(rawValue: defaults.string(forKey: "proResFlavor") ?? "") ?? .proRes422
+        hevcMbps = defaults.object(forKey: "hevcMbps") as? Int ?? ProResFlavor.defaultHEVCRate
         deviceA = defaults.string(forKey: "deviceA") ?? ""
         deviceB = defaults.string(forKey: "deviceB") ?? ""
         cameraNameA = defaults.string(forKey: "cameraNameA") ?? "A"
@@ -136,7 +139,7 @@ final class AppSettings: ObservableObject {
                         orientationA: orientationA, orientationB: orientationB,
                         maskA: maskA, maskB: maskB,
                         recDetectionA: recDetectionA, recDetectionB: recDetectionB, cameraTrigger: cameraTrigger,
-                        backupEnabled: backupEnabled, backupRootPath: backupRootPath)
+                        backupEnabled: backupEnabled, backupRootPath: backupRootPath, hevcMbps: hevcMbps)
     }
 
     func apply(_ p: ProjectSettings) {
@@ -165,6 +168,7 @@ final class AppSettings: ObservableObject {
         cameraTrigger = p.cameraTrigger
         backupEnabled = p.backupEnabled
         backupRootPath = p.backupRootPath
+        hevcMbps = p.hevcMbps
     }
 
     /// Sanitized, guaranteed-distinct camera names.

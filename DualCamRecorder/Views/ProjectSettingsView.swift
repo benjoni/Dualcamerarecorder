@@ -104,6 +104,14 @@ struct ProjectSettingsView: View {
                     Picker("Codec", selection: $settings.proResFlavor) {
                         ForEach(ProResFlavor.allCases) { Text($0.title).tag($0) }
                     }
+                    if settings.proResFlavor == .hevc {
+                        Picker("H.265 data rate", selection: $settings.hevcMbps) {
+                            ForEach(ProResFlavor.hevcRates, id: \.self) { rate in
+                                Text("\(rate) Mbit/s" + (rate == ProResFlavor.defaultHEVCRate ? " (default)" : "")).tag(rate)
+                            }
+                        }
+                        .help("For 1920×1080 – a larger picture gets more in proportion. 5 Mbit/s ≈ 2.3 GB per camera per hour")
+                    }
                     Picker("Audio (SDI embedded)", selection: Binding(
                         get: { settings.audioChannels },
                         set: { settings.audioChannels = $0; needsInputRestart = true })) {

@@ -16,7 +16,7 @@ enum ClipLog {
 
     static let header = ["clip", "camera", "camera_name", "file", "camera_clip", "shooting_day", "scene", "shot",
                          "take", "good", "mos", "int_ext", "day_night", "recorded_at", "production", "note", "camera_setup",
-                         "tc_in", "tc_out"]
+                         "tc_in", "tc_out", "rehearsal"]
 
     /// Rewrites CLIPLOG.CSV for `folder`. Safe to call from any thread.
     static func rebuild(folder: URL, names: CameraNames) {
@@ -58,6 +58,7 @@ enum ClipLog {
                 s?.setup(entry.role).summary ?? "",
                 s?.timecode(entry.role)?.start.string ?? "",
                 s?.timecode(entry.role)?.end.string ?? "",
+                s?.rehearsal == true ? "1" : "0",
             ]
             lines.append(row.map(csvField).joined(separator: ","))
         }

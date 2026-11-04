@@ -270,6 +270,7 @@ private struct ReportRow: View {
         return HStack(alignment: .top, spacing: 10) {
             VStack(alignment: .leading, spacing: 3) {
                 Text(String(format: "%03d", clip.take.number)).font(.system(size: 14, weight: .bold))
+                if s?.rehearsal == true { tag("REHEARSAL", Color.orange) }
                 if s?.good == true { tag("★ GOOD", Color(red: 0.75, green: 0.55, blue: 0)) }
                 if s?.mos == true { tag("MOS", Color(white: 0.4)) }
             }
@@ -295,11 +296,13 @@ private struct ReportRow: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text(PDFReport.timecode(clip.duration, fps: clip.fps)).font(.system(size: 9, weight: .semibold, design: .monospaced))
                 if let m = clip.take.marks, !m.isEmpty {
-                    let lo = m.inPoint ?? 0
-                    let hi = m.outPoint ?? clip.duration
+                    let spans = m.spans(duration: clip.duration)
+                    let lo = spans.first?.lowerBound ?? 0
+                    let hi = spans.last?.upperBound ?? clip.duration
                     Text("IN \(PDFReport.timecode(lo, fps: clip.fps))").font(.system(size: 8, design: .monospaced))
                     Text("OUT \(PDFReport.timecode(hi, fps: clip.fps))").font(.system(size: 8, design: .monospaced))
-                    Text("DUR \(PDFReport.timecode(max(0, hi - lo), fps: clip.fps))").font(.system(size: 8, design: .monospaced))
+                    Text("DUR \(PDFReport.timecode(m.totalDuration(duration: clip.duration), fps: clip.fps))\(spans.count > 1 ? " · \(spans.count)×" : "")")
+                        .font(.system(size: 8, design: .monospaced))
                 }
                 if let rec = s?.recordedAt ?? Optional(clip.take.modified) {
                     Text(rec.formatted(date: .omitted, time: .shortened)).font(.system(size: 8))
@@ -346,7 +349,8 @@ private struct ReportRow: View {
     private func tag(_ text: String, _ color: Color) -> some View {
         Text(text)
             .font(.system(size: 7, weight: .bold))
-            .padding(.horizontal, 4).padding(.vertical, 1)
+            .lineLimit(1).minimumScaleFactor(0.7)
+            .padding(.horizontal, 3).padding(.vertical, 1)
             .foregroundStyle(Color.white)
             .background(RoundedRectangle(cornerRadius: 2).fill(color))
     }
@@ -372,7 +376,8 @@ private struct ReportRowPortrait: View {
                     Text(String(format: "%03d", clip.take.number)).font(.system(size: 13, weight: .bold))
                     Text("\(s?.scene.isEmpty == false ? s!.scene : "–") / \(s?.shot.isEmpty == false ? s!.shot : "–") / \(s.map { String($0.take) } ?? "–")")
                         .font(.system(size: 12, weight: .semibold))
-                    if s?.good == true { tag("★ GOOD", Color(red: 0.75, green: 0.55, blue: 0)) }
+                    if s?.rehearsal == true { tag("REHEARSAL", Color.orange) }
+                if s?.good == true { tag("★ GOOD", Color(red: 0.75, green: 0.55, blue: 0)) }
                     if s?.mos == true { tag("MOS", Color(white: 0.4)) }
                     Spacer(minLength: 0)
                     Text(([s?.location.rawValue ?? "", s?.timeOfDay.rawValue ?? ""].filter { !$0.isEmpty }
@@ -404,11 +409,12 @@ private struct ReportRowPortrait: View {
     /// "IN 00:00:08:10 · OUT 00:00:41:22 · DUR 00:00:33:12" (nil without marks)
     private var inOut: String? {
         guard let m = clip.take.marks, !m.isEmpty else { return nil }
-        let lo = m.inPoint ?? 0
-        let hi = m.outPoint ?? clip.duration
-        return ["IN " + PDFReport.timecode(lo, fps: clip.fps),
-                "OUT " + PDFReport.timecode(hi, fps: clip.fps),
-                "DUR " + PDFReport.timecode(max(0, hi - lo), fps: clip.fps)].joined(separator: "  ·  ")
+        // Every range "IN – OUT", then the length of all together.
+        let spans = m.spans(duration: clip.duration)
+        let ranges = spans.map { PDFReport.timecode($0.lowerBound, fps: clip.fps) + " – " + PDFReport.timecode($0.upperBound, fps: clip.fps) }
+        return (spans.count > 1 ? ranges : ["IN " + PDFReport.timecode(spans.first?.lowerBound ?? 0, fps: clip.fps),
+                                            "OUT " + PDFReport.timecode(spans.first?.upperBound ?? clip.duration, fps: clip.fps)])
+            .joined(separator: "  ·  ") + "  ·  DUR " + PDFReport.timecode(m.totalDuration(duration: clip.duration), fps: clip.fps)
     }
 
     private func picture(_ image: CGImage?, recorded: Bool) -> some View {
@@ -443,7 +449,8 @@ private struct ReportRowPortrait: View {
     private func tag(_ text: String, _ color: Color) -> some View {
         Text(text)
             .font(.system(size: 7, weight: .bold))
-            .padding(.horizontal, 4).padding(.vertical, 1)
+            .lineLimit(1).minimumScaleFactor(0.7)
+            .padding(.horizontal, 3).padding(.vertical, 1)
             .foregroundStyle(Color.white)
             .background(RoundedRectangle(cornerRadius: 2).fill(color))
     }
