@@ -83,17 +83,22 @@ struct SlateFields: View {
     var setShot: ((String) -> Void)?
     /// Bigger fields with larger text (recording tab).
     var large = false
+    /// Fields grouped in the middle with larger text, also in the compact size (recording tab).
+    var centered = false
+
+    /// Grouped layout (recording tab, both sizes).
+    private var grouped: Bool { large || centered }
 
     var body: some View {
         Grid(alignment: .leading, horizontalSpacing: 10, verticalSpacing: 8) {
             GridRow {
-                field("Production", text: $slate.production).frame(maxWidth: large ? 180 : .infinity)
-                field("Director", text: $slate.director).frame(maxWidth: large ? 180 : .infinity)
-                field("DoP", text: $slate.cameraOperator).frame(maxWidth: large ? 180 : .infinity)
+                field("Production", text: $slate.production).frame(maxWidth: grouped ? 180 : .infinity)
+                field("Director", text: $slate.director).frame(maxWidth: grouped ? 180 : .infinity)
+                field("DoP", text: $slate.cameraOperator).frame(maxWidth: grouped ? 180 : .infinity)
                 field("Shooting day", text: $slate.shootingDay).frame(maxWidth: 140)
             }
             .disabled(locked)
-            if large {
+            if grouped {
                 // Scene · shot · take · EXT / DAY / MOS as one group, centered under the fields.
                 GridRow {
                     HStack(alignment: .top, spacing: 16) {
@@ -115,11 +120,11 @@ struct SlateFields: View {
                 }
                 .disabled(locked)
             }
-            if large {
+            if grouped {
                 // Note · Good take as one group, centered like the row above.
                 GridRow {
                     HStack(alignment: .top, spacing: 10) {
-                        field("Note", text: $slate.note).frame(width: 420)
+                        field("Note", text: $slate.note).frame(width: large ? 420 : 380)
                         goodToggle
                     }
                     .gridCellColumns(4)
@@ -138,21 +143,21 @@ struct SlateFields: View {
     private var sceneField: some View {
         field("Scene", text: Binding(get: { slate.scene },
                                      set: { v in if let setScene { setScene(v) } else { slate.scene = v } }))
-            .frame(maxWidth: large ? 75 : 110)
+            .frame(maxWidth: grouped ? 75 : 110)
     }
 
     private var shotField: some View {
         field("Shot", text: Binding(get: { slate.shot },
                                     set: { v in if let setShot { setShot(v) } else { slate.shot = v } }))
-            .frame(maxWidth: large ? 75 : 110)
+            .frame(maxWidth: grouped ? 75 : 110)
     }
 
     private var takeField: some View {
         VStack(alignment: .leading, spacing: 2) {
-            Text("Take").font(large ? .body : .callout).foregroundStyle(.secondary)
+            Text("Take").font(grouped ? .body : .callout).foregroundStyle(.secondary)
             HStack(spacing: 4) {
                 styled(TextField("", value: $slate.take, format: .number))
-                    .frame(width: large ? 80 : 56)
+                    .frame(width: grouped ? 80 : 56)
                 Stepper("", value: $slate.take, in: 1...999).labelsHidden()
             }
         }
@@ -165,14 +170,14 @@ struct SlateFields: View {
             }
             .help("Good (circled) take")
         }
-        .toggleStyle(SegmentToggleStyle(width: large ? 180 : 150, minHeight: large ? 32 : 30))
-        .padding(.top, large ? 22 : 14)
+        .toggleStyle(SegmentToggleStyle(width: large ? 180 : 160, minHeight: grouped ? 32 : 30))
+        .padding(.top, grouped ? 22 : 14)
     }
 
     /// EXT / DAY / MOS.
     private var extrasGroup: some View {
         HStack(spacing: 10) {
-            if large {
+            if grouped {
                 // Same rounded box as MOS (system pop-ups are capsules on macOS 26).
                 boxMenu(slate.location.title) {
                     Picker("", selection: $slate.location) {
@@ -200,10 +205,10 @@ struct SlateFields: View {
                 }
                 .help("Without sound")
             }
-            .toggleStyle(SegmentToggleStyle(width: large ? 106 : 86, height: large ? 32 : 24))   // + 2 pt group padding = like EXT / DAY
+            .toggleStyle(SegmentToggleStyle(width: large ? 106 : 96, height: grouped ? 32 : 24))   // + 2 pt group padding = like EXT / DAY
         }
         .controlSize(large ? .extraLarge : .regular)
-        .padding(.top, large ? 22 : 14)
+        .padding(.top, grouped ? 22 : 14)
     }
 
     /// Pop-up menu drawn as a 110 × 36 rounded box like the MOS toggle group.
@@ -227,7 +232,7 @@ struct SlateFields: View {
 
     private func field(_ title: String, text: Binding<String>) -> some View {
         VStack(alignment: .leading, spacing: 2) {
-            Text(title).font(large ? .body : .callout).foregroundStyle(.secondary)
+            Text(title).font(grouped ? .body : .callout).foregroundStyle(.secondary)
             styled(TextField(title, text: text))
         }
     }
@@ -236,6 +241,8 @@ struct SlateFields: View {
     private func styled<Field: View>(_ field: Field) -> some View {
         if large {
             field.textFieldStyle(BigTextFieldStyle())
+        } else if centered {
+            field.textFieldStyle(BigTextFieldStyle(height: 32))
         } else {
             field.textFieldStyle(.roundedBorder)
         }
@@ -244,11 +251,13 @@ struct SlateFields: View {
 
 /// Tall text field with larger text (rounded-border fields ignore larger fonts / sizes on macOS 26).
 struct BigTextFieldStyle: TextFieldStyle {
+    var height: CGFloat = 40
+
     func _body(configuration: TextField<Self._Label>) -> some View {
         configuration
             .textFieldStyle(.plain)
             .padding(.horizontal, 10)
-            .frame(minHeight: 40)
+            .frame(minHeight: height)
             .background(RoundedRectangle(cornerRadius: 6).fill(Color.gray.opacity(0.15)))
             .overlay(RoundedRectangle(cornerRadius: 6).strokeBorder(Color.gray.opacity(0.35)))
     }
@@ -293,8 +302,8 @@ struct SlatePanel: View {
                             locked: controller.slateLocked,
                             setScene: { controller.setSlateScene($0) },
                             setShot: { controller.setSlateShot($0) },
-                            large: !compact)
-                    .font(compact ? .body : .title2)
+                            large: !compact, centered: true)
+                    .font(compact ? .title3 : .title2)
             }
             Spacer(minLength: 16)
             SlateBoard(slate: displayedSlate, large: !compact).hidden()
