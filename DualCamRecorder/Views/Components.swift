@@ -124,19 +124,23 @@ struct SegmentGroup<Content: View>: View {
 
 /// Big rounded button in the look of SegmentGroup (system buttons ignore larger fonts on macOS 26).
 struct BigButtonStyle: ButtonStyle {
+    /// Smaller version (side controls next to the big transport buttons).
+    var compact = false
+
     func makeBody(configuration: Configuration) -> some View {
-        BigButton(configuration: configuration)
+        BigButton(configuration: configuration, compact: compact)
     }
 
     private struct BigButton: View {
         let configuration: ButtonStyleConfiguration
+        let compact: Bool
         @Environment(\.isEnabled) private var isEnabled
 
         var body: some View {
             configuration.label
                 .lineLimit(1)
-                .padding(.horizontal, 20)
-                .frame(minHeight: 44)
+                .padding(.horizontal, compact ? 12 : 20)
+                .frame(minHeight: compact ? 32 : 44)
                 .foregroundStyle(isEnabled ? Color.primary : Color.secondary.opacity(0.6))
                 .background(
                     RoundedRectangle(cornerRadius: 8)

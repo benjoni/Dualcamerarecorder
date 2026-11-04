@@ -297,6 +297,7 @@ struct ContentView: View {
         .task { await runSnapshotsIfRequested() }
         .task { await runDiskTestIfRequested() }
         .task { await runTriggerTestIfRequested() }
+        .task { await runPlaybackEndTestIfRequested() }
         #endif
         .onDisappear {
             if let tabKeyMonitor { NSEvent.removeMonitor(tabKeyMonitor) }
@@ -638,6 +639,41 @@ extension ContentView {
     /// Debug only: `-triggerTestProject <name> -triggerTestDir <folder>` (with `-simCameraRec <s>`): records with the
     /// camera trigger on – the simulated camera starts and stops the take; then REC in the app while the camera
     /// stands (warning). Saves pictures, the SDI data log and result.txt (slate timecode) and quits.
+    /// Debug only: `-playbackEndTestDir <folder> -playbackEndTestProject <name>` plays the last second of the
+    /// latest clip without loop and logs both players every 50 ms until 3 s after the end (playback_end.txt).
+    @MainActor
+    func runPlaybackEndTestIfRequested() async {
+        let args = UserDefaults.standard
+        guard let dir = args.string(forKey: "playbackEndTestDir"), let name = args.string(forKey: "playbackEndTestProject") else { return }
+        try? await Task.sleep(nanoseconds: 2_000_000_000)
+        guard let entry = projects.projects.first(where: { $0.project.name == name }) else { exit(2) }
+        model.open(entry)
+        if let size = args.string(forKey: "snapshotWindowSize")?.split(separator: "x").compactMap({ Double($0) }), size.count == 2,
+           let window = NSApp.windows.first(where: { $0.isVisible && $0.contentView != nil }) {
+            window.setContentSize(NSSize(width: size[0], height: size[1]))
+        }
+        try? await Task.sleep(nanoseconds: 1_000_000_000)
+        tab = 1
+        try? await Task.sleep(nanoseconds: 4_000_000_000)
+        let player = model.player
+        player.loopClip = false
+        player.loopInOut = false
+        player.seek(seconds: max(0, player.duration - 1))
+        try? await Task.sleep(nanoseconds: 1_000_000_000)
+        var lines = ["duration \(player.duration) frame \(player.frameDuration.seconds)"]
+        player.play()
+        let start = Date()
+        while Date().timeIntervalSince(start) < 4.5 {
+            let a = player.playerA, b = player.playerB
+            lines.append(String(format: "%.2f  A %.4f r%.1f %@  B %.4f r%.1f %@  playing %@  current %.4f",
+                                Date().timeIntervalSince(start), a.currentTime().seconds, a.rate, "\(a.timeControlStatus.rawValue)",
+                                b.currentTime().seconds, b.rate, "\(b.timeControlStatus.rawValue)", "\(player.isPlaying)", player.currentTime))
+            try? await Task.sleep(nanoseconds: 50_000_000)
+        }
+        try? lines.joined(separator: "\n").write(to: URL(fileURLWithPath: dir).appendingPathComponent("playback_end.txt"), atomically: true, encoding: .utf8)
+        exit(0)
+    }
+
     @MainActor
     func runTriggerTestIfRequested() async {
         let args = UserDefaults.standard

@@ -448,74 +448,57 @@ struct PlaybackView: View {
         }
     }
 
-    /// Two rows – IN/OUT · transport · speed, then loop · add to timeline · audio · good take / slate –
-    /// so the screens above get as much height as possible.
+    /// Side controls (IN / OUT, speed, loop, audio, timeline, slate): smaller than the transport buttons.
+    private func side<V: View>(_ view: V) -> some View {
+        view.buttonStyle(BigButtonStyle(compact: true)).font(.body)
+    }
+
+    /// Big transport buttons centered; side controls at the left and right edges.
+    private func transportLine(playWidth: CGFloat = 160) -> some View {
+        HStack(spacing: 12) {
+            side(markButtons).fixedSize().frame(maxWidth: .infinity, alignment: .leading)
+            transportButtons(playWidth: playWidth).fixedSize()
+            side(speedControl).fixedSize().frame(maxWidth: .infinity, alignment: .trailing)
+        }
+    }
+
+    /// Left group at the left edge, right group at the right edge.
+    private func edgeLine<L: View, R: View>(_ left: L, _ right: R) -> some View {
+        HStack(spacing: 16) {
+            side(left).fixedSize().frame(maxWidth: .infinity, alignment: .leading)
+            side(right).fixedSize().frame(maxWidth: .infinity, alignment: .trailing)
+        }
+    }
+
+    /// Wide window: two rows, so the screens above get as much height as possible.
     private var wideButtons: some View {
         VStack(spacing: 8) {
-            HStack(spacing: 0) {
-                markButtons.fixedSize()
-                Spacer(minLength: 16)
-                transportButtons().fixedSize()
-                Spacer(minLength: 16)
-                speedControl.fixedSize()
-            }
-            HStack(spacing: 0) {
-                loopControl.fixedSize()
-                Spacer(minLength: 16)
-                addRow.fixedSize()
-                Spacer(minLength: 16)
-                audioButtons.fixedSize()
-                Spacer(minLength: 16)
-                takeButtons.fixedSize()
-            }
+            transportLine()
+            edgeLine(HStack(spacing: 16) { loopControl; addRow },
+                     HStack(spacing: 16) { audioButtons; takeButtons })
         }
         .buttonStyle(BigButtonStyle())
         .font(.title3)
     }
 
-    /// Medium window (e.g. a laptop with the clip list open): transport · speed,
-    /// IN/OUT · loop · audio, add to timeline · good take / slate.
+    /// Medium window (e.g. a laptop): transport row, then loop · audio, then timeline · slate.
     private var mediumButtons: some View {
         VStack(spacing: 8) {
-            HStack(spacing: 0) {
-                Spacer(minLength: 0)
-                transportButtons().fixedSize()
-                Spacer(minLength: 16)
-                speedControl.fixedSize()
-            }
-            HStack(spacing: 0) {
-                markButtons.fixedSize()
-                Spacer(minLength: 16)
-                loopControl.fixedSize()
-                Spacer(minLength: 16)
-                audioButtons.fixedSize()
-            }
-            HStack(spacing: 0) {
-                addRow.fixedSize()
-                Spacer(minLength: 16)
-                takeButtons.fixedSize()
-            }
+            transportLine(playWidth: 130)
+            edgeLine(loopControl, audioButtons)
+            edgeLine(addRow, takeButtons)
         }
         .buttonStyle(BigButtonStyle())
         .font(.title3)
     }
 
-    /// Narrow window: smaller groups under each other, none wider than about 600 points.
+    /// Narrow window: transport alone, the side controls in rows under it.
     private var stackedButtons: some View {
         VStack(spacing: 8) {
             transportButtons(playWidth: 110).fixedSize()
-            HStack(spacing: 0) {
-                markButtons.fixedSize()
-                Spacer(minLength: 16)
-                speedControl.fixedSize()
-            }
-            HStack(spacing: 0) {
-                loopControl.fixedSize()
-                Spacer(minLength: 16)
-                audioButtons.fixedSize()
-            }
-            addRow.fixedSize()
-            takeButtons.fixedSize()
+            edgeLine(markButtons, speedControl)
+            edgeLine(loopControl, audioButtons)
+            edgeLine(addRow, takeButtons)
         }
         .buttonStyle(BigButtonStyle())
         .font(.title3)
@@ -536,7 +519,7 @@ struct PlaybackView: View {
                 }
                 .help("Good (circled) take")
             }
-            .toggleStyle(SegmentToggleStyle(width: 160, minHeight: 40))
+            .toggleStyle(SegmentToggleStyle(width: 130, minHeight: 32))
             Button("Edit slate…") { editingSlate = true }
             Button(role: .destructive) { deletingTake = player.take } label: {
                 Label("Delete clip…", systemImage: "trash")
@@ -628,7 +611,7 @@ struct PlaybackView: View {
                         set: { if $0 { player.rate = rate } }))
                 }
             }
-            .toggleStyle(SegmentToggleStyle(width: 80, minHeight: 40))
+            .toggleStyle(SegmentToggleStyle(width: 66, minHeight: 32))
         }
     }
 
@@ -671,7 +654,7 @@ struct PlaybackView: View {
                     .help("Hear camera B")
             }
         }
-        .toggleStyle(SegmentToggleStyle(minHeight: 40))
+        .toggleStyle(SegmentToggleStyle(minHeight: 32))
     }
 
     private var markButtons: some View {
@@ -753,7 +736,7 @@ struct PlaybackView: View {
                 Toggle("CLIP", isOn: $player.loopClip)
                     .help("Repeat the whole clip from start to end (IN / OUT ignored)")
             }
-            .toggleStyle(SegmentToggleStyle(width: 90, minHeight: 40))
+            .toggleStyle(SegmentToggleStyle(width: 84, minHeight: 32))
         }
     }
 
@@ -784,11 +767,17 @@ struct PlaybackView: View {
             if player.slate == nil && player.take != nil {
                 Text("This clip has no slate data.")
             }
-            // Shown only when A and B drift apart by more than one frame.
-            if let offset = player.abOffsetMs, abs(offset) > 1000 * player.frameDuration.seconds {
+            // Shown only while playing, when A and B drift apart by more than one frame. While scrubbing or
+            // seeking the two players catch up at different moments, so the offset there means nothing.
+            // The line always takes its place (clip with both cameras): showing it must not move the screens.
+            if player.take?.camA != nil && player.take?.camB != nil {
+                let offset = player.abOffsetMs ?? 0
+                let drifting = abs(offset) > 1000 * player.frameDuration.seconds && player.isPlaying && !isScrubbing
                 Label(String(format: "A/B out of sync: B−A %+.1f ms", offset), systemImage: "exclamationmark.triangle.fill")
                     .font(.callout.monospacedDigit())
                     .foregroundStyle(Color.red)
+                    .opacity(drifting ? 1 : 0)
+                    .accessibilityHidden(!drifting)
             }
         }
         .foregroundStyle(.secondary)
