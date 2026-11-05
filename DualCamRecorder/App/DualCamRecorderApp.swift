@@ -40,10 +40,20 @@ final class AppModel: ObservableObject {
         // Live view for phones: camera JPEGs go straight from the preview queue to the server.
         recorder.channelA.preview.onJPEG = { [weak liveView = self.liveView] jpeg in liveView?.updateFrame(camera: "A", jpeg: jpeg) }
         recorder.channelB.preview.onJPEG = { [weak liveView = self.liveView] jpeg in liveView?.updateFrame(camera: "B", jpeg: jpeg) }
-        // Card number typed on the phone (script): goes into the Card field of the camera, not while recording.
-        liveView.onSetCard = { [weak self] role, card in
+        // Slate field changed on the phone (script): scene / shot / take / card – like typing it in Record,
+        // not while recording (a new scene or shot starts again at take 1).
+        liveView.onSetSlate = { [weak self] field, value in
             guard let self, !self.recorder.isRecording else { return false }
-            if role == .a { self.settings.slate.cardA = card } else { self.settings.slate.cardB = card }
+            switch field {
+            case "scene": self.recorder.setSlateScene(value)
+            case "shot": self.recorder.setSlateShot(value)
+            case "take":
+                guard let take = Int(value), (1...999).contains(take) else { return false }
+                self.settings.slate.take = take
+            case "cardA": self.settings.slate.cardA = value
+            case "cardB": self.settings.slate.cardB = value
+            default: return false
+            }
             self.updateLiveView()
             return true
         }

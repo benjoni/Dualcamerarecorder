@@ -30,8 +30,9 @@ final class LiveViewServer: ObservableObject {
         didSet { UserDefaults.standard.set(quality.rawValue, forKey: "liveViewQuality") }
     }
 
-    /// Card number sent from the phone (called on the main thread); false = not accepted (recording).
-    var onSetCard: ((CameraRole, String) -> Bool)?
+    /// Slate field sent from the phone – "scene", "shot", "take", "cardA", "cardB" (called on the main thread);
+    /// false = not accepted (recording or not a valid value).
+    var onSetSlate: ((String, String) -> Bool)?
 
     private var listener: NWListener?
     private let queue = DispatchQueue(label: "liveview-server", qos: .utility)
@@ -256,18 +257,18 @@ final class LiveViewServer: ObservableObject {
             shared.withLock { $0.clients[client] = Date() }
         }
 
-        // POST /card?k=…&cam=A&v=A008 – the card number of one camera, typed on the phone.
+        // POST /slate?k=…&f=scene&v=12B – one slate field (scene, shot, take, cardA, cardB) typed on the phone.
         if parts[0] == "POST" {
-            guard path == "/card",
-                  let cam = components?.queryItems?.first(where: { $0.name == "cam" })?.value,
-                  let role: CameraRole = cam == "A" ? .a : cam == "B" ? .b : nil else {
+            let fields: Set<String> = ["scene", "shot", "take", "cardA", "cardB"]
+            guard path == "/slate", let field = components?.queryItems?.first(where: { $0.name == "f" })?.value,
+                  fields.contains(field) else {
                 return Self.http(404, "text/plain", Data("Not found".utf8))
             }
             let raw = components?.queryItems?.first(where: { $0.name == "v" })?.value ?? ""
-            let card = String(raw.trimmingCharacters(in: .whitespacesAndNewlines).prefix(16))
-            let accepted = DispatchQueue.main.sync { onSetCard?(role, card) ?? false }
+            let value = String(raw.trimmingCharacters(in: .whitespacesAndNewlines).prefix(16))
+            let accepted = DispatchQueue.main.sync { onSetSlate?(field, value) ?? false }
             return accepted ? Self.http(200, "text/plain", Data("OK".utf8))
-                            : Self.http(409, "text/plain", Data("Not while recording".utf8))
+                            : Self.http(409, "text/plain", Data("Not accepted".utf8))
         }
 
         switch path {
@@ -427,12 +428,19 @@ enum LiveViewPage {
   .note{margin-top:6px;font-size:13px;color:#bbb}
   /* Cards above DAY at the right; a tap changes the number */
   #bCards{margin-bottom:4px;display:flex;flex-direction:column;align-items:flex-end}
-  #bCards .card{cursor:pointer;white-space:nowrap;line-height:1.05}   /* both cards close together */
+  #bCards .card{white-space:nowrap;line-height:.95;margin:0}   /* both cards close together */
+  #bCards .card + .card{margin-top:-1px}
+  /* Editable fields: a tap changes them – only on the full-screen slate */
+  #board.full .edit{cursor:pointer}
   #bCards .t{font:700 10px -apple-system,system-ui,sans-serif;color:#999;letter-spacing:.5px}
   /* Smaller than DAY / INT; no edit hint – a tap still changes the number */
   #bCards .v{font-weight:700;font-size:13px}
   #board.full #bCards .t{font-size:max(10px,2vmin)}
   #board.full #bCards .v{font-size:max(13px,3.2vmin)}
+  /* The line height follows the card's own size (not DAY / INT's), so both cards sit tight together */
+  #bCards{font-size:13px;line-height:1}
+  #board.full #bCards{font-size:max(13px,3.2vmin)}
+  #bCards .card{line-height:1}
   .hint{margin-top:8px;font-size:11px;color:#666}
   #board.full .prod{font-size:4.5vmin}
   #board.full .big{gap:min(6vmin,4vw);margin:3vmin 0 2vmin}
@@ -583,21 +591,38 @@ function beep(atSeconds, freq, seconds){
 // CLAP: both cameras at once. CLAP A / CLAP B: cameras far apart – one clap in front of each; the camera's
 // name stays big on the screen during the countdown and the flash, so the editor sees which one it was.
 let camNames = {A: 'A', B: 'B'}, cards = {A: '', B: ''}, recording = false;
-// Tap a card number to change it (the script notes the card in each camera); not while recording.
-async function editCard(cam, ev){
+// On the full-screen slate a tap on scene / shot / take / a card changes it (the script); not while recording.
+// On the small slate a tap only opens full screen. A new scene or shot starts again at take 1 (as in the app).
+let board_ = {};
+async function editField(field, title, ev){
+  if (!board.classList.contains('full')) return;   // the tap opens full screen instead
   ev.stopPropagation();
-  if (recording) { alert('The card number cannot be changed while recording.'); return; }
-  const v = prompt('Card number – camera ' + camNames[cam], cards[cam] || '');
+  if (recording) { alert('The slate cannot be changed while recording.'); return; }
+  const current = field === 'cardA' ? cards.A : field === 'cardB' ? cards.B : String(board_[field] ?? '');
+  const v = prompt(title, current);
   if (v === null) return;
   try {
-    const r = await fetch('/card?k=' + k + '&cam=' + cam + '&v=' + encodeURIComponent(v.trim()), {method:'POST', cache:'no-store'});
-    if (r.status === 409) alert('The card number cannot be changed while recording.');
-    else if (r.ok) { cards[cam] = v.trim(); document.getElementById('bCard' + cam).textContent = cards[cam] || '–'; }
-    else alert('Could not save the card number.');
+    const r = await fetch('/slate?k=' + k + '&f=' + field + '&v=' + encodeURIComponent(v.trim()), {method:'POST', cache:'no-store'});
+    if (r.ok) {
+      // Shown at once; the next status (within a second) brings the app's values (e.g. take 1 after a new scene).
+      const ids = {scene: 'bScene', shot: 'bShot', take: 'bTake', cardA: 'bCardA', cardB: 'bCardB'};
+      document.getElementById(ids[field]).textContent = v.trim() || '–';
+      if (field === 'cardA') cards.A = v.trim();
+      if (field === 'cardB') cards.B = v.trim();
+      fitTitle();
+    }
+    else if (recording) alert('The slate cannot be changed while recording.');
+    else alert(field === 'take' ? 'Take must be a number 1–999.' : 'Could not change it.');
   } catch (e) { alert('No connection to the Mac.'); }
 }
-document.getElementById('bCardACell').onclick = (ev) => editCard('A', ev);
-document.getElementById('bCardBCell').onclick = (ev) => editCard('B', ev);
+const editable = [['bScene', 'scene', () => 'Scene'], ['bShot', 'shot', () => 'Shot'], ['bTake', 'take', () => 'Take'],
+                  ['bCardACell', 'cardA', () => 'Card number – camera ' + camNames.A],
+                  ['bCardBCell', 'cardB', () => 'Card number – camera ' + camNames.B]];
+editable.forEach(([id, field, title]) => {
+  const el = document.getElementById(id);
+  el.classList.add('edit');
+  el.onclick = (ev) => editField(field, title(), ev);
+});
 document.getElementById('clapAll').onclick = (ev) => { ev.stopPropagation(); clap(''); };
 document.getElementById('clapA').onclick = (ev) => { ev.stopPropagation(); clap('A'); };
 document.getElementById('clapB').onclick = (ev) => { ev.stopPropagation(); clap('B'); };
@@ -636,6 +661,7 @@ function clap(cam){
 }
 function fillBoard(b){
   if (!b) return;
+  board_ = b;
   const set = (id, v) => { document.getElementById(id).textContent = v; };
   set('bProd', (b.production || 'PRODUCTION').toUpperCase());
   set('bDay', b.day ? 'DAY ' + b.day : '');
