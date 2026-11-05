@@ -139,6 +139,12 @@ enum PDFReport {
         context.closePDF()
     }
 
+    /// Recording time ("21:15") with a look-alike ratio sign instead of the colon, so Preview's data
+    /// detectors don't turn it into a clickable calendar event.
+    static func clockTime(_ date: Date) -> String {
+        date.formatted(date: .omitted, time: .shortened).replacingOccurrences(of: ":", with: "\u{2236}")
+    }
+
     static func timecode(_ seconds: Double, fps: Double) -> String {
         let nominal = max(1, Int(fps.rounded()))
         let total = Int((seconds * fps).rounded())
@@ -305,7 +311,7 @@ private struct ReportRow: View {
                         .font(.system(size: 8, design: .monospaced))
                 }
                 if let rec = s?.recordedAt ?? Optional(clip.take.modified) {
-                    Text(rec.formatted(date: .omitted, time: .shortened)).font(.system(size: 8))
+                    Text(PDFReport.clockTime(rec)).font(.system(size: 8))
                         .foregroundStyle(Color(white: 0.35))
                 }
             }
@@ -382,7 +388,7 @@ private struct ReportRowPortrait: View {
                     Spacer(minLength: 0)
                     Text(([s?.location.rawValue ?? "", s?.timeOfDay.rawValue ?? ""].filter { !$0.isEmpty }
                           + [PDFReport.timecode(clip.duration, fps: clip.fps),
-                             (s?.recordedAt ?? clip.take.modified).formatted(date: .omitted, time: .shortened)])
+                             PDFReport.clockTime(s?.recordedAt ?? clip.take.modified)])
                             .joined(separator: " · "))
                         .font(.system(size: 8, design: .monospaced))
                 }
