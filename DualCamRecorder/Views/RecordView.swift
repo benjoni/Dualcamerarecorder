@@ -273,9 +273,16 @@ struct CameraPanel: View {
         .fixedSize()
     }
 
-    /// "Cam clip" · clip number field · stepper.
+    /// "Card" · card number · "Cam clip" · clip number field · stepper.
     private func clipNumber(minFieldWidth: CGFloat) -> some View {
         HStack {
+            Text("Card").font(.caption).foregroundStyle(.secondary).fixedSize()
+            TextField("A001", text: cardBinding)
+                .textFieldStyle(.roundedBorder)
+                .font(.body.monospaced())
+                .frame(width: 70)
+                .disabled(controller.isRecording)
+                .help("Number of the memory card in this camera (e.g. A001) – stays for the next takes; saved with every clip, in CLIPLOG.CSV and on the phone slate.")
             Text("Cam clip").font(.caption).foregroundStyle(.secondary).fixedSize()
             TextField("A001C0001", text: cameraClipBinding)
                 .textFieldStyle(.roundedBorder)
@@ -365,6 +372,21 @@ struct CameraPanel: View {
                 let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
                 if role == .a { controller.settings.slate.cameraClipA = trimmed }
                 else { controller.settings.slate.cameraClipB = trimmed }
+            })
+    }
+
+    /// Card number in this camera (frozen value of the running take while recording).
+    private var cardBinding: Binding<String> {
+        let role = channel.role
+        return Binding(
+            get: {
+                if let frozen = controller.recordingSlate { return frozen.card(role) }
+                return controller.settings.slate.card(role)
+            },
+            set: { value in
+                let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
+                if role == .a { controller.settings.slate.cardA = trimmed }
+                else { controller.settings.slate.cardB = trimmed }
             })
     }
 

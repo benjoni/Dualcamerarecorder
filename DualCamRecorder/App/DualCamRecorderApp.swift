@@ -40,6 +40,13 @@ final class AppModel: ObservableObject {
         // Live view for phones: camera JPEGs go straight from the preview queue to the server.
         recorder.channelA.preview.onJPEG = { [weak liveView = self.liveView] jpeg in liveView?.updateFrame(camera: "A", jpeg: jpeg) }
         recorder.channelB.preview.onJPEG = { [weak liveView = self.liveView] jpeg in liveView?.updateFrame(camera: "B", jpeg: jpeg) }
+        // Card number typed on the phone (script): goes into the Card field of the camera, not while recording.
+        liveView.onSetCard = { [weak self] role, card in
+            guard let self, !self.recorder.isRecording else { return false }
+            if role == .a { self.settings.slate.cardA = card } else { self.settings.slate.cardB = card }
+            self.updateLiveView()
+            return true
+        }
 
         // Blackmagic monitor: live pictures and formats of both inputs, device / source from the project settings.
         recorder.channelA.onPicture = { [weak monitor = self.monitor, weak overlay = self.overlay] picture in
@@ -160,6 +167,12 @@ final class AppModel: ObservableObject {
         }
     }
 
+    /// One frame in ms for the phone's clap flash (25 fps when no signal is known).
+    private static func clapFrameMs(_ durations: [Double]) -> Int {
+        let longest = durations.filter { $0 > 0 && $0 < 1 }.max() ?? 0.04
+        return Int((longest * 1000).rounded(.up))
+    }
+
     private static let boardDate: DateFormatter = {
         let f = DateFormatter()
         f.dateFormat = "d. M. yyyy"
@@ -212,8 +225,15 @@ final class AppModel: ObservableObject {
                 "director": slate.director,
                 "dop": slate.cameraOperator,
                 "note": settings.slate.note,
+                "cardA": slate.cardA,
+                "cardB": slate.cardB,
                 "date": Self.boardDate.string(from: Date()),
             ] as [String: Any],
+            // Longest frame of the cameras that are on (ms): the phone's clap flash lasts one such frame,
+            // so every camera gets at least one white frame.
+            "frameMs": Self.clapFrameMs([recorder.channelA, recorder.channelB]
+                .filter { settings.isCameraOn($0.role) }
+                .map(\.signal.frameDuration)),
         ]
         if let json = try? JSONSerialization.data(withJSONObject: status) {
             liveView.updateStatus(json)

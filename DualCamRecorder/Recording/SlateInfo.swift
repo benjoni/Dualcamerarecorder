@@ -52,6 +52,9 @@ struct SlateInfo: Codable, Hashable {
     /// Its last number goes up by 1 after every take. Empty = that camera did not record this take.
     var cameraClipA = ""
     var cameraClipB = ""
+    /// Number of the memory card in each camera, e.g. "A001" (stays from take to take; empty = not filled in).
+    var cardA = ""
+    var cardB = ""
     /// Lens / stop / distance / height / tilt … of each camera (empty = not filled in).
     var setupA = CameraSetup()
     var setupB = CameraSetup()
@@ -62,6 +65,7 @@ struct SlateInfo: Codable, Hashable {
     func timecode(_ role: CameraRole) -> TimecodeRange? { role == .a ? timecodeA : timecodeB }
 
     func cameraClip(_ role: CameraRole) -> String { role == .a ? cameraClipA : cameraClipB }
+    func card(_ role: CameraRole) -> String { role == .a ? cardA : cardB }
     func setup(_ role: CameraRole) -> CameraSetup { role == .a ? setupA : setupB }
 
     /// "Day 3 · Scene 12 · Shot 3 · Take 2"
@@ -94,6 +98,8 @@ struct SlateInfo: Codable, Hashable {
         if !cameraClipA.isEmpty { clips.append("A " + cameraClipA) }
         if !cameraClipB.isEmpty { clips.append("B " + cameraClipB) }
         if !clips.isEmpty { lines.append("Camera clip: " + clips.joined(separator: " / ")) }
+        let cards = [cardA.isEmpty ? nil : "A " + cardA, cardB.isEmpty ? nil : "B " + cardB].compactMap { $0 }
+        if !cards.isEmpty { lines.append("Card: " + cards.joined(separator: " / ")) }
         if !setupA.isEmpty { lines.append("Camera A settings: " + setupA.summary) }
         if !setupB.isEmpty { lines.append("Camera B settings: " + setupB.summary) }
         if !note.isEmpty { lines.append("Note: \(note)") }
@@ -134,6 +140,14 @@ struct SlateInfo: Codable, Hashable {
                 items.append(comment)
             }
         }
+        let card = self.card(camera)
+        if !card.isEmpty {
+            let custom = AVMutableMetadataItem()
+            custom.keySpace = .quickTimeMetadata
+            custom.key = "sk.dualcam.camera-card" as NSString
+            custom.value = card as NSString
+            items.append(custom)
+        }
         let setup = self.setup(camera)
         if !setup.isEmpty {
             let custom = AVMutableMetadataItem()
@@ -167,6 +181,8 @@ extension SlateInfo {
         recordedAt = try c.decodeIfPresent(Date.self, forKey: .recordedAt)
         cameraClipA = Self.decodeClip(c, .cameraClipA)
         cameraClipB = Self.decodeClip(c, .cameraClipB)
+        cardA = (try? c.decodeIfPresent(String.self, forKey: .cardA)) ?? ""
+        cardB = (try? c.decodeIfPresent(String.self, forKey: .cardB)) ?? ""
         setupA = try c.decodeIfPresent(CameraSetup.self, forKey: .setupA) ?? setupA
         setupB = try c.decodeIfPresent(CameraSetup.self, forKey: .setupB) ?? setupB
         timecodeA = try? c.decodeIfPresent(TimecodeRange.self, forKey: .timecodeA)

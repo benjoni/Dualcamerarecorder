@@ -30,6 +30,9 @@ final class LiveViewServer: ObservableObject {
         didSet { UserDefaults.standard.set(quality.rawValue, forKey: "liveViewQuality") }
     }
 
+    /// Card number sent from the phone (called on the main thread); false = not accepted (recording).
+    var onSetCard: ((CameraRole, String) -> Bool)?
+
     private var listener: NWListener?
     private let queue = DispatchQueue(label: "liveview-server", qos: .utility)
     private struct Shared {
@@ -236,7 +239,9 @@ final class LiveViewServer: ObservableObject {
         // "GET /frame/A.jpg?k=abc&t=123 HTTP/1.1"
         let firstLine = request.split(separator: "\r\n", maxSplits: 1).first.map(String.init) ?? ""
         let parts = firstLine.split(separator: " ")
-        guard parts.count >= 2, parts[0] == "GET" else { return Self.http(405, "text/plain", Data("Method not allowed".utf8)) }
+        guard parts.count >= 2, parts[0] == "GET" || parts[0] == "POST" else {
+            return Self.http(405, "text/plain", Data("Method not allowed".utf8))
+        }
         let target = String(parts[1])
         let components = URLComponents(string: target)
         let path = components?.path ?? "/"
@@ -249,6 +254,20 @@ final class LiveViewServer: ObservableObject {
         if case .hostPort(let host, _) = endpoint {
             let client = "\(host)"
             shared.withLock { $0.clients[client] = Date() }
+        }
+
+        // POST /card?k=…&cam=A&v=A008 – the card number of one camera, typed on the phone.
+        if parts[0] == "POST" {
+            guard path == "/card",
+                  let cam = components?.queryItems?.first(where: { $0.name == "cam" })?.value,
+                  let role: CameraRole = cam == "A" ? .a : cam == "B" ? .b : nil else {
+                return Self.http(404, "text/plain", Data("Not found".utf8))
+            }
+            let raw = components?.queryItems?.first(where: { $0.name == "v" })?.value ?? ""
+            let card = String(raw.trimmingCharacters(in: .whitespacesAndNewlines).prefix(16))
+            let accepted = DispatchQueue.main.sync { onSetCard?(role, card) ?? false }
+            return accepted ? Self.http(200, "text/plain", Data("OK".utf8))
+                            : Self.http(409, "text/plain", Data("Not while recording".utf8))
         }
 
         switch path {
@@ -274,7 +293,8 @@ final class LiveViewServer: ObservableObject {
     }
 
     private static func http(_ code: Int, _ type: String, _ body: Data) -> Data {
-        let reason = [200: "OK", 204: "No Content", 403: "Forbidden", 404: "Not Found", 405: "Method Not Allowed"][code] ?? "OK"
+        let reason = [200: "OK", 204: "No Content", 403: "Forbidden", 404: "Not Found", 405: "Method Not Allowed",
+                      409: "Conflict"][code] ?? "OK"
         var head = "HTTP/1.1 \(code) \(reason)\r\n"
         head += "Content-Type: \(type)\r\n"
         head += "Content-Length: \(body.count)\r\n"
@@ -381,29 +401,66 @@ enum LiveViewPage {
   #board.on{display:block}
   #board.full{position:fixed;inset:0;margin:0;border:none;border-radius:0;z-index:10;display:flex;flex-direction:column;justify-content:center;
     padding:max(16px,env(safe-area-inset-top)) max(20px,env(safe-area-inset-right)) max(16px,env(safe-area-inset-bottom)) max(20px,env(safe-area-inset-left))}
-  .sticks{height:16px;background:repeating-linear-gradient(-60deg,#fff 0 18px,#000 18px 36px);transform:rotate(-2deg);margin:2px 0 10px}
-  #board.full .sticks{height:6vmin;background:repeating-linear-gradient(-60deg,#fff 0 7vmin,#000 7vmin 14vmin)}
+  .sticks{height:16px;background:repeating-linear-gradient(-60deg,#fff 0 18px,#000 18px 36px);transform:rotate(-2deg);margin:2px 0 18px}
+  #board.full .sticks{height:6vmin;background:repeating-linear-gradient(-60deg,#fff 0 7vmin,#000 7vmin 14vmin);margin-bottom:5vmin}
   .brow{display:flex;justify-content:space-between;gap:12px;align-items:baseline}
   .prod{font-weight:800;font-size:16px;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  /* Production as big as the scene number (made smaller only when the name does not fit the width) */
+  .title{font:800 44px ui-rounded,-apple-system,system-ui,sans-serif;line-height:1.05;text-transform:uppercase;white-space:nowrap;overflow:hidden}
+  #bTags{display:flex;flex-direction:column;align-items:flex-end}
+  /* Production at the left in the room the DAY / INT / NIGHT column at the right leaves free. */
+  .head{display:flex;flex-direction:row;align-items:flex-start;gap:max(16px,5vmin)}
+  .head .title{flex:1;min-width:0}
+  /* Every row uses the whole width: the cells share it equally. */
   .big{display:flex;gap:22px;margin:8px 0 6px}
+  .big .cell,.people .cell{flex:1;min-width:0}
+  .big .cell .v{overflow:hidden;display:flex;align-items:center}   /* a smaller number stays centered on the row */
+  #board .people .v{white-space:normal;overflow-wrap:anywhere}   /* long names wrap instead of being cut */
+  #board .tags{flex-direction:column;flex-wrap:nowrap;align-items:flex-end;gap:0}   /* INT / DAY / MOS … under each other, right under DAY */
   .cell .t{font:700 10px -apple-system,system-ui,sans-serif;color:#999;letter-spacing:.5px}
   .cell .v{font:800 44px ui-rounded,-apple-system,system-ui,sans-serif;line-height:1.05;white-space:nowrap}
-  .tags{font-weight:800;font-size:16px;display:flex;gap:10px;flex-wrap:wrap;min-height:20px}
+  .tags{font-weight:800;font-size:16px;display:flex;gap:10px;flex-wrap:wrap;min-height:20px;margin-top:2px}
   .tags .reh{color:#000;background:#ff9500;border-radius:4px;padding:0 6px}
   .tags .good{color:#ffd60a}
   .people{display:flex;gap:22px;margin-top:8px}
   .people .v{font-weight:700;font-size:14px}
   .note{margin-top:6px;font-size:13px;color:#bbb}
+  /* Cards above DAY at the right; a tap changes the number */
+  #bCards{margin-bottom:4px;display:flex;flex-direction:column;align-items:flex-end}
+  #bCards .card{cursor:pointer;white-space:nowrap;line-height:1.05}   /* both cards close together */
+  #bCards .t{font:700 10px -apple-system,system-ui,sans-serif;color:#999;letter-spacing:.5px}
+  /* Smaller than DAY / INT; no edit hint – a tap still changes the number */
+  #bCards .v{font-weight:700;font-size:13px}
+  #board.full #bCards .t{font-size:max(10px,2vmin)}
+  #board.full #bCards .v{font-size:max(13px,3.2vmin)}
   .hint{margin-top:8px;font-size:11px;color:#666}
   #board.full .prod{font-size:4.5vmin}
   #board.full .big{gap:min(6vmin,4vw);margin:3vmin 0 2vmin}
   #board.full .cell .t{font-size:max(11px,2.6vmin)}
-  /* Scene · shot · take as big as the screen allows – never wider than the screen. */
-  #board.full .big .cell .v{font-size:min(22vmin,12vw)}
+  /* Scene · shot · take as big as the screen allows – never wider than their third of the screen. */
+  #board.full .big .cell .v{font-size:min(30vmin,13vw)}
   #board.full .tags{font-size:max(18px,5vmin);min-height:6vmin}
   #board.full .people .v{font-size:max(16px,4.5vmin)}
   #board.full .note{font-size:3.5vmin}
   #board.full .hint{font-size:2.4vmin}
+  /* Clap: countdown, then the whole screen white for one camera frame + a beep */
+  #claps{display:none;margin-top:3vmin;gap:3vmin;flex-wrap:wrap}
+  #board.full #claps{display:flex}
+  .clap{background:#e0201b;color:#fff;border:none;border-radius:10px;
+    padding:2.4vmin 6vmin;font:800 max(18px,5vmin) -apple-system,system-ui,sans-serif;letter-spacing:1px}
+  .clap.one{background:#3a3a3a;border:2px solid #e0201b}
+  /* Camera the clap is for (cameras far apart: one clap each) */
+  #camTag{display:none;position:fixed;left:5vmin;bottom:5vmin;z-index:11;color:#fff;background:#e0201b;border-radius:2vmin;
+    padding:1vmin 3vmin;font:800 14vmin ui-rounded,-apple-system,system-ui,sans-serif;line-height:1}
+  #count{display:none;position:fixed;right:5vmin;bottom:5vmin;z-index:11;font:800 26vmin ui-rounded,-apple-system,system-ui,sans-serif;color:#e0201b;line-height:1}
+  #flash{display:none;position:fixed;inset:0;background:#fff;z-index:20}
+  /* Landscape (last, so it wins over the rules above) */
+  @media (orientation: landscape){
+    #board.full .big .cell .v{font-size:min(19vmin,13vw)}
+    #board.full .big{margin:1.5vmin 0 1vmin}
+    #board.full .sticks{margin-bottom:3vmin}
+    #board.full #claps{margin-top:2vmin}
+  }
 </style>
 </head><body>
 <header><span id="rec">● REC</span><span id="timer">00:00:00</span><span id="project">DualCamRecorder</span><button id="slateBtn" type="button">Slate</button><span class="app"><svg class="logo" viewBox="0 0 294 245" fill="none" stroke="currentColor" stroke-width="16"><g id="bb"><path d="M169 0V245M169 8H244A42 42 0 0 1 286 50V51A42 42 0 0 1 244 93H169M169 152H244A42 42 0 0 1 286 194V195A42 42 0 0 1 244 237H169"/></g><use href="#bb" transform="matrix(-1 0 0 1 293 0)"/></svg>DualCamRecorder</span></header>
@@ -411,13 +468,21 @@ enum LiveViewPage {
 <div id="slate"></div>
 <div id="board">
   <div class="sticks"></div>
-  <div class="brow"><span class="prod" id="bProd">PRODUCTION</span><span class="prod" id="bDay"></span></div>
+  <div class="head">
+    <div class="title" id="bProd">PRODUCTION</div>
+    <div class="tags">
+      <div id="bCards">
+        <div class="card" id="bCardACell"><span class="t" id="bCardAT">CARD A</span> <span class="v" id="bCardA">–</span></div>
+        <div class="card" id="bCardBCell"><span class="t" id="bCardBT">CARD B</span> <span class="v" id="bCardB">–</span></div>
+      </div>
+      <span class="prod" id="bDay"></span><span id="bTags"></span>
+    </div>
+  </div>
   <div class="big">
     <div class="cell"><div class="t">SCENE</div><div class="v" id="bScene">–</div></div>
     <div class="cell"><div class="t">SHOT</div><div class="v" id="bShot">–</div></div>
     <div class="cell"><div class="t">TAKE</div><div class="v" id="bTake">1</div></div>
   </div>
-  <div class="tags" id="bTags"></div>
   <div class="people">
     <div class="cell"><div class="t">DIRECTOR</div><div class="v" id="bDir">–</div></div>
     <div class="cell"><div class="t">DOP</div><div class="v" id="bDop">–</div></div>
@@ -425,7 +490,15 @@ enum LiveViewPage {
   </div>
   <div class="note" id="bNote"></div>
   <div class="hint" id="bHint">Tap the slate for full screen</div>
+  <div id="claps">
+    <button class="clap" id="clapAll" type="button">CLAP</button>
+    <button class="clap one" id="clapA" type="button">CLAP A</button>
+    <button class="clap one" id="clapB" type="button">CLAP B</button>
+  </div>
 </div>
+<div id="camTag"></div>
+<div id="count"></div>
+<div id="flash"></div>
 <div id="files"></div>
 <main>
   <div class="cam" id="boxA"><img id="camA" alt=""><span class="label" id="nameA">A</span></div>
@@ -457,6 +530,15 @@ async function status(){
     document.getElementById('slate').textContent = s.slate || '';
     document.getElementById('files').textContent = s.files || '';
     fillBoard(s.board);
+    if (s.frameMs) frameMs = s.frameMs;
+    recording = !!s.recording;
+    camNames = {A: s.nameA || 'A', B: s.nameB || 'B'};
+    document.getElementById('clapA').textContent = 'CLAP ' + camNames.A;
+    document.getElementById('clapB').textContent = 'CLAP ' + camNames.B;
+    document.getElementById('clapB').style.display = s.twoCameras ? '' : 'none';
+    document.getElementById('bCardAT').textContent = 'CARD ' + camNames.A;
+    document.getElementById('bCardBT').textContent = 'CARD ' + camNames.B;
+    document.getElementById('bCardBCell').style.display = s.twoCameras ? '' : 'none';
     document.getElementById('nameA').textContent = s.nameA || 'A';
     document.getElementById('nameB').textContent = s.nameB || 'B';
     document.getElementById('boxA').classList.toggle('hidden', s.showA === false);
@@ -476,15 +558,82 @@ function setBoard(on){
   board.classList.toggle('on', on);
   slateBtn.classList.toggle('on', on);
   if (!on) board.classList.remove('full');
+  fitTitle();
   try { localStorage.setItem('dcrSlate', on ? '1' : '0'); } catch (e) {}
 }
 slateBtn.onclick = () => setBoard(!board.classList.contains('on'));
 board.onclick = () => {
   const full = !board.classList.contains('full');
   board.classList.toggle('full', full);
+  fitTitle();
   document.getElementById('bHint').textContent = full ? 'Tap to close full screen' : 'Tap the slate for full screen';
 };
 try { setBoard(localStorage.getItem('dcrSlate') === '1'); } catch (e) {}
+
+// Clap: hold the phone in front of the cameras, tap CLAP – 3 · 2 · 1 with short pips, then the screen is white
+// for one camera frame together with a beep (sync point for picture and sound).
+let frameMs = 40, clapping = false, audio = null;
+function beep(atSeconds, freq, seconds){
+  const o = audio.createOscillator(), g = audio.createGain();
+  o.frequency.value = freq; o.type = 'sine';
+  g.gain.setValueAtTime(0.9, atSeconds); g.gain.setValueAtTime(0, atSeconds + seconds);
+  o.connect(g); g.connect(audio.destination);
+  o.start(atSeconds); o.stop(atSeconds + seconds + 0.01);
+}
+// CLAP: both cameras at once. CLAP A / CLAP B: cameras far apart – one clap in front of each; the camera's
+// name stays big on the screen during the countdown and the flash, so the editor sees which one it was.
+let camNames = {A: 'A', B: 'B'}, cards = {A: '', B: ''}, recording = false;
+// Tap a card number to change it (the script notes the card in each camera); not while recording.
+async function editCard(cam, ev){
+  ev.stopPropagation();
+  if (recording) { alert('The card number cannot be changed while recording.'); return; }
+  const v = prompt('Card number – camera ' + camNames[cam], cards[cam] || '');
+  if (v === null) return;
+  try {
+    const r = await fetch('/card?k=' + k + '&cam=' + cam + '&v=' + encodeURIComponent(v.trim()), {method:'POST', cache:'no-store'});
+    if (r.status === 409) alert('The card number cannot be changed while recording.');
+    else if (r.ok) { cards[cam] = v.trim(); document.getElementById('bCard' + cam).textContent = cards[cam] || '–'; }
+    else alert('Could not save the card number.');
+  } catch (e) { alert('No connection to the Mac.'); }
+}
+document.getElementById('bCardACell').onclick = (ev) => editCard('A', ev);
+document.getElementById('bCardBCell').onclick = (ev) => editCard('B', ev);
+document.getElementById('clapAll').onclick = (ev) => { ev.stopPropagation(); clap(''); };
+document.getElementById('clapA').onclick = (ev) => { ev.stopPropagation(); clap('A'); };
+document.getElementById('clapB').onclick = (ev) => { ev.stopPropagation(); clap('B'); };
+function clap(cam){
+  if (clapping) return;
+  clapping = true;
+  const camTag = document.getElementById('camTag');
+  camTag.textContent = cam ? 'CAM ' + camNames[cam] + (cards[cam] ? ' · ' + cards[cam] : '') : '';
+  camTag.style.display = cam ? 'block' : 'none';
+  const claps = document.getElementById('claps');
+  claps.style.visibility = 'hidden';   // the camera's name / countdown take the place of the buttons
+  try { audio = audio || new (window.AudioContext || window.webkitAudioContext)(); audio.resume(); } catch (e) { audio = null; }
+  const count = document.getElementById('count'), flash = document.getElementById('flash');
+  const start = performance.now();
+  // Audio is scheduled on its own clock; the device's output latency is taken off so the beep leaves the
+  // speaker when the screen turns white.
+  if (audio) {
+    const t0 = audio.currentTime, lat = audio.outputLatency || audio.baseLatency || 0;
+    for (let i = 0; i < 3; i++) beep(t0 + i, 880, 0.08);
+    beep(Math.max(t0, t0 + 3 - lat), 1000, frameMs / 1000);
+  }
+  [3, 2, 1].forEach((n, i) => setTimeout(() => { count.textContent = n; count.style.display = 'block'; }, i * 1000));
+  setTimeout(() => {
+    count.style.display = 'none';
+    requestAnimationFrame(() => {
+      flash.style.display = 'block';
+      const on = performance.now();
+      let done = false;
+      const end = () => { if (!done) { done = true; flash.style.display = 'none'; clapping = false;
+        setTimeout(() => { if (!clapping) { camTag.style.display = 'none'; claps.style.visibility = ''; } }, 1500); } };
+      const off = () => { if (done) return; if (performance.now() - on >= frameMs) end(); else requestAnimationFrame(off); };
+      requestAnimationFrame(off);
+      setTimeout(end, frameMs + 5);   // also when the screen is not redrawn in time
+    });
+  }, 3000 - (performance.now() - start));
+}
 function fillBoard(b){
   if (!b) return;
   const set = (id, v) => { document.getElementById(id).textContent = v; };
@@ -497,6 +646,10 @@ function fillBoard(b){
   set('bDop', b.dop || '–');
   set('bDate', b.date || '');
   set('bNote', b.note || '');
+  cards = {A: b.cardA || '', B: b.cardB || ''};
+  set('bCardA', cards.A || '–');
+  set('bCardB', cards.B || '–');
+  // (the card row always shows: a tap on a card changes it)
   const tags = document.getElementById('bTags');
   tags.textContent = '';
   const add = (text, cls) => { const s = document.createElement('span'); s.textContent = text; if (cls) s.className = cls; tags.appendChild(s); };
@@ -505,7 +658,23 @@ function fillBoard(b){
   if (b.mos) add('MOS');
   if (b.good) add('★ GOOD', 'good');
   if (b.rehearsal) add('REHEARSAL', 'reh');
+  fitTitle();
 }
+// Every field keeps its normal size and gets smaller only as far as needed to fit its own room
+// (e.g. scene "12B+13" in its third of the width), never below a readable size.
+function shrinkToFit(el, size, min){
+  el.style.fontSize = size + 'px';
+  while (el.scrollWidth > el.clientWidth + 1 && size > min) { size -= 1; el.style.fontSize = size + 'px'; }
+}
+function fitTitle(){
+  const nums = ['bScene', 'bShot', 'bTake'].map(id => document.getElementById(id));
+  nums.forEach(n => { n.style.fontSize = ''; n.style.height = ''; });
+  const numSize = parseFloat(getComputedStyle(nums[0]).fontSize) || 44;
+  nums.forEach(n => { n.style.height = Math.ceil(numSize * 1.05) + 'px'; shrinkToFit(n, numSize, 14); });
+  // Production: at most 3/4 of the scene number's size, in the room left of DAY / INT / NIGHT.
+  shrinkToFit(document.getElementById('bProd'), Math.round(numSize * 0.75), 12);
+}
+window.addEventListener('resize', fitTitle);
 restartStreams(); status();
 </script>
 </body></html>

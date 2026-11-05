@@ -458,6 +458,8 @@ final class RecordingController: NSObject, ObservableObject, DLDeviceBrowserDele
             let clipB = slate.cameraClipB
             if !recordedA { slate.cameraClipA = "" }
             if !recordedB { slate.cameraClipB = "" }
+            if !recordedA { slate.cardA = "" }   // the card stays in settings.slate for the next take
+            if !recordedB { slate.cardB = "" }
             if !recordedA { slate.setupA = CameraSetup() }
             if !recordedB { slate.setupB = CameraSetup() }
             // Camera timecode of each file (TC IN – TC OUT).
