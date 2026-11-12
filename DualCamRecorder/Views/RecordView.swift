@@ -29,11 +29,11 @@ struct RecordView: View {
         HStack(spacing: 8) {
             if settings.isCameraOn(.a) {
                 CameraScreen(channel: controller.channelA, showWaveform: settings.showWaveform, mask: settings.maskA,
-                             rehearsal: controller.isRehearsal)
+                             squeeze: settings.squeezeA, rehearsal: controller.isRehearsal)
             }
             if settings.isCameraOn(.b) {
                 CameraScreen(channel: controller.channelB, showWaveform: settings.showWaveform, mask: settings.maskB,
-                             rehearsal: controller.isRehearsal)
+                             squeeze: settings.squeezeB, rehearsal: controller.isRehearsal)
             }
         }
         .padding(8)
@@ -274,7 +274,8 @@ struct CameraPanel: View {
     private var picturButtons: some View {
         HStack {
             FlipFlopButtons(settings: settings, role: channel.role, locked: controller.isRecording)
-            FrameMaskButton(settings: settings, role: channel.role)
+            AnamorphicButton(settings: settings, role: channel.role, locked: controller.isRecording)
+            FrameMaskButton(settings: settings, role: channel.role, locked: controller.isRecording)
         }
         .fixedSize()
     }
@@ -333,7 +334,7 @@ struct CameraPanel: View {
             .frame(maxWidth: pictureWidth ?? .infinity)
 
             CameraScreen(channel: channel, showWaveform: showWaveform, mask: settings.mask(channel.role),
-                         rehearsal: controller.isRehearsal)
+                         squeeze: settings.squeeze(channel.role), rehearsal: controller.isRehearsal)
                 .overlay(alignment: .bottomLeading) {
                     let o = settings.orientation(channel.role)
                     if o.isTurned {
@@ -474,6 +475,8 @@ struct CameraScreen: View {
     @ObservedObject var channel: CameraChannel
     var showWaveform = false
     var mask = FrameMask()
+    /// Anamorphic squeeze of the lens (the picture arrives already de-squeezed – only the badge).
+    var squeeze = 1.0
     /// The take is a rehearsal: orange frame and badge, no "camera is not recording" warning.
     var rehearsal = false
 
@@ -493,7 +496,6 @@ struct CameraScreen: View {
                         .background(Color.black)
                     }
                 }
-                .overlay { if channel.hasSource && channel.hasSignal { FrameMaskOverlay(mask: mask) } }
                 .overlay { if channel.hasSource && channel.hasSignal { CameraSignalOverlay(signal: channel.signal, appRecording: channel.isRecording && !rehearsal) } }
                 .clipShape(RoundedRectangle(cornerRadius: 6))
                 // Luma waveform over the lower part of the picture.
@@ -510,6 +512,9 @@ struct CameraScreen: View {
             HStack(spacing: 6) {
                 if channel.isRecording {
                     Badge(text: rehearsal ? "● REHEARSAL" : "● REC", color: rehearsal ? .orange : .red)
+                }
+                if squeeze > 1.01 {
+                    Badge(text: "ANA " + Anamorphic.title(squeeze), color: .purple)
                 }
                 if !channel.hasSource {
                     Badge(text: "Unassigned", color: .gray)
@@ -750,5 +755,37 @@ struct InterfaceChannelMeters: View {
             .font(.caption)
             .foregroundStyle(.red)
         }
+    }
+}
+
+/// "Ana" button of one camera: anamorphic squeeze of its lens (Off / 1.33× / 1.5× / 1.8× / 2×). Purple when on.
+struct AnamorphicButton: View {
+    @ObservedObject var settings: AppSettings
+    var role: CameraRole
+    var locked: Bool
+
+    var body: some View {
+        let current = settings.squeeze(role)
+        let on = current > 1.01
+        Menu {
+            ForEach(Anamorphic.factors, id: \.self) { factor in
+                Button {
+                    settings.setSqueeze(factor, for: role)
+                } label: {
+                    if abs(factor - current) < 0.01 { Label(Anamorphic.title(factor), systemImage: "checkmark") }
+                    else { Text(Anamorphic.title(factor)) }
+                }
+            }
+        } label: {
+            Text(on ? "Ana " + Anamorphic.title(current) : "Ana")
+                .fontWeight(on ? .bold : .regular)
+        }
+        .menuStyle(.button)
+        .fixedSize()
+        .tint(on ? .purple : nil)
+        .disabled(locked)
+        .help("Anamorphic lens – the camera sends the squeezed picture: it is de-squeezed here (black bars above and "
+              + "below) and recorded like that, also on the monitor and the phones. Playback and Edit show the clip as "
+              + "recorded. If the camera already sends a de-squeezed picture, leave it Off.")
     }
 }

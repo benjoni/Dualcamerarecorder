@@ -36,10 +36,12 @@
 		9168DEFF5C8ACED2D8579F70 /* PreviewRenderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 86EE76A2E0DF03A995D87568 /* PreviewRenderer.swift */; };
 		0D2CA9BB78FD0035D5D36DF6 /* PreviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54A98420FFEC2C998E26B947 /* PreviewView.swift */; };
 		8B1FD6B4543A40394476CF5E /* Waveform.swift in Sources */ = {isa = PBXBuildFile; fileRef = E2FBE3F8BF993A66AAC34180 /* Waveform.swift */; };
+		DE8310335FA842ACA6663B5B /* Anamorphic.swift in Sources */ = {isa = PBXBuildFile; fileRef = F9FB9E3C2ECCDEFE03880370 /* Anamorphic.swift */; };
 		8A95CF0EB055A53010FE371A /* CameraChannel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9C6E675FB14A7235CFCF3850 /* CameraChannel.swift */; };
 		D6F0928CDF8B14EA54D48C44 /* CameraSetup.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70F90FC31A94687C32C227DA /* CameraSetup.swift */; };
 		D51B819347E68186A70BC23A /* ClipLog.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2118891433C5D8100EADE27 /* ClipLog.swift */; };
 		801F49D4930640D47F344B2C /* MovieWriter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4AAEE032902641AFB372D5C2 /* MovieWriter.swift */; };
+		150868AE915AE56A48755406 /* PictureAdjuster.swift in Sources */ = {isa = PBXBuildFile; fileRef = 341BD8CD671D037C20FFDAB7 /* PictureAdjuster.swift */; };
 		847956D8CA68D4BD49F4303C /* RecordingController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9F63A88B3FF58DABCEC4CBC9 /* RecordingController.swift */; };
 		15D26091D6F59B02B28078E3 /* SDIDataLog.swift in Sources */ = {isa = PBXBuildFile; fileRef = EB78C646E5C41E1F5BEB930D /* SDIDataLog.swift */; };
 		B37B40FD751D227921E4707C /* SlateInfo.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3B7D6187F343325A5C603B5B /* SlateInfo.swift */; };
@@ -99,10 +101,12 @@
 		86EE76A2E0DF03A995D87568 /* PreviewRenderer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PreviewRenderer.swift; sourceTree = "<group>"; };
 		54A98420FFEC2C998E26B947 /* PreviewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PreviewView.swift; sourceTree = "<group>"; };
 		E2FBE3F8BF993A66AAC34180 /* Waveform.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Waveform.swift; sourceTree = "<group>"; };
+		F9FB9E3C2ECCDEFE03880370 /* Anamorphic.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Anamorphic.swift; sourceTree = "<group>"; };
 		9C6E675FB14A7235CFCF3850 /* CameraChannel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraChannel.swift; sourceTree = "<group>"; };
 		70F90FC31A94687C32C227DA /* CameraSetup.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraSetup.swift; sourceTree = "<group>"; };
 		B2118891433C5D8100EADE27 /* ClipLog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClipLog.swift; sourceTree = "<group>"; };
 		4AAEE032902641AFB372D5C2 /* MovieWriter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MovieWriter.swift; sourceTree = "<group>"; };
+		341BD8CD671D037C20FFDAB7 /* PictureAdjuster.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PictureAdjuster.swift; sourceTree = "<group>"; };
 		9F63A88B3FF58DABCEC4CBC9 /* RecordingController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordingController.swift; sourceTree = "<group>"; };
 		EB78C646E5C41E1F5BEB930D /* SDIDataLog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SDIDataLog.swift; sourceTree = "<group>"; };
 		3B7D6187F343325A5C603B5B /* SlateInfo.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SlateInfo.swift; sourceTree = "<group>"; };
@@ -246,10 +250,12 @@
 		A2B6AD46AD5B1EB0037ED029 /* Recording */ = {
 			isa = PBXGroup;
 			children = (
+				F9FB9E3C2ECCDEFE03880370 /* Anamorphic.swift */,
 				9C6E675FB14A7235CFCF3850 /* CameraChannel.swift */,
 				70F90FC31A94687C32C227DA /* CameraSetup.swift */,
 				B2118891433C5D8100EADE27 /* ClipLog.swift */,
 				4AAEE032902641AFB372D5C2 /* MovieWriter.swift */,
+				341BD8CD671D037C20FFDAB7 /* PictureAdjuster.swift */,
 				9F63A88B3FF58DABCEC4CBC9 /* RecordingController.swift */,
 				EB78C646E5C41E1F5BEB930D /* SDIDataLog.swift */,
 				3B7D6187F343325A5C603B5B /* SlateInfo.swift */,
@@ -408,10 +414,12 @@
 				9168DEFF5C8ACED2D8579F70 /* PreviewRenderer.swift in Sources */,
 				0D2CA9BB78FD0035D5D36DF6 /* PreviewView.swift in Sources */,
 				8B1FD6B4543A40394476CF5E /* Waveform.swift in Sources */,
+				DE8310335FA842ACA6663B5B /* Anamorphic.swift in Sources */,
 				8A95CF0EB055A53010FE371A /* CameraChannel.swift in Sources */,
 				D6F0928CDF8B14EA54D48C44 /* CameraSetup.swift in Sources */,
 				D51B819347E68186A70BC23A /* ClipLog.swift in Sources */,
 				801F49D4930640D47F344B2C /* MovieWriter.swift in Sources */,
+				150868AE915AE56A48755406 /* PictureAdjuster.swift in Sources */,
 				847956D8CA68D4BD49F4303C /* RecordingController.swift in Sources */,
 				15D26091D6F59B02B28078E3 /* SDIDataLog.swift in Sources */,
 				B37B40FD751D227921E4707C /* SlateInfo.swift in Sources */,

@@ -2,8 +2,9 @@
 //  FrameMaskView.swift
 //  DualCamRecorder
 //
-//  Aspect ratio mask (1.85, 2:1, 2.35, custom) over a 16:9 camera picture – black bars with adjustable opacity.
-//  A framing guide on the screen only: the recorded file, the monitor and the phones keep the full picture.
+//  Aspect ratio mask (1.85, 2:1, 2.35, custom): its settings (Record tab). The bars are burned into the input's
+//  pictures by PictureAdjuster – screen, monitor, phones and the recorded file. (FrameMaskOverlay draws a mask over
+//  a picture; only used for the help pictures.)
 //
 
 import SwiftUI
@@ -53,6 +54,8 @@ struct FrameMaskOverlay: View {
 struct FrameMaskButton: View {
     @ObservedObject var settings: AppSettings
     var role: CameraRole
+    /// While recording the mask cannot change (it is part of the recorded picture).
+    var locked = false
     @State private var open = false
 
     var body: some View {
@@ -65,8 +68,10 @@ struct FrameMaskButton: View {
         }
         .buttonStyle(.bordered)
         .background(mask.isOn ? RoundedRectangle(cornerRadius: 5).fill(Color.yellow) : nil)
-        .help("Mask – black bars showing a 1.85, 2:1, 2.35 or custom frame, with adjustable opacity. Only on the screen, not in the recorded file.")
+        .help("Mask – black bars cropping the picture to 1.85, 2:1, 2.35 or a custom ratio. Recorded into the file "
+              + "(also on the monitor and the phones); Playback and Edit show the clip as recorded.")
         .accessibilityLabel("Mask")
+        .disabled(locked)
         .popover(isPresented: $open, arrowEdge: .bottom) {
             FrameMaskSettings(mask: Binding(get: { settings.mask(role) }, set: { settings.setMask($0, for: role) }),
                               title: "Mask – Camera \(settings.cameraNames.name(role))")
@@ -105,23 +110,8 @@ struct FrameMaskSettings: View {
                 }
             }
 
-            VStack(alignment: .leading, spacing: 4) {
-                HStack {
-                    Text("Opacity").foregroundStyle(.secondary)
-                    Spacer()
-                    Text("\(Int((mask.opacity * 100).rounded())) %").monospacedDigit()
-                }
-                Slider(value: $mask.opacity, in: 0...1)
-                HStack {
-                    ForEach([0.25, 0.5, 0.75, 1.0], id: \.self) { value in
-                        Button("\(Int(value * 100)) %") { mask.opacity = value }
-                            .controlSize(.small)
-                    }
-                }
-            }
-            .disabled(!mask.isOn)
-
-            Text("Only on the screen – the recorded file, the monitor and the phones keep the full picture.")
+            Text("Black bars in the picture – recorded into the file, also on the monitor and the phones. With an "
+                 + "anamorphic lens (Ana) the ratio is measured on the de-squeezed picture.")
                 .font(.caption).foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
         }

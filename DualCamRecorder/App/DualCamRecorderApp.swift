@@ -74,6 +74,13 @@ final class AppModel: ObservableObject {
         settings.$proResFlavor.filter { $0 == .hevc }.first().sink { _ in HEVCWarmup.run() }.store(in: &cancellables)
         settings.$orientationA.removeDuplicates().sink { [weak recorder = self.recorder] o in recorder?.channelA.setOrientation(o) }.store(in: &cancellables)
         settings.$orientationB.removeDuplicates().sink { [weak recorder = self.recorder] o in recorder?.channelB.setOrientation(o) }.store(in: &cancellables)
+        // Anamorphic de-squeeze and mask: burned into each input's pictures (and so into the recording).
+        settings.$squeezeA.combineLatest(settings.$maskA)
+            .map { PictureAdjuster.Settings(squeeze: $0, maskAspect: $1.aspect) }.removeDuplicates()
+            .sink { [weak recorder = self.recorder] a in recorder?.channelA.setAdjustments(a) }.store(in: &cancellables)
+        settings.$squeezeB.combineLatest(settings.$maskB)
+            .map { PictureAdjuster.Settings(squeeze: $0, maskAspect: $1.aspect) }.removeDuplicates()
+            .sink { [weak recorder = self.recorder] a in recorder?.channelB.setAdjustments(a) }.store(in: &cancellables)
         // (The output is the first device found with one – the UltraStudio Monitor.)
         settings.$monitorEnabled.combineLatest(settings.$monitorSource, recorder.$outputDevices)
             .sink { [weak monitor = self.monitor] enabled, source, devices in

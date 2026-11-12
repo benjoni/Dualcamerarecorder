@@ -50,6 +50,9 @@ final class AppSettings: ObservableObject {
     /// Aspect ratio mask over each camera's picture (per project) – Record and Playback screens only.
     @Published var maskA = FrameMask()
     @Published var maskB = FrameMask()
+    /// Anamorphic squeeze of each camera's lens (per project): 1 = off, 1.33 / 1.5 / 1.8 / 2.
+    @Published var squeezeA = 1.0
+    @Published var squeezeB = 1.0
     /// Camera's own REC read from the SDI signal (per input) and recording together with the camera (per project).
     @Published var recDetectionA = CameraRecDetection.flag
     @Published var recDetectionB = CameraRecDetection.flag
@@ -103,6 +106,14 @@ final class AppSettings: ObservableObject {
         if role == .a { orientationA = o } else { orientationB = o }
     }
 
+    func squeeze(_ role: CameraRole) -> Double {
+        role == .a ? squeezeA : squeezeB
+    }
+
+    func setSqueeze(_ factor: Double, for role: CameraRole) {
+        if role == .a { squeezeA = factor } else { squeezeB = factor }
+    }
+
     func mask(_ role: CameraRole) -> FrameMask {
         role == .a ? maskA : maskB
     }
@@ -146,7 +157,8 @@ final class AppSettings: ObservableObject {
                         recDetectionA: recDetectionA, recDetectionB: recDetectionB, cameraTrigger: cameraTrigger,
                         backupEnabled: backupEnabled, backupRootPath: backupRootPath, hevcMbps: hevcMbps,
                         audioInterfaceMode: audioInterfaceMode, audioInterfaceID: audioInterfaceID,
-                        audioInterfaceDelayMs: audioInterfaceDelayMs)
+                        audioInterfaceDelayMs: audioInterfaceDelayMs,
+                        squeezeA: squeezeA, squeezeB: squeezeB)
     }
 
     func apply(_ p: ProjectSettings) {
@@ -179,6 +191,8 @@ final class AppSettings: ObservableObject {
         audioInterfaceMode = p.audioInterfaceMode
         audioInterfaceID = p.audioInterfaceID
         audioInterfaceDelayMs = p.audioInterfaceDelayMs
+        squeezeA = p.squeezeA
+        squeezeB = p.squeezeB
     }
 
     /// Sanitized, guaranteed-distinct camera names.

@@ -86,7 +86,6 @@ struct PlaybackView: View {
             if showCameraA {
                 PlayerView(player: player.playerA)
                     .aspectRatio(16.0 / 9.0, contentMode: .fit)
-                    .overlay { FrameMaskOverlay(mask: settings.maskA) }
                     .overlay { if settings.showWaveform { WaveformOverlay(model: player.waveformA) } }
                     .overlay { timecodeBadge(.a) }
                     .clipShape(RoundedRectangle(cornerRadius: 6))
@@ -94,7 +93,6 @@ struct PlaybackView: View {
             if showCameraB {
                 PlayerView(player: player.playerB)
                     .aspectRatio(16.0 / 9.0, contentMode: .fit)
-                    .overlay { FrameMaskOverlay(mask: settings.maskB) }
                     .overlay { if settings.showWaveform { WaveformOverlay(model: player.waveformB) } }
                     .overlay { timecodeBadge(.b) }
                     .clipShape(RoundedRectangle(cornerRadius: 6))
@@ -313,11 +311,9 @@ struct PlaybackView: View {
         VStack(alignment: .leading, spacing: 6) {
             HStack(spacing: 10) {
                 Text(title).font(.title3.weight(.bold))
-                FrameMaskButton(settings: settings, role: role)
             }
             ZStack {
                 content
-                if available { FrameMaskOverlay(mask: settings.mask(role)) }
                 if available && settings.showWaveform {
                     WaveformOverlay(model: waveform)
                 }

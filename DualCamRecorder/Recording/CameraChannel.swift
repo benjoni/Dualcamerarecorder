@@ -103,6 +103,8 @@ final class CameraChannel: ObservableObject, VideoSourceDelegate {
         var poolKey: (format: OSType, width: Int, height: Int)?
     }
     private let turn = OSAllocatedUnfairLock(initialState: Turn())
+    /// De-squeeze and mask set on the Record tab – part of every picture from here on (screen, monitor, phones, file).
+    private let adjust = OSAllocatedUnfairLock(uncheckedState: (adjuster: PictureAdjuster(), settings: PictureAdjuster.Settings()))
     private let recDetection = OSAllocatedUnfairLock(initialState: CameraRecDetection.flag)
 
     // Pending work on `queue` – used to detect a backlog (disk/encoder too slow).
@@ -239,6 +241,15 @@ final class CameraChannel: ObservableObject, VideoSourceDelegate {
         }
     }
 
+    /// Anamorphic de-squeeze and mask for this input (any thread; used from the next frame on).
+    func setAdjustments(_ settings: PictureAdjuster.Settings) {
+        adjust.withLockUnchecked { $0.settings = settings }
+    }
+
+    private func adjusted(_ picture: CVPixelBuffer) -> CVPixelBuffer {
+        adjust.withLockUnchecked { a in a.adjuster.process(picture, settings: a.settings) }
+    }
+
     /// The picture flipped / flopped (same format and size, colour tags kept); unchanged when not turned.
     private func turned(_ picture: CVPixelBuffer) -> CVPixelBuffer {
         turn.withLockUnchecked { t in
@@ -329,7 +340,7 @@ final class CameraChannel: ObservableObject, VideoSourceDelegate {
 
     func videoSource(_ source: VideoSource, didCapture captured: CapturedFrame) {
         var frame = captured
-        frame.pixelBuffer = turned(captured.pixelBuffer)
+        frame.pixelBuffer = adjusted(turned(captured.pixelBuffer))
         preview.enqueue(frame.pixelBuffer)
         onPicture?(frame.pixelBuffer)
 
