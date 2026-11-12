@@ -51,6 +51,7 @@
 		F2C8F5F65147FB70DE7E0B40 /* DiskAlertView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C7385998366C664D0AB36512 /* DiskAlertView.swift */; };
 		7A4B5578C70A406BAF776EB0 /* FrameMaskView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C64C6B6B9B9063EC1B758467 /* FrameMaskView.swift */; };
 		F838ACAD1CBFBCA534FF435B /* HelpView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A51EA3371A596E1124FF2760 /* HelpView.swift */; };
+		157B03D891981EA9B8801EDB /* LiveViewPrint.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABBAD7C5CCF406EB3A40E906 /* LiveViewPrint.swift */; };
 		EE89B967555C804E880097C6 /* LiveViewSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1681762CBB9D0175B77FDC8E /* LiveViewSettings.swift */; };
 		9C38C3FC26E697763DF1A65B /* PlaybackView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 912ECBEF9548220CA52C8564 /* PlaybackView.swift */; };
 		D40ED900BFEB9F13FDCE0BB9 /* ProjectSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A642370AD4E4A6A95DDFAF6B /* ProjectSettingsView.swift */; };
@@ -113,6 +114,7 @@
 		C7385998366C664D0AB36512 /* DiskAlertView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiskAlertView.swift; sourceTree = "<group>"; };
 		C64C6B6B9B9063EC1B758467 /* FrameMaskView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FrameMaskView.swift; sourceTree = "<group>"; };
 		A51EA3371A596E1124FF2760 /* HelpView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HelpView.swift; sourceTree = "<group>"; };
+		ABBAD7C5CCF406EB3A40E906 /* LiveViewPrint.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveViewPrint.swift; sourceTree = "<group>"; };
 		1681762CBB9D0175B77FDC8E /* LiveViewSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveViewSettings.swift; sourceTree = "<group>"; };
 		912ECBEF9548220CA52C8564 /* PlaybackView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaybackView.swift; sourceTree = "<group>"; };
 		A642370AD4E4A6A95DDFAF6B /* ProjectSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProjectSettingsView.swift; sourceTree = "<group>"; };
@@ -266,6 +268,7 @@
 				C7385998366C664D0AB36512 /* DiskAlertView.swift */,
 				C64C6B6B9B9063EC1B758467 /* FrameMaskView.swift */,
 				A51EA3371A596E1124FF2760 /* HelpView.swift */,
+				ABBAD7C5CCF406EB3A40E906 /* LiveViewPrint.swift */,
 				1681762CBB9D0175B77FDC8E /* LiveViewSettings.swift */,
 				912ECBEF9548220CA52C8564 /* PlaybackView.swift */,
 				A642370AD4E4A6A95DDFAF6B /* ProjectSettingsView.swift */,
@@ -420,6 +423,7 @@
 				F2C8F5F65147FB70DE7E0B40 /* DiskAlertView.swift in Sources */,
 				7A4B5578C70A406BAF776EB0 /* FrameMaskView.swift in Sources */,
 				F838ACAD1CBFBCA534FF435B /* HelpView.swift in Sources */,
+				157B03D891981EA9B8801EDB /* LiveViewPrint.swift in Sources */,
 				EE89B967555C804E880097C6 /* LiveViewSettings.swift in Sources */,
 				9C38C3FC26E697763DF1A65B /* PlaybackView.swift in Sources */,
 				D40ED900BFEB9F13FDCE0BB9 /* ProjectSettingsView.swift in Sources */,

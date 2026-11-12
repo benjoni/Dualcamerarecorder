@@ -287,6 +287,10 @@ Rozhranie aplikácie je **v angličtine** (Record / Playback / Slate …); tento
     produkcie; prázdne = *CONFIDENTIAL*). Je vpálený priamo do obrázkov, ktoré dostanú telefóny štábu, takže je
     na každom screenshote aj nahrávke obrazovky a orezaním sa nedá odstrániť. Telefóny s kódom klapky dostávajú
     čistý obraz. Obraz s watermarkom sa robí na samostatnej fronte a len vtedy, keď sa pozerá telefón štábu.
+  - **Print…** pri každom QR kóde – A4 list (tlač alebo „Uložiť ako PDF“ v dialógu tlače): veľký QR kód, názov
+    projektu, Wi-Fi a tri kroky. Tlačí sa QR kód podľa prepínača **Name / IP address** (na celé natáčanie je lepší
+    *Name* – `dualcam.local` sa nemení). Na liste kódu klapky je upozornenie, že nie je pre celý štáb.
+  - **Wi-Fi on the printed sheet** – názov a (voliteľne) heslo siete, len pre vytlačený list (uložené v Macu).
 - JPEG sa robí len vtedy, keď sa nejaký telefón pozerá, na samostatnej fronte (nespomalí náhľad
   na Macu) → nahrávanie to nezaťaží. Pri prvom spustení macOS môže žiadať povolenie prichádzajúcich spojení / lokálnej siete.
 - Telefóny vidia vstupy kamier (aj keď je na Macu otvorený Playback), nie prehrávané klipy.

@@ -48,6 +48,13 @@ final class LiveViewServer: ObservableObject {
             if crewWatermark { shared.withLock { $0.watermark = crewWatermarkText } }
         }
     }
+    /// Wi-Fi the phones join – only printed on the QR code sheet (optional).
+    @Published var wifiName: String {
+        didSet { UserDefaults.standard.set(wifiName, forKey: "liveViewWifiName") }
+    }
+    @Published var wifiPassword: String {
+        didSet { UserDefaults.standard.set(wifiPassword, forKey: "liveViewWifiPassword") }
+    }
 
     /// Slate field sent from the phone – "scene", "shot", "take", "cardA", "cardB" (called on the main thread);
     /// false = not accepted (recording or not a valid value).
@@ -93,6 +100,8 @@ final class LiveViewServer: ObservableObject {
         quality = LiveViewQuality(rawValue: UserDefaults.standard.string(forKey: "liveViewQuality") ?? "") ?? .standard
         crewWatermark = UserDefaults.standard.bool(forKey: "liveViewCrewWatermark")
         crewWatermarkText = UserDefaults.standard.string(forKey: "liveViewCrewWatermarkText") ?? ""
+        wifiName = UserDefaults.standard.string(forKey: "liveViewWifiName") ?? ""
+        wifiPassword = UserDefaults.standard.string(forKey: "liveViewWifiPassword") ?? ""
         if let key = UserDefaults.standard.string(forKey: "liveViewKey"), !key.isEmpty {
             accessKey = key
         } else {

@@ -28,6 +28,15 @@ struct LiveViewSettingsSection: View {
                     codeCard(edit: true)
                 }
                 .padding(.vertical, 4)
+                // Only printed on the sheet (Print…) – the Mac does not need it.
+                LabeledContent("Wi-Fi on the printed sheet") {
+                    HStack {
+                        TextField("Network name", text: $server.wifiName)
+                            .textFieldStyle(.roundedBorder).frame(width: 170)
+                        TextField("Password (optional)", text: $server.wifiPassword)
+                            .textFieldStyle(.roundedBorder).frame(width: 170)
+                    }
+                }
                 HStack(spacing: 16) {
                     if server.nameURL() != nil {
                         Picker("QR codes", selection: $qrByIP) {
@@ -106,8 +115,18 @@ struct LiveViewSettingsSection: View {
             ForEach(ipURLs, id: \.self) { address in
                 Text(address).font(.caption.monospaced()).textSelection(.enabled)
             }
-            Button("New code") { edit ? server.regenerateEditKey() : server.regenerateKey() }
-                .help("Old links and QR codes of this code stop working")
+            HStack {
+                Button("Print…") {
+                    guard let qrURL else { return }
+                    LiveViewPrint.print(.init(edit: edit, url: qrURL,
+                                              project: model.projects.current?.project.name ?? "",
+                                              wifiName: server.wifiName, wifiPassword: server.wifiPassword,
+                                              watermark: !edit && server.crewWatermark))
+                }
+                .help("A4 sheet with this QR code, the Wi-Fi and three steps – print it or save it as PDF")
+                Button("New code") { edit ? server.regenerateEditKey() : server.regenerateKey() }
+                    .help("Old links and QR codes of this code stop working")
+            }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }
