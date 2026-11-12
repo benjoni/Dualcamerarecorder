@@ -163,6 +163,10 @@ struct RecordView: View {
         VStack(spacing: 6) {
             Text(takeLabel).font(.body).foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
+            if settings.audioInterfaceMode != .off {
+                AudioInterfaceStatus(audio: controller.audioInterface, delayMs: settings.audioInterfaceDelayMs)
+                    .font(.callout)
+            }
             HStack(spacing: 12) {
                 Image(systemName: "internaldrive")
                 Text("Free: \(DisplayFormat.bytes(controller.freeBytes)) of \(DisplayFormat.bytes(controller.totalBytes))")
@@ -179,9 +183,6 @@ struct RecordView: View {
                     .frame(maxWidth: 300)
                 Button("Show in Finder") {
                     NSWorkspace.shared.activateFileViewerSelecting([settings.recordFolderURL])
-                }
-                if settings.audioInterfaceMode != .off {
-                    AudioInterfaceStatus(audio: controller.audioInterface, delayMs: settings.audioInterfaceDelayMs)
                 }
                 if let status = backup.shortStatus {
                     Label(status, systemImage: backup.isProblem ? "externaldrive.badge.xmark" : "externaldrive.badge.checkmark")
