@@ -180,6 +180,9 @@ struct RecordView: View {
                 Button("Show in Finder") {
                     NSWorkspace.shared.activateFileViewerSelecting([settings.recordFolderURL])
                 }
+                if settings.audioInterfaceMode != .off {
+                    AudioInterfaceStatus(audio: controller.audioInterface, delayMs: settings.audioInterfaceDelayMs)
+                }
                 if let status = backup.shortStatus {
                     Label(status, systemImage: backup.isProblem ? "externaldrive.badge.xmark" : "externaldrive.badge.checkmark")
                         .foregroundStyle(backup.isProblem ? Color.red : Color.secondary)
@@ -678,5 +681,32 @@ private struct TransportButton: View {
             .opacity(isEnabled || active ? 1 : 0.35)
         }
         .buttonStyle(.plain)
+    }
+}
+
+/// Record tab: the audio interface's level (one small meter per channel) or a red note when it is missing.
+struct AudioInterfaceStatus: View {
+    @ObservedObject var audio: AudioInterfaceCapture
+    var delayMs: Int
+
+    var body: some View {
+        if let running = audio.running {
+            HStack(spacing: 6) {
+                Image(systemName: "mic.fill").foregroundStyle(.secondary)
+                Text(running.name).foregroundStyle(.secondary).lineLimit(1)
+                VStack(spacing: 2) {
+                    ForEach(Array(audio.levelsDB.enumerated()), id: \.offset) { _, db in
+                        AudioMeter(db: db).frame(width: 90)
+                    }
+                }
+                if delayMs != 0 {
+                    Text(delayMs > 0 ? "+\(delayMs) ms" : "\(delayMs) ms").foregroundStyle(.orange)
+                }
+            }
+            .help("Sound from the audio interface goes into the files of both cameras")
+        } else {
+            Label(audio.problem ?? "Audio interface not connected", systemImage: "mic.slash.fill")
+                .foregroundStyle(.red)
+        }
     }
 }

@@ -150,6 +150,10 @@ final class CameraChannel: ObservableObject, VideoSourceDelegate {
         var firstTimecode: Timecode?
         var timecodeBase = 25
         var lastTimecode: Timecode?
+        /// Audio interface: sample frame (48 kHz, from the first video frame) the next buffer is written at.
+        var interfaceNextFrame: Int64?
+        /// Sound delay against the picture (ns): + = sound later in the file, − = earlier.
+        var interfaceDelayNanos: Int64 = 0
     }
 
     #if DEBUG
@@ -271,7 +275,7 @@ final class CameraChannel: ObservableObject, VideoSourceDelegate {
 
     /// Creates the writer now (so the first frame does not pay for it) and arms the channel to start at `startHostNanos`.
     func arm(url: URL, startHostNanos: UInt64, flavor: ProResFlavor, hevcMbps: Int, audioChannels: Int,
-             metadata: [AVMetadataItem] = [],
+             interfaceChannels: Int = 0, interfaceDelayMs: Int = 0, metadata: [AVMetadataItem] = [],
              completion: @escaping (ChannelTakeResult) -> Void) -> String? {
         var failure: String?
         queue.sync {
@@ -286,9 +290,11 @@ final class CameraChannel: ObservableObject, VideoSourceDelegate {
             do {
                 let writer = try MovieWriter(url: url, width: size.width, height: size.height,
                                              flavor: flavor, hevcMbps: hevcMbps, audioChannels: audioChannels,
+                                             interfaceChannels: interfaceChannels,
                                              metadata: metadata, timecode: track)
                 take = TakeState(writer: writer, startHostNanos: startHostNanos, completion: completion,
                                  statsAtStart: qStats)
+                take?.interfaceDelayNanos = Int64(interfaceDelayMs) * 1_000_000
             } catch {
                 failure = "Camera \(role.rawValue): \(error.localizedDescription)"
             }
@@ -351,6 +357,54 @@ final class CameraChannel: ObservableObject, VideoSourceDelegate {
     func videoSource(_ source: VideoSource, didFail message: String) {
         guard source === self.source else { return }
         lastError = message
+    }
+
+    // MARK: - Audio interface (any thread)
+
+    /// Sound from the audio interface: written to the take's interface track, placed by its host time relative
+    /// to the take's first frame and then continued sample by sample (no gaps or overlaps between buffers).
+    func receiveInterfaceAudio(_ chunk: ExternalAudioChunk) {
+        queue.async { self.writeInterfaceAudio(chunk) }
+    }
+
+    /// 20 ms at 48 kHz.
+    private static let interfaceDriftLimit: Int64 = 960
+
+    private func writeInterfaceAudio(_ chunk: ExternalAudioChunk) {
+        guard var t = take, let firstHost = t.firstHostNanos, t.writer.interfaceChannels > 0,
+              chunk.channels == t.writer.interfaceChannels else { return }
+        // After the stop instant nothing more is needed (the session ends at the last frame anyway).
+        if let stop = t.stopHostNanos, chunk.hostNanos >= stop { return }
+        // Place of this buffer on the take's timeline by its host time.
+        let offsetNanos = Int64(chunk.hostNanos) - Int64(firstHost) + HostClock.nanos(t.ptsOffset) + t.interfaceDelayNanos
+        let expected = offsetNanos * 48_000 / 1_000_000_000
+        var position: Int64
+        var skip = 0
+        if let next = t.interfaceNextFrame, abs(expected - next) < Self.interfaceDriftLimit {
+            position = next                       // continuous
+        } else {
+            // First buffer of the take, or the interface's clock drifted from the cameras by more than 20 ms
+            // (long takes): place the buffer by its host time again.
+            position = expected
+            if let next = t.interfaceNextFrame, position < next {
+                skip = Int(min(Int64(chunk.frames), next - position))   // never overlap what is written
+                position = next
+            }
+            if position < 0 {                     // sound from before the first picture is cut
+                skip = max(skip, Int(min(Int64(chunk.frames), -position)))
+                position = 0
+            }
+        }
+        guard skip < chunk.frames else { return }
+        let frames = chunk.frames - skip
+        if t.writer.appendInterfaceAudio(chunk.data, offsetFrames: skip, frames: frames,
+                                         at: CMTime(value: position, timescale: 48_000)) {
+            t.interfaceNextFrame = position + Int64(frames)
+        } else if t.interfaceNextFrame != nil {
+            // Not written (writer busy) – keep the timeline going so later sound stays in sync.
+            t.interfaceNextFrame = position + Int64(frames)
+        }
+        take = t
     }
 
     // MARK: - Frame processing (queue)

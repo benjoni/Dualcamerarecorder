@@ -2,7 +2,7 @@
 //  MovieWriter.swift
 //  DualCamRecorder
 //
-//  AVAssetWriter wrapper: ProRes 422 or H.265 (.mov) video + uncompressed 24-bit LPCM audio.
+//  AVAssetWriter wrapper: ProRes 422 or H.265 (.mov) video + uncompressed 24-bit LPCM audio (SDI and/or audio interface).
 //  Not thread-safe: use from one serial queue (CameraChannel.queue).
 //
 
@@ -122,8 +122,13 @@ final class MovieWriter {
     private let timecodeFormat: CMTimeCodeFormatDescription?
     private let audioChannels: Int
     private var audioFormat: CMAudioFormatDescription?
+    /// Audio interface track (nil when the project does not use one).
+    private let interfaceInput: AVAssetWriterInput?
+    private let interfaceFormat: CMAudioFormatDescription?
+    let interfaceChannels: Int
     private(set) var videoFramesWritten = 0
     private(set) var audioSamplesWritten = 0
+    private(set) var interfaceSamplesWritten = 0
     private var sessionStarted = false
 
     /// Camera timecode of a take: the file gets a timecode track (frame duration, counting base, drop-frame).
@@ -133,10 +138,53 @@ final class MovieWriter {
         var dropFrame: Bool
     }
 
+    /// 24-bit LPCM 48 kHz track for `channels` interleaved Int32 channels (stereo layout for 2, discrete otherwise).
+    private static func makeAudioTrack(channels: Int, writer: AVAssetWriter, name: String,
+                                       enabled: Bool = true) throws -> (input: AVAssetWriterInput, format: CMAudioFormatDescription?) {
+        var layout = AudioChannelLayout()
+        layout.mChannelLayoutTag = channels == 2
+            ? kAudioChannelLayoutTag_Stereo
+            : (kAudioChannelLayoutTag_DiscreteInOrder | AudioChannelLayoutTag(channels))
+        let layoutData = Data(bytes: &layout, count: MemoryLayout<AudioChannelLayout>.size)
+        let settings: [String: Any] = [
+            AVFormatIDKey: kAudioFormatLinearPCM,
+            AVSampleRateKey: 48_000,
+            AVNumberOfChannelsKey: channels,
+            AVLinearPCMBitDepthKey: 24,
+            AVLinearPCMIsFloatKey: false,
+            AVLinearPCMIsBigEndianKey: false,
+            AVLinearPCMIsNonInterleaved: false,
+            AVChannelLayoutKey: layoutData,
+        ]
+        let input = AVAssetWriterInput(mediaType: .audio, outputSettings: settings)
+        input.expectsMediaDataInRealTime = true
+        input.marksOutputTrackAsEnabled = enabled
+        guard writer.canAdd(input) else { throw MovieWriterError.cannotAddInput(name) }
+        writer.add(input)
+
+        var asbd = AudioStreamBasicDescription(
+            mSampleRate: 48_000,
+            mFormatID: kAudioFormatLinearPCM,
+            mFormatFlags: kAudioFormatFlagIsSignedInteger | kAudioFormatFlagIsPacked,
+            mBytesPerPacket: UInt32(4 * channels),
+            mFramesPerPacket: 1,
+            mBytesPerFrame: UInt32(4 * channels),
+            mChannelsPerFrame: UInt32(channels),
+            mBitsPerChannel: 32,
+            mReserved: 0)
+        var format: CMAudioFormatDescription?
+        CMAudioFormatDescriptionCreate(allocator: kCFAllocatorDefault, asbd: &asbd, layoutSize: 0, layout: nil,
+                                       magicCookieSize: 0, magicCookie: nil, extensions: nil,
+                                       formatDescriptionOut: &format)
+        return (input, format)
+    }
+
+    /// `interfaceChannels` > 0 adds a track for the audio interface (Focusrite …) before the SDI audio track.
     init(url: URL, width: Int, height: Int, flavor: ProResFlavor, hevcMbps: Int = ProResFlavor.defaultHEVCRate, audioChannels: Int,
-         metadata: [AVMetadataItem] = [], timecode: TimecodeTrack? = nil) throws {
+         interfaceChannels: Int = 0, metadata: [AVMetadataItem] = [], timecode: TimecodeTrack? = nil) throws {
         self.url = url
         self.audioChannels = audioChannels
+        self.interfaceChannels = interfaceChannels
         if FileManager.default.fileExists(atPath: url.path) {
             throw MovieWriterError.cannotCreate("\(url.lastPathComponent) already exists")
         }
@@ -170,45 +218,22 @@ final class MovieWriter {
         guard writer.canAdd(videoInput) else { throw MovieWriterError.cannotAddInput("video") }
         writer.add(videoInput)
 
+        // Audio interface track first (the one players use), then the cameras' SDI sound – with the interface
+        // the SDI track is kept for the edit but not played (two enabled tracks would be mixed).
+        var interfaceInput: AVAssetWriterInput?
+        var interfaceFormat: CMAudioFormatDescription?
+        if interfaceChannels > 0 {
+            let track = try Self.makeAudioTrack(channels: interfaceChannels, writer: writer, name: "audio interface")
+            interfaceInput = track.input
+            interfaceFormat = track.format
+        }
         var audioInput: AVAssetWriterInput?
         var audioFormat: CMAudioFormatDescription?
         if audioChannels > 0 {
-            var layout = AudioChannelLayout()
-            layout.mChannelLayoutTag = audioChannels == 2
-                ? kAudioChannelLayoutTag_Stereo
-                : (kAudioChannelLayoutTag_DiscreteInOrder | AudioChannelLayoutTag(audioChannels))
-            let layoutData = Data(bytes: &layout, count: MemoryLayout<AudioChannelLayout>.size)
-            let audioSettings: [String: Any] = [
-                AVFormatIDKey: kAudioFormatLinearPCM,
-                AVSampleRateKey: 48_000,
-                AVNumberOfChannelsKey: audioChannels,
-                AVLinearPCMBitDepthKey: 24,
-                AVLinearPCMIsFloatKey: false,
-                AVLinearPCMIsBigEndianKey: false,
-                AVLinearPCMIsNonInterleaved: false,
-                AVChannelLayoutKey: layoutData,
-            ]
-            let input = AVAssetWriterInput(mediaType: .audio, outputSettings: audioSettings)
-            input.expectsMediaDataInRealTime = true
-            guard writer.canAdd(input) else { throw MovieWriterError.cannotAddInput("audio") }
-            writer.add(input)
-            audioInput = input
-
-            var asbd = AudioStreamBasicDescription(
-                mSampleRate: 48_000,
-                mFormatID: kAudioFormatLinearPCM,
-                mFormatFlags: kAudioFormatFlagIsSignedInteger | kAudioFormatFlagIsPacked,
-                mBytesPerPacket: UInt32(4 * audioChannels),
-                mFramesPerPacket: 1,
-                mBytesPerFrame: UInt32(4 * audioChannels),
-                mChannelsPerFrame: UInt32(audioChannels),
-                mBitsPerChannel: 32,
-                mReserved: 0)
-            var fmt: CMAudioFormatDescription?
-            CMAudioFormatDescriptionCreate(allocator: kCFAllocatorDefault, asbd: &asbd, layoutSize: 0, layout: nil,
-                                           magicCookieSize: 0, magicCookie: nil, extensions: nil,
-                                           formatDescriptionOut: &fmt)
-            audioFormat = fmt
+            let track = try Self.makeAudioTrack(channels: audioChannels, writer: writer, name: "audio",
+                                                enabled: interfaceChannels == 0)
+            audioInput = track.input
+            audioFormat = track.format
         }
 
         // Timecode track tied to the video track – editors (Resolve, Premiere, Avid, FCP) read the source timecode.
@@ -244,6 +269,8 @@ final class MovieWriter {
         self.adaptor = adaptor
         self.audioInput = audioInput
         self.audioFormat = audioFormat
+        self.interfaceInput = interfaceInput
+        self.interfaceFormat = interfaceFormat
         self.timecodeInput = timecodeInput
         self.timecodeFormat = timecodeFormat
     }
@@ -313,12 +340,30 @@ final class MovieWriter {
         return false
     }
 
-    /// Appends `frames` interleaved Int32 sample frames starting at `offsetFrames` of `data`.
+    /// Appends `frames` interleaved Int32 sample frames starting at `offsetFrames` of `data` (SDI audio track).
     @discardableResult
     func appendAudio(_ data: Data, offsetFrames: Int, frames: Int, at pts: CMTime) -> Bool {
-        guard sessionStarted, let audioInput, let audioFormat, frames > 0,
-              writer.status == .writing, audioInput.isReadyForMoreMediaData else { return false }
-        let bytesPerFrame = 4 * audioChannels
+        guard let audioInput, let audioFormat else { return false }
+        let ok = append(data, offsetFrames: offsetFrames, frames: frames, channels: audioChannels, at: pts,
+                        to: audioInput, format: audioFormat, track: "audio")
+        if ok { audioSamplesWritten += frames }
+        return ok
+    }
+
+    /// Same for the audio interface track.
+    @discardableResult
+    func appendInterfaceAudio(_ data: Data, offsetFrames: Int, frames: Int, at pts: CMTime) -> Bool {
+        guard let interfaceInput, let interfaceFormat else { return false }
+        let ok = append(data, offsetFrames: offsetFrames, frames: frames, channels: interfaceChannels, at: pts,
+                        to: interfaceInput, format: interfaceFormat, track: "audio interface")
+        if ok { interfaceSamplesWritten += frames }
+        return ok
+    }
+
+    private func append(_ data: Data, offsetFrames: Int, frames: Int, channels: Int, at pts: CMTime,
+                        to input: AVAssetWriterInput, format: CMAudioFormatDescription, track: String) -> Bool {
+        guard sessionStarted, frames > 0, writer.status == .writing, input.isReadyForMoreMediaData else { return false }
+        let bytesPerFrame = 4 * channels
         let byteOffset = offsetFrames * bytesPerFrame
         let byteCount = frames * bytesPerFrame
         guard byteOffset + byteCount <= data.count else { return false }
@@ -337,15 +382,12 @@ final class MovieWriter {
 
         var sample: CMSampleBuffer?
         status = CMAudioSampleBufferCreateReadyWithPacketDescriptions(allocator: kCFAllocatorDefault, dataBuffer: block,
-                                                                      formatDescription: audioFormat, sampleCount: frames,
+                                                                      formatDescription: format, sampleCount: frames,
                                                                       presentationTimeStamp: pts, packetDescriptions: nil,
                                                                       sampleBufferOut: &sample)
         guard status == noErr, let sample else { return false }
-        if audioInput.append(sample) {
-            audioSamplesWritten += frames
-            return true
-        }
-        noteFailure(in: "audio")
+        if input.append(sample) { return true }
+        noteFailure(in: track)
         return false
     }
 
@@ -362,6 +404,7 @@ final class MovieWriter {
         if let endTime { writer.endSession(atSourceTime: endTime) }
         videoInput.markAsFinished()
         audioInput?.markAsFinished()
+        interfaceInput?.markAsFinished()
         timecodeInput?.markAsFinished()
         writer.finishWriting { [writer] in
             completion(writer.status == .completed ? nil : writer.error)

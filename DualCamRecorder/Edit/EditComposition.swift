@@ -51,7 +51,8 @@ enum EditComposition {
                 transformSet = true
                 if let rate = try? await sourceVideo.load(.nominalFrameRate), rate > 0 { fps = Double(rate) }
             }
-            if let sourceAudio = try? await asset.loadTracks(withMediaType: .audio).first,
+            let playedAudio = await Self.playedAudioTrack(of: asset)
+            if let sourceAudio = playedAudio,
                (try? audioTrack.insertTimeRange(range, of: sourceAudio, at: cursor)) != nil {
             } else {
                 audioTrack.insertEmptyTimeRange(CMTimeRange(start: cursor, duration: range.duration))
@@ -60,6 +61,17 @@ enum EditComposition {
             cursor = CMTimeAdd(cursor, range.duration)
         }
         return pieces.isEmpty ? nil : Built(composition: composition, pieces: pieces, fps: fps)
+    }
+
+    /// The audio track a player would play: the first enabled one (with an audio interface the files also
+    /// carry the cameras' SDI sound as a second, disabled track), else the first.
+    static func playedAudioTrack(of asset: AVAsset) async -> AVAssetTrack? {
+        guard let tracks = try? await asset.loadTracks(withMediaType: .audio), !tracks.isEmpty else { return nil }
+        for track in tracks {
+            let enabled = (try? await track.load(.isEnabled)) ?? false
+            if enabled { return track }
+        }
+        return tracks.first
     }
 
     // MARK: - Export for the director (H.264 1080p MOV)

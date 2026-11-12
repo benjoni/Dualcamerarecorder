@@ -143,6 +143,24 @@ Rozhranie aplikácie je **v angličtine** (Record / Playback / Slate …); tento
 - Testované len so simulovaným vstupom (`-simCameraRec <s>`, `-simNoRecFlag YES`, test `-triggerTestProject`);
   so skutočnou kamerou a UltraStudio zatiaľ nie.
 
+### Zvuk zo zvukového rozhrania – Focusrite Scarlett a pod. (Project settings → Audio interface)
+- Zvuk od zvukára (výstup mixu) ide cez USB audio rozhranie, napr. **Focusrite Scarlett 3rd Gen**.
+  Rozhranie sa zapojí do USB-C (aj cez hub), na macOS netreba ovládač.
+- **Sound in the files:**
+  - *Cameras only (SDI)* – ako doteraz, len zvuk z kamier.
+  - *Audio interface only* – oba súbory (A aj B) dostanú zvuk z rozhrania, zvuk z kamier sa nezapisuje.
+  - *Audio interface + cameras (SDI)* – zvuk z rozhrania je prvá (prehrávaná) stopa, zvuk z kamier druhá
+    stopa (vypnutá pri prehrávaní, v strižni ostáva k dispozícii).
+- **Device:** výber rozhrania, počet kanálov podľa zariadenia (Solo / 2i2: 2, 4i4: 4 …, max. 8).
+  Zapisuje sa 48 kHz / 24 bit, aj keď rozhranie beží na 44,1 kHz (prevod robí macOS).
+- Zvuk je zarovnaný s obrazom podľa spoločných hodín počítača; pri dlhých záberoch sa rozdiel hodín
+  rozhrania a kamier priebežne dorovnáva (najviac 20 ms).
+- **Sound delay (ms):** posun zvuku voči obrazu – kladná hodnota zvuk oneskorí (zvuk predbieha obraz,
+  tlesknutie počuť skôr, ako ho vidno), záporná ho posunie skôr. 1 snímka = 40 ms pri 25p. Platí od ďalšieho záberu.
+- Record ukazuje meradlo každého kanála; keď rozhranie chýba, svieti červené *Audio interface not connected*
+  (záber sa nahrá len so zvukom z kamier). Po odpojení a pripojení sa rozhranie samo znova spustí.
+- Pri prvom použití sa macOS opýta na prístup k mikrofónu (audio vstupom) – treba povoliť.
+
 ### Dočasné vypnutie jednej kamery (Record, ⌥1 / ⌥2)
 - V projekte s dvoma kamerami je nadpis **Camera A / Camera B** nad obrazom tlačidlo so značkou **ON / OFF**. Vypnutá kamera
   zmizne, druhá sa roztiahne na celú šírku a **nahráva sa len ona** (aj Cam clip sa zvýši len jej).

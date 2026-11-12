@@ -35,6 +35,8 @@ final class RecordingController: NSObject, ObservableObject, DLDeviceBrowserDele
     let settings: AppSettings
     let channelA = CameraChannel(role: .a)
     let channelB = CameraChannel(role: .b)
+    /// Audio interface (Focusrite …) – its sound goes into the files of both cameras.
+    let audioInterface = AudioInterfaceCapture()
 
     @Published private(set) var devices: [DLDeviceDescriptor] = []
     /// Devices with a video output (for a monitor).
@@ -99,6 +101,15 @@ final class RecordingController: NSObject, ObservableObject, DLDeviceBrowserDele
         // Camera's own REC from the SDI signal: how it is read (project settings) and the camera trigger.
         settings.$recDetectionA.removeDuplicates().sink { [weak self] d in self?.channelA.setRecDetection(d) }.store(in: &cancellables)
         settings.$recDetectionB.removeDuplicates().sink { [weak self] d in self?.channelB.setRecDetection(d) }.store(in: &cancellables)
+        // Audio interface: started / stopped with the project's setting, sound to both cameras.
+        audioInterface.onAudio = { [channelA, channelB] chunk in
+            channelA.receiveInterfaceAudio(chunk)
+            channelB.receiveInterfaceAudio(chunk)
+        }
+        settings.$audioInterfaceMode.combineLatest(settings.$audioInterfaceID)
+            .removeDuplicates { $0 == $1 }
+            .sink { [weak self] mode, id in self?.applyAudioInterface(mode: mode, id: id) }
+            .store(in: &cancellables)
         channelA.onCameraRecChange = { [weak self] _ in self?.cameraRecChanged() }
         channelB.onCameraRecChange = { [weak self] _ in self?.cameraRecChanged() }
 
@@ -179,6 +190,20 @@ final class RecordingController: NSObject, ObservableObject, DLDeviceBrowserDele
         }
         if role == .a { settings.deviceA = id } else { settings.deviceB = id }
         applyAssignment(role: role)
+    }
+
+    /// Starts the project's audio interface, or stops it when the project does not use one.
+    private func applyAudioInterface(mode: AudioInterfaceMode, id: String) {
+        if mode == .off || id.isEmpty {
+            audioInterface.stop()
+        } else if audioInterface.running?.id != id {
+            audioInterface.start(deviceID: id)
+        }
+    }
+
+    /// Channels of the interface track for the next take (0 = none: off, or the interface is not running).
+    private var interfaceChannelsForTake: Int {
+        settings.audioInterfaceMode == .off ? 0 : audioInterface.channels
     }
 
     /// Re-creates sources (also used after audio / bit-depth settings change).
@@ -277,7 +302,9 @@ final class RecordingController: NSObject, ObservableObject, DLDeviceBrowserDele
         let take = TakeNaming.nextTakeNumber(in: folder, names: names)
         // Common start instant slightly in the future so both channels see it.
         let startHost = HostClock.nowNanos + 200_000_000
-        let audioChannels = settings.audioChannels
+        // Audio interface: its own track; "Interface only" leaves the SDI sound out of the files.
+        let interfaceChannels = interfaceChannelsForTake
+        let audioChannels = settings.audioInterfaceMode == .insteadOfSDI && interfaceChannels > 0 ? 0 : settings.audioChannels
         pendingResults = []
         expectedResults = 0
         // Units of a camera settings field still being typed in (they are completed when the field is left).
@@ -299,6 +326,8 @@ final class RecordingController: NSObject, ObservableObject, DLDeviceBrowserDele
             if let failure = ch.arm(url: url, startHostNanos: startHost, flavor: settings.proResFlavor,
                                     hevcMbps: settings.hevcMbps,
                                     audioChannels: audioChannels,
+                                    interfaceChannels: interfaceChannels,
+                                    interfaceDelayMs: max(-1000, min(1000, settings.audioInterfaceDelayMs)),
                                     metadata: slate.metadataItems(camera: role, takeNumber: take, names: names),
                                     completion: { [weak self] result in self?.channelFinished(result) }) {
                 armed.forEach { $0.cancelArmed() }
@@ -319,6 +348,9 @@ final class RecordingController: NSObject, ObservableObject, DLDeviceBrowserDele
         state = .recording(take: take, started: Date())
         elapsed = 0
         lastTakeMessage = rehearsal ? "Rehearsal – only the app records" : nil
+        if settings.audioInterfaceMode != .off && interfaceChannels == 0 {
+            errorMessage = "Audio interface is not connected – this take has only the cameras' SDI sound."
+        }
     }
 
     // MARK: - IN / OUT during recording
@@ -666,7 +698,7 @@ final class RecordingController: NSObject, ObservableObject, DLDeviceBrowserDele
             let pixels = Double((ch.format?.width ?? 1920) * (ch.format?.height ?? 1080))
             let videoBits = settings.proResFlavor.approxBitsPerSecondHD(fps: fps, hevcMbps: settings.hevcMbps)
                 * pixels / (1920 * 1080)
-            let audioBits = Double(settings.audioChannels) * 24 * 48_000
+            let audioBits = Double(settings.audioChannels + interfaceChannelsForTake) * 24 * 48_000
             bytesPerSecond += (videoBits + audioBits) / 8
         }
         guard bytesPerSecond > 0 else { return nil }

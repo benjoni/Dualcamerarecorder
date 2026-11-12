@@ -193,6 +193,7 @@ def main():
         "INFOPLIST_KEY_LSApplicationCategoryType": "public.app-category.video",
         "INFOPLIST_KEY_NSHumanReadableCopyright": "",
         "INFOPLIST_KEY_NSLocalNetworkUsageDescription": "Phones on the same Wi-Fi can watch the cameras live.",
+        "INFOPLIST_KEY_NSMicrophoneUsageDescription": "Sound from the audio interface (sound mixer) is recorded into the camera files.",
         "COMBINE_HIDPI_IMAGES": "YES",
         "CODE_SIGN_STYLE": "Automatic",
         "CODE_SIGN_IDENTITY": "-",

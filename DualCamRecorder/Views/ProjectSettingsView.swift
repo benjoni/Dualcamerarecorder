@@ -125,6 +125,8 @@ struct ProjectSettingsView: View {
                         set: { settings.forceEightBit = $0; needsInputRestart = true }))
                 }
 
+                AudioInterfaceSection(settings: settings, audio: recorder.audioInterface)
+
                 Section("Backup copy") {
                     Toggle("Copy clips to a second disk after every take", isOn: $settings.backupEnabled)
                     if settings.backupEnabled {
@@ -272,6 +274,78 @@ struct ProjectSettingsView: View {
                 }
                 .labelsHidden()
                 .frame(width: 170)
+            }
+        }
+    }
+}
+
+/// Project settings: sound from an audio interface (Focusrite …, e.g. the sound mixer's output).
+struct AudioInterfaceSection: View {
+    @ObservedObject var settings: AppSettings
+    @ObservedObject var audio: AudioInterfaceCapture
+
+    var body: some View {
+        Section("Audio interface (sound mixer)") {
+            Picker("Sound in the files", selection: $settings.audioInterfaceMode) {
+                Text("Cameras only (SDI)").tag(AudioInterfaceMode.off)
+                Text("Audio interface only").tag(AudioInterfaceMode.insteadOfSDI)
+                Text("Audio interface + cameras (SDI)").tag(AudioInterfaceMode.withSDI)
+            }
+            .help("Audio interface only: the files of both cameras get the interface's sound and no camera sound. "
+                  + "With cameras: the interface is the first (played) track, the cameras' sound a second track for the edit.")
+
+            if settings.audioInterfaceMode != .off {
+                LabeledContent("Device") {
+                    HStack {
+                        Picker("", selection: $settings.audioInterfaceID) {
+                            Text("— choose —").tag("")
+                            ForEach(audio.devices) { device in
+                                Text("\(device.name) · \(device.channels) ch").tag(device.id)
+                            }
+                            if !settings.audioInterfaceID.isEmpty,
+                               !audio.devices.contains(where: { $0.id == settings.audioInterfaceID }) {
+                                Text("Not connected").tag(settings.audioInterfaceID)
+                            }
+                        }
+                        .labelsHidden()
+                        .frame(minWidth: 260)
+                        Button("Refresh") { audio.refreshDevices() }
+                    }
+                }
+                LabeledContent("Input") {
+                    if let running = audio.running {
+                        VStack(alignment: .leading, spacing: 4) {
+                            ForEach(Array(audio.levelsDB.enumerated()), id: \.offset) { index, db in
+                                HStack(spacing: 8) {
+                                    Text("\(index + 1)").font(.caption.monospacedDigit()).frame(width: 14)
+                                    AudioMeter(db: db).frame(width: 220)
+                                }
+                            }
+                            Text("\(running.name) · \(running.channels) channels · 48 kHz 24-bit")
+                                .font(.caption).foregroundStyle(.secondary)
+                        }
+                    } else if let problem = audio.problem {
+                        Text(problem).foregroundStyle(.red)
+                    } else {
+                        Text("Not running").foregroundStyle(.secondary)
+                    }
+                }
+                LabeledContent("Sound delay") {
+                    HStack(spacing: 8) {
+                        TextField("0", value: $settings.audioInterfaceDelayMs, format: .number)
+                            .textFieldStyle(.roundedBorder)
+                            .multilineTextAlignment(.trailing)
+                            .frame(width: 70)
+                        Text("ms").foregroundStyle(.secondary)
+                        Stepper("", value: $settings.audioInterfaceDelayMs, in: -1000...1000, step: 10)
+                            .labelsHidden()
+                        Button("0") { settings.audioInterfaceDelayMs = 0 }
+                            .disabled(settings.audioInterfaceDelayMs == 0)
+                    }
+                }
+                Text("Sound ahead of the picture (clap heard before it is seen) → delay it with a positive value. "
+                     + "Sound late → negative value. One frame is 40 ms at 25p, 41.7 ms at 24p. Applies to the next take.")
+                    .font(.caption).foregroundStyle(.secondary)
             }
         }
     }

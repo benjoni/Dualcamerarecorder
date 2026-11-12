@@ -20,6 +20,11 @@ final class AppSettings: ObservableObject {
     @Published var cameraCount: Int { didSet { defaults.set(cameraCount, forKey: "cameraCount") } }
     /// 0 = no audio, 2 / 8 / 16 embedded SDI channels.
     @Published var audioChannels: Int { didSet { defaults.set(audioChannels, forKey: "audioChannels") } }
+    /// Audio interface (Focusrite …) per project: how it is used and which device (AVCaptureDevice.uniqueID).
+    @Published var audioInterfaceMode = AudioInterfaceMode.off
+    @Published var audioInterfaceID = ""
+    /// Sound against picture (ms): + delays the sound, − moves it earlier.
+    @Published var audioInterfaceDelayMs = 0
     @Published var forceEightBit: Bool { didSet { defaults.set(forceEightBit, forKey: "forceEightBit") } }
     @Published var proResFlavor: ProResFlavor { didSet { defaults.set(proResFlavor.rawValue, forKey: "proResFlavor") } }
     /// H.265 data rate (Mbit/s for 1080p).
@@ -139,7 +144,9 @@ final class AppSettings: ObservableObject {
                         orientationA: orientationA, orientationB: orientationB,
                         maskA: maskA, maskB: maskB,
                         recDetectionA: recDetectionA, recDetectionB: recDetectionB, cameraTrigger: cameraTrigger,
-                        backupEnabled: backupEnabled, backupRootPath: backupRootPath, hevcMbps: hevcMbps)
+                        backupEnabled: backupEnabled, backupRootPath: backupRootPath, hevcMbps: hevcMbps,
+                        audioInterfaceMode: audioInterfaceMode, audioInterfaceID: audioInterfaceID,
+                        audioInterfaceDelayMs: audioInterfaceDelayMs)
     }
 
     func apply(_ p: ProjectSettings) {
@@ -169,6 +176,9 @@ final class AppSettings: ObservableObject {
         backupEnabled = p.backupEnabled
         backupRootPath = p.backupRootPath
         hevcMbps = p.hevcMbps
+        audioInterfaceMode = p.audioInterfaceMode
+        audioInterfaceID = p.audioInterfaceID
+        audioInterfaceDelayMs = p.audioInterfaceDelayMs
     }
 
     /// Sanitized, guaranteed-distinct camera names.

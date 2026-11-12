@@ -59,6 +59,11 @@ struct ProjectSettings: Codable, Equatable {
     var backupRootPath = ""
     /// H.265 data rate (Mbit/s for 1080p).
     var hevcMbps = ProResFlavor.defaultHEVCRate
+    /// Audio interface (Focusrite …): how it is used and which device.
+    var audioInterfaceMode = AudioInterfaceMode.off
+    var audioInterfaceID = ""
+    /// Sound against picture (ms): + delays the sound, − moves it earlier.
+    var audioInterfaceDelayMs = 0
 }
 
 extension ProjectSettings {
@@ -89,6 +94,9 @@ extension ProjectSettings {
         backupEnabled = try c.decodeIfPresent(Bool.self, forKey: .backupEnabled) ?? backupEnabled
         backupRootPath = try c.decodeIfPresent(String.self, forKey: .backupRootPath) ?? backupRootPath
         hevcMbps = (try? c.decodeIfPresent(Int.self, forKey: .hevcMbps)) ?? hevcMbps
+        audioInterfaceMode = (try? c.decodeIfPresent(AudioInterfaceMode.self, forKey: .audioInterfaceMode)) ?? audioInterfaceMode
+        audioInterfaceID = (try? c.decodeIfPresent(String.self, forKey: .audioInterfaceID)) ?? audioInterfaceID
+        audioInterfaceDelayMs = (try? c.decodeIfPresent(Int.self, forKey: .audioInterfaceDelayMs)) ?? audioInterfaceDelayMs
     }
 }
 
