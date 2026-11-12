@@ -163,7 +163,9 @@ struct RecordView: View {
         VStack(spacing: 6) {
             Text(takeLabel).font(.body).foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
-            if settings.audioInterfaceMode != .off {
+            // "Interface + cameras": the camera meters show the SDI sound, so the interface gets its own line.
+            // ("Interface only" shows the interface under each camera instead.)
+            if settings.audioInterfaceMode == .withSDI {
                 AudioInterfaceStatus(audio: controller.audioInterface, delayMs: settings.audioInterfaceDelayMs)
                     .font(.callout)
             }

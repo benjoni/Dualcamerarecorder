@@ -159,7 +159,7 @@ Rozhranie aplikácie je **v angličtine** (Record / Playback / Slate …); tento
   tlesknutie počuť skôr, ako ho vidno), záporná ho posunie skôr. 1 snímka = 40 ms pri 25p. Platí od ďalšieho záberu.
 - Pri *Audio interface only* je pod obrazom každej kamery namiesto meradla zvuku zo SDI meradlo kanálov
   rozhrania (1, 2 …) – to, čo sa naozaj zapisuje do súboru.
-- Record ukazuje meradlo každého kanála; keď rozhranie chýba, svieti červené *Audio interface not connected*
+- Pri *Audio interface + cameras* je meradlo rozhrania v riadku pod názvami súborov; keď rozhranie chýba, svieti červené *Audio interface not connected*
   (záber sa nahrá len so zvukom z kamier). Po odpojení a pripojení sa rozhranie samo znova spustí.
 - Pri prvom použití sa macOS opýta na prístup k mikrofónu (audio vstupom) – treba povoliť.
 
