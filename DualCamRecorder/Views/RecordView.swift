@@ -353,7 +353,9 @@ struct CameraPanel: View {
                 Text(channel.format?.displayString ?? "Format: —")
                     .font(.system(compact ? .callout : .body, design: .monospaced))
                     .lineLimit(1).truncationMode(.tail)
-                ChannelMetersView(meters: channel.meters, compact: compact)
+                // "Audio interface only": the files get the Focusrite's sound, so its meter replaces the camera's.
+                ChannelMetersView(meters: channel.meters, compact: compact,
+                                  interface: settings.audioInterfaceMode == .insteadOfSDI ? controller.audioInterface : nil)
                 if let error = channel.lastError {
                     Text(error).font(.callout).foregroundStyle(.red)
                 }
@@ -415,10 +417,16 @@ struct CameraPanel: View {
 struct ChannelMetersView: View {
     @ObservedObject var meters: ChannelMeters
     var compact: Bool
+    /// Set: the audio interface's channels are shown instead of the camera's SDI sound.
+    var interface: AudioInterfaceCapture? = nil
 
     var body: some View {
         let stats = meters.stats
-        AudioMeter(db: meters.audioLevelDB)
+        if let interface {
+            InterfaceChannelMeters(audio: interface)
+        } else {
+            AudioMeter(db: meters.audioLevelDB)
+        }
         if compact {
             // Numbers in one line.
             HStack(spacing: 14) {
@@ -696,8 +704,11 @@ struct AudioInterfaceStatus: View {
                 Image(systemName: "mic.fill").foregroundStyle(.secondary)
                 Text(running.name).foregroundStyle(.secondary).lineLimit(1)
                 VStack(spacing: 2) {
-                    ForEach(Array(audio.levelsDB.enumerated()), id: \.offset) { _, db in
-                        AudioMeter(db: db).frame(width: 90)
+                    ForEach(Array(audio.levelsDB.enumerated()), id: \.offset) { index, db in
+                        HStack(spacing: 4) {
+                            Text("\(index + 1)").font(.caption2.monospacedDigit()).foregroundStyle(.secondary)
+                            AudioMeter(db: db).frame(width: 90)
+                        }
                     }
                 }
                 if delayMs != 0 {
@@ -708,6 +719,34 @@ struct AudioInterfaceStatus: View {
         } else {
             Label(audio.problem ?? "Audio interface not connected", systemImage: "mic.slash.fill")
                 .foregroundStyle(.red)
+        }
+    }
+}
+
+/// Under each camera picture in "Audio interface only": one meter per Focusrite channel (1, 2 …), as wide as the
+/// camera meter it replaces; red note when the interface is missing.
+struct InterfaceChannelMeters: View {
+    @ObservedObject var audio: AudioInterfaceCapture
+
+    var body: some View {
+        if audio.running != nil {
+            VStack(spacing: 2) {
+                ForEach(Array(audio.levelsDB.enumerated()), id: \.offset) { index, db in
+                    HStack(spacing: 6) {
+                        Text("\(index + 1)").font(.caption2.monospacedDigit()).foregroundStyle(.secondary)
+                            .frame(width: 10)
+                        AudioMeter(db: db)
+                    }
+                }
+            }
+            .help("Sound from \(audio.running?.name ?? "the audio interface") – recorded into this camera's file")
+        } else {
+            HStack(spacing: 6) {
+                Image(systemName: "mic.slash.fill")
+                Text("Audio interface not connected").lineLimit(1)
+            }
+            .font(.caption)
+            .foregroundStyle(.red)
         }
     }
 }
