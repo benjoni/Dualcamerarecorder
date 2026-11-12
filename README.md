@@ -263,8 +263,8 @@ Rozhranie aplikácie je **v angličtine** (Record / Playback / Slate …); tento
   seek a krokovanie sú presné na snímku (nulová tolerancia) na oboch prehrávačoch.
 
 ### Živý náhľad na telefónoch (Settings → Live view on phones)
-- **Settings (⌘,) → Live view on phones** – zapni prepínač. Zobrazí sa **QR kód**
-  a adresa (napr. `http://dualcam.local:8090/?k=ab12cd34`) a počet pripojených telefónov.
+- **Settings (⌘,) → Live view on phones** – zapni prepínač. Zobrazia sa **dva QR kódy**
+  s adresami (napr. `http://dualcam.local:8090/?k=ab12cd34`) a počet pripojených telefónov.
 - Adresa **`dualcam.local`** (Bonjour/mDNS) sa nemení, keď router pridelí Macu inú IP – QR kód
   vytlačený raz platí stále (kým nezmeníš prístupový kód). Treba povoliť **Lokálnu sieť** pre DualCamRecorder
   (macOS sa spýta raz; inak Systémové nastavenia › Súkromie a bezpečnosť › Lokálna sieť, potom náhľad vypni a zapni).
@@ -277,8 +277,12 @@ Rozhranie aplikácie je **v angličtine** (Record / Playback / Slate …); tento
   **Picture quality**: **Low** 640×360 ~6 obr./s · **Standard** 960×540 ~12 obr./s ·
   **High** 1280×720 ~12–15 obr./s (pri 25p zdroji 12,5; treba dobrú Wi-Fi, ~5–15 Mbit/s na kameru podľa obrazu).
   Pomalý telefón obrázky preskakuje, oneskorenie sa nenahromadí.
-- Adresa obsahuje náhodný prístupový kód – bez neho server odpovie 403. **New access code** zneplatní
-  staré odkazy.
+- **Dva kódy (dva QR kódy):**
+  - **Crew – watch only** – pre celý štáb: obe kamery, REC a klapka, nič sa nedá zmeniť.
+  - **Slate – can change the slate** – pre skript / 2. asistenta: na celoobrazovkovej klapke sa ťukom mení
+    scéna, záber, pokus a čísla kariet (ako doteraz).
+  - Každý kód je náhodný – bez neho server odpovie 403; s kódom štábu server zmenu klapky odmietne.
+    **New code** pri každom zneplatní len jeho staré odkazy.
 - JPEG sa robí len vtedy, keď sa nejaký telefón pozerá, na samostatnej fronte (nespomalí náhľad
   na Macu) → nahrávanie to nezaťaží. Pri prvom spustení macOS môže žiadať povolenie prichádzajúcich spojení / lokálnej siete.
 - Telefóny vidia vstupy kamier (aj keď je na Macu otvorený Playback), nie prehrávané klipy.

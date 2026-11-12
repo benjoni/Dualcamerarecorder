@@ -2,8 +2,8 @@
 //  LiveViewSettings.swift
 //  DualCamRecorder
 //
-//  "Live view on phones" section of the app Settings (⌘,): on/off, QR code / address,
-//  number of phones watching, picture quality, new access code.
+//  "Live view on phones" section of the app Settings (⌘,): on/off, two QR codes / addresses (crew: watch only,
+//  slate: can change the slate), number of phones watching, picture quality, new codes.
 //
 
 import SwiftUI
@@ -21,50 +21,33 @@ struct LiveViewSettingsSection: View {
             Toggle("Share both cameras with phones on the same Wi-Fi",
                    isOn: Binding(get: { server.isRunning }, set: { model.setLiveView($0) }))
 
-            if server.isRunning, let url = qrByIP ? server.ipURLs.first : (server.nameURL ?? server.ipURLs.first) {
-                HStack(alignment: .top, spacing: 20) {
-                    if let qr = Self.qrCode(url) {
-                        Image(decorative: qr, scale: 1)
-                            .interpolation(.none)
-                            .resizable()
-                            .frame(width: 170, height: 170)
-                            .padding(8)
-                            .background(Color.white, in: RoundedRectangle(cornerRadius: 8))
-                    }
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("Scan the QR code with the phone camera, or open:")
-                            .foregroundStyle(.secondary)
-                        if let nameURL = server.nameURL {
-                            Text(nameURL).font(.callout.monospaced().weight(.semibold)).textSelection(.enabled)
-                            Text("Stays the same when the router gives the Mac a new IP address")
-                                .font(.caption).foregroundStyle(.secondary)
-                            if server.hostName != LocalName.preferred {
-                                Text("For the shorter \(LocalName.preferred): allow DualCamRecorder in System Settings › Privacy & Security › Local Network, then switch the live view off and on (or another Mac on this network already uses the name)")
-                                    .font(.caption).foregroundStyle(.secondary)
-                                    .fixedSize(horizontal: false, vertical: true)
-                            }
-                        }
-                        ForEach(server.ipURLs, id: \.self) { address in
-                            Text(address).font(.callout.monospaced()).textSelection(.enabled)
-                        }
-                        if server.nameURL != nil {
-                            Picker("QR code", selection: $qrByIP) {
-                                Text("Name").tag(false)
-                                Text("IP address").tag(true)
-                            }
-                            .pickerStyle(.segmented)
-                            .fixedSize()
-                            .help("iPhone opens the name; some Android phones need the IP address")
-                        }
-                        Label("\(server.clientCount) phone\(server.clientCount == 1 ? "" : "s") watching",
-                              systemImage: "iphone")
-                            .font(.title3)
-                            .padding(.top, 4)
-                        Button("New access code") { server.regenerateKey() }
-                            .help("Old links and QR codes stop working")
-                    }
+            if server.isRunning, server.nameURL() != nil || !server.ipURLs().isEmpty {
+                // Two codes: the whole crew watches; only the slate phone(s) can change scene / shot / take / cards.
+                HStack(alignment: .top, spacing: 24) {
+                    codeCard(edit: false)
+                    codeCard(edit: true)
                 }
                 .padding(.vertical, 4)
+                HStack(spacing: 16) {
+                    if server.nameURL() != nil {
+                        Picker("QR codes", selection: $qrByIP) {
+                            Text("Name").tag(false)
+                            Text("IP address").tag(true)
+                        }
+                        .pickerStyle(.segmented)
+                        .fixedSize()
+                        .help("iPhone opens the name; some Android phones need the IP address")
+                    }
+                    Spacer()
+                    Label("\(server.clientCount) phone\(server.clientCount == 1 ? "" : "s") watching",
+                          systemImage: "iphone")
+                        .font(.title3)
+                }
+                if let host = server.hostName, host != LocalName.preferred {
+                    Text("For the shorter \(LocalName.preferred): allow DualCamRecorder in System Settings › Privacy & Security › Local Network, then switch the live view off and on (or another Mac on this network already uses the name)")
+                        .font(.caption).foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
             } else if server.isRunning {
                 Text("The Mac is not connected to a network (Wi-Fi or Ethernet).").foregroundStyle(.red)
             }
@@ -82,6 +65,40 @@ struct LiveViewSettingsSection: View {
             Text("Phones open the page in their web browser – no app needed. Pictures are streamed only while a phone is watching and never slow down recording. The first time, allow incoming connections when macOS asks.")
                 .font(.caption).foregroundStyle(.secondary)
         }
+    }
+
+    /// One code: title, QR code, address, new code. `edit` = the slate code (can change the slate).
+    private func codeCard(edit: Bool) -> some View {
+        let nameURL = server.nameURL(edit: edit)
+        let ipURLs = server.ipURLs(edit: edit)
+        let qrURL = qrByIP ? ipURLs.first : (nameURL ?? ipURLs.first)
+        return VStack(alignment: .leading, spacing: 8) {
+            Label(edit ? "Slate – can change the slate" : "Crew – watch only",
+                  systemImage: edit ? "square.and.pencil" : "eye")
+                .font(.headline)
+                .foregroundStyle(edit ? Color.orange : Color.primary)
+            if let qrURL, let qr = Self.qrCode(qrURL) {
+                Image(decorative: qr, scale: 1)
+                    .interpolation(.none)
+                    .resizable()
+                    .frame(width: 150, height: 150)
+                    .padding(8)
+                    .background(Color.white, in: RoundedRectangle(cornerRadius: 8))
+            }
+            Text(edit ? "For the script supervisor / 2nd AC: scene, shot, take and card numbers can be changed on the phone."
+                      : "For everyone on set: both cameras and the slate, nothing can be changed.")
+                .font(.caption).foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+            if let nameURL {
+                Text(nameURL).font(.caption.monospaced().weight(.semibold)).textSelection(.enabled)
+            }
+            ForEach(ipURLs, id: \.self) { address in
+                Text(address).font(.caption.monospaced()).textSelection(.enabled)
+            }
+            Button("New code") { edit ? server.regenerateEditKey() : server.regenerateKey() }
+                .help("Old links and QR codes of this code stop working")
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     static func qrCode(_ text: String) -> CGImage? {

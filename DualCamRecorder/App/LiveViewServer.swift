@@ -22,7 +22,10 @@ final class LiveViewServer: ObservableObject {
     @Published private(set) var isRunning = false
     @Published private(set) var error: String?
     @Published private(set) var clientCount = 0
+    /// Crew code: watch only.
     @Published private(set) var accessKey: String
+    /// Slate code: watch + change scene / shot / take / cards on the phone.
+    @Published private(set) var editKey: String
     /// "dualcam.local" (or the Mac's own name) – stays the same when the IP address changes.
     @Published private(set) var hostName: String?
     /// Size / rate / JPEG quality of the pictures sent to phones (app-wide setting).
@@ -65,6 +68,12 @@ final class LiveViewServer: ObservableObject {
         } else {
             accessKey = Self.randomKey()
             UserDefaults.standard.set(accessKey, forKey: "liveViewKey")
+        }
+        if let key = UserDefaults.standard.string(forKey: "liveViewEditKey"), !key.isEmpty, key != accessKey {
+            editKey = key
+        } else {
+            editKey = Self.randomKey()
+            UserDefaults.standard.set(editKey, forKey: "liveViewEditKey")
         }
         localName.onChange = { [weak self] name in self?.hostName = name }
     }
@@ -117,11 +126,24 @@ final class LiveViewServer: ObservableObject {
         }
     }
 
-    /// New key: links / QR codes given out before stop working.
+    /// New crew (watch-only) code: its links / QR codes given out before stop working.
     func regenerateKey() {
         accessKey = Self.randomKey()
         UserDefaults.standard.set(accessKey, forKey: "liveViewKey")
         shared.withLock { $0.clients = [:] }
+    }
+
+    /// New slate code: phones with the old one can no longer change the slate (or watch).
+    func regenerateEditKey() {
+        editKey = Self.randomKey()
+        UserDefaults.standard.set(editKey, forKey: "liveViewEditKey")
+        shared.withLock { $0.clients = [:] }
+    }
+
+    /// Either code lets a phone watch (read on the server queue; the keys only change on the main thread).
+    private func canWatch(_ key: String?) -> Bool {
+        guard let key else { return false }
+        return key == accessKey || key == editKey
     }
 
     /// True while at least one phone requested something in the last few seconds.
@@ -131,17 +153,19 @@ final class LiveViewServer: ObservableObject {
         return shared.withLock { $0.clients.values.contains { $0 > limit } }
     }
 
-    /// Address by name – the one for the QR code (nil: no network).
-    var nameURL: String? {
-        hostName.map { url($0) }
+    /// Address by name – the one for the QR code (nil: no network). `edit` = with the slate code.
+    func nameURL(edit: Bool = false) -> String? {
+        hostName.map { url($0, edit: edit) }
     }
 
     /// Addresses by IP (one per active network interface) – for phones that cannot open .local names.
-    var ipURLs: [String] {
-        Self.localIPv4Addresses().map { url($0) }
+    func ipURLs(edit: Bool = false) -> [String] {
+        Self.localIPv4Addresses().map { url($0, edit: edit) }
     }
 
-    private func url(_ host: String) -> String { "http://\(host):\(Self.port)/?k=\(accessKey)" }
+    private func url(_ host: String, edit: Bool) -> String {
+        "http://\(host):\(Self.port)/?k=\(edit ? editKey : accessKey)"
+    }
 
     // MARK: - Data from the app (any thread)
 
@@ -228,7 +252,7 @@ final class LiveViewServer: ObservableObject {
         let firstLine = request.split(separator: "\r\n", maxSplits: 1).first.map(String.init) ?? ""
         let parts = firstLine.split(separator: " ")
         guard parts.count >= 2, parts[0] == "GET", let components = URLComponents(string: String(parts[1])),
-              components.queryItems?.first(where: { $0.name == "k" })?.value == accessKey else { return nil }
+              canWatch(components.queryItems?.first(where: { $0.name == "k" })?.value) else { return nil }
         switch components.path {
         case "/stream/A.mjpg": return "A"
         case "/stream/B.mjpg": return "B"
@@ -248,7 +272,7 @@ final class LiveViewServer: ObservableObject {
         let path = components?.path ?? "/"
         let key = components?.queryItems?.first(where: { $0.name == "k" })?.value
 
-        guard key == accessKey else {
+        guard canWatch(key) else {
             return Self.http(403, "text/html; charset=utf-8",
                              Data("<h2 style='font-family:sans-serif'>DualCamRecorder – scan the QR code in the app to connect.</h2>".utf8))
         }
@@ -259,6 +283,10 @@ final class LiveViewServer: ObservableObject {
 
         // POST /slate?k=…&f=scene&v=12B – one slate field (scene, shot, take, cardA, cardB) typed on the phone.
         if parts[0] == "POST" {
+            // Only the slate code may change the slate; the crew code just watches.
+            guard key == editKey else {
+                return Self.http(403, "text/plain", Data("View only".utf8))
+            }
             let fields: Set<String> = ["scene", "shot", "take", "cardA", "cardB"]
             guard path == "/slate", let field = components?.queryItems?.first(where: { $0.name == "f" })?.value,
                   fields.contains(field) else {
@@ -273,7 +301,9 @@ final class LiveViewServer: ObservableObject {
 
         switch path {
         case "/", "/index.html":
-            return Self.http(200, "text/html; charset=utf-8", Data(LiveViewPage.html.utf8))
+            // The page knows whether its code may change the slate (taps on the slate fields).
+            let page = LiveViewPage.html.replacingOccurrences(of: "__CAN_EDIT__", with: key == editKey ? "true" : "false")
+            return Self.http(200, "text/html; charset=utf-8", Data(page.utf8))
         case "/status.json":
             return Self.http(200, "application/json", shared.withLock { $0.status })
         case "/frame/A.jpg", "/frame/B.jpg":
@@ -618,7 +648,9 @@ async function editField(field, title, ev){
 const editable = [['bScene', 'scene', () => 'Scene'], ['bShot', 'shot', () => 'Shot'], ['bTake', 'take', () => 'Take'],
                   ['bCardACell', 'cardA', () => 'Card number – camera ' + camNames.A],
                   ['bCardBCell', 'cardB', () => 'Card number – camera ' + camNames.B]];
-editable.forEach(([id, field, title]) => {
+// Only phones opened with the slate code can change it (crew code: view only).
+const canEdit = __CAN_EDIT__;
+if (canEdit) editable.forEach(([id, field, title]) => {
   const el = document.getElementById(id);
   el.classList.add('edit');
   el.onclick = (ev) => editField(field, title(), ev);
