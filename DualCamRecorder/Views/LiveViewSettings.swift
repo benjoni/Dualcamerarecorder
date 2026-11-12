@@ -89,6 +89,17 @@ struct LiveViewSettingsSection: View {
                       : "For everyone on set: both cameras and the slate, nothing can be changed.")
                 .font(.caption).foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
+            if !edit {
+                // Crew pictures can carry a watermark (the slate phones always get clean pictures).
+                Toggle("Watermark", isOn: $server.crewWatermark)
+                    .help("Text over the whole picture on crew phones – it is in every screenshot or screen recording")
+                if server.crewWatermark {
+                    TextField(Watermark.defaultText, text: $server.crewWatermarkText)
+                        .textFieldStyle(.roundedBorder)
+                        .frame(maxWidth: 220)
+                        .help("E.g. the production name – empty: \(Watermark.defaultText)")
+                }
+            }
             if let nameURL {
                 Text(nameURL).font(.caption.monospaced().weight(.semibold)).textSelection(.enabled)
             }

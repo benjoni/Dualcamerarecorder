@@ -13,6 +13,7 @@
 		4069D153DC8A41A0EBB19E6A /* LiveViewServer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 12488A3A64E60A6C38A73F10 /* LiveViewServer.swift */; };
 		F7D9437B767E7B118C8041E7 /* LocalName.swift in Sources */ = {isa = PBXBuildFile; fileRef = 161BB4F5FCBD0E08067AE87A /* LocalName.swift */; };
 		2C588EFFB2A5C116880E0887 /* ProjectStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = CD5109A5E98FE81FDE5290F5 /* ProjectStore.swift */; };
+		F8210A711DB9ABD5E216EB25 /* Watermark.swift in Sources */ = {isa = PBXBuildFile; fileRef = DBCDBAC9CD88357EB4571ADC /* Watermark.swift */; };
 		9702D5C78A7731A21798CE69 /* DLCapture.mm in Sources */ = {isa = PBXBuildFile; fileRef = A4CED7CFCAAD74CB7DEA1EED /* DLCapture.mm */; };
 		0D65B653BEADDAC430489682 /* AudioInterfaceCapture.swift in Sources */ = {isa = PBXBuildFile; fileRef = 35B92947EAB2E7B6C5E54219 /* AudioInterfaceCapture.swift */; };
 		630F330E84A6D4165DB8AAD0 /* DeckLinkSource.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6117E90CD68D5B390594AEB6 /* DeckLinkSource.swift */; };
@@ -72,6 +73,7 @@
 		12488A3A64E60A6C38A73F10 /* LiveViewServer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveViewServer.swift; sourceTree = "<group>"; };
 		161BB4F5FCBD0E08067AE87A /* LocalName.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalName.swift; sourceTree = "<group>"; };
 		CD5109A5E98FE81FDE5290F5 /* ProjectStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProjectStore.swift; sourceTree = "<group>"; };
+		DBCDBAC9CD88357EB4571ADC /* Watermark.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Watermark.swift; sourceTree = "<group>"; };
 		A11E4BF0364B81E5DAC6AAD8 /* DLCapture.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = DLCapture.h; sourceTree = "<group>"; };
 		A4CED7CFCAAD74CB7DEA1EED /* DLCapture.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = DLCapture.mm; sourceTree = "<group>"; };
 		8E914CCF7EDC0F606247452E /* DualCamRecorder-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "DualCamRecorder-Bridging-Header.h"; sourceTree = "<group>"; };
@@ -168,6 +170,7 @@
 				12488A3A64E60A6C38A73F10 /* LiveViewServer.swift */,
 				161BB4F5FCBD0E08067AE87A /* LocalName.swift */,
 				CD5109A5E98FE81FDE5290F5 /* ProjectStore.swift */,
+				DBCDBAC9CD88357EB4571ADC /* Watermark.swift */,
 			);
 			path = App;
 			sourceTree = "<group>";
@@ -379,6 +382,7 @@
 				4069D153DC8A41A0EBB19E6A /* LiveViewServer.swift in Sources */,
 				F7D9437B767E7B118C8041E7 /* LocalName.swift in Sources */,
 				2C588EFFB2A5C116880E0887 /* ProjectStore.swift in Sources */,
+				F8210A711DB9ABD5E216EB25 /* Watermark.swift in Sources */,
 				9702D5C78A7731A21798CE69 /* DLCapture.mm in Sources */,
 				0D65B653BEADDAC430489682 /* AudioInterfaceCapture.swift in Sources */,
 				630F330E84A6D4165DB8AAD0 /* DeckLinkSource.swift in Sources */,

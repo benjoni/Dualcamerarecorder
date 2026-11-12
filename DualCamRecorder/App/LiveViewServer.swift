@@ -30,7 +30,23 @@ final class LiveViewServer: ObservableObject {
     @Published private(set) var hostName: String?
     /// Size / rate / JPEG quality of the pictures sent to phones (app-wide setting).
     @Published var quality: LiveViewQuality {
-        didSet { UserDefaults.standard.set(quality.rawValue, forKey: "liveViewQuality") }
+        didSet {
+            UserDefaults.standard.set(quality.rawValue, forKey: "liveViewQuality")
+            shared.withLock { $0.jpegQuality = quality.jpegQuality }
+        }
+    }
+    /// Watermark burned into the pictures crew phones get (the slate code's phones get clean pictures).
+    @Published var crewWatermark: Bool {
+        didSet {
+            UserDefaults.standard.set(crewWatermark, forKey: "liveViewCrewWatermark")
+            shared.withLock { $0.watermark = crewWatermark ? crewWatermarkText : nil; $0.crewFrames = [:] }
+        }
+    }
+    @Published var crewWatermarkText: String {
+        didSet {
+            UserDefaults.standard.set(crewWatermarkText, forKey: "liveViewCrewWatermarkText")
+            if crewWatermark { shared.withLock { $0.watermark = crewWatermarkText } }
+        }
     }
 
     /// Slate field sent from the phone – "scene", "shot", "take", "cardA", "cardB" (called on the main thread);
@@ -41,6 +57,15 @@ final class LiveViewServer: ObservableObject {
     private let queue = DispatchQueue(label: "liveview-server", qos: .utility)
     private struct Shared {
         var frames: [String: Data] = [:]
+        /// Watermarked pictures for crew phones (only made while the watermark is on and a crew phone watches).
+        var crewFrames: [String: Data] = [:]
+        /// Watermark text while it is on (nil = off).
+        var watermark: String?
+        var jpegQuality = 0.75
+        /// Last request / picture of a crew phone.
+        var crewSeen = Date.distantPast
+        /// Camera whose watermarked picture is being made (a new one is skipped meanwhile).
+        var marking: Set<String> = []
         var status = Data("{}".utf8)
         var clients: [String: Date] = [:]
     }
@@ -54,15 +79,20 @@ final class LiveViewServer: ObservableObject {
         let connection: NWConnection
         let camera: String
         let host: String?
+        /// Opened with the crew code (gets the watermarked pictures when the watermark is on).
+        let crew: Bool
         var sending = false
-        init(connection: NWConnection, camera: String, host: String?) {
-            self.connection = connection; self.camera = camera; self.host = host
+        init(connection: NWConnection, camera: String, host: String?, crew: Bool) {
+            self.connection = connection; self.camera = camera; self.host = host; self.crew = crew
         }
     }
     private var streams: [ObjectIdentifier: StreamClient] = [:]
+    private let watermarkQueue = DispatchQueue(label: "liveview-watermark", qos: .utility)
 
     init() {
         quality = LiveViewQuality(rawValue: UserDefaults.standard.string(forKey: "liveViewQuality") ?? "") ?? .standard
+        crewWatermark = UserDefaults.standard.bool(forKey: "liveViewCrewWatermark")
+        crewWatermarkText = UserDefaults.standard.string(forKey: "liveViewCrewWatermarkText") ?? ""
         if let key = UserDefaults.standard.string(forKey: "liveViewKey"), !key.isEmpty {
             accessKey = key
         } else {
@@ -75,6 +105,8 @@ final class LiveViewServer: ObservableObject {
             editKey = Self.randomKey()
             UserDefaults.standard.set(editKey, forKey: "liveViewEditKey")
         }
+        let (mark, jpegQuality) = (crewWatermark ? crewWatermarkText : nil, quality.jpegQuality)
+        shared.withLock { $0.watermark = mark; $0.jpegQuality = jpegQuality }
         localName.onChange = { [weak self] name in self?.hostName = name }
     }
 
@@ -119,7 +151,7 @@ final class LiveViewServer: ObservableObject {
         clientTimer = nil
         isRunning = false
         clientCount = 0
-        shared.withLock { $0.clients = [:]; $0.frames = [:] }
+        shared.withLock { $0.clients = [:]; $0.frames = [:]; $0.crewFrames = [:] }
         queue.async { [weak self] in
             self?.streams.values.forEach { $0.connection.cancel() }
             self?.streams = [:]
@@ -170,8 +202,31 @@ final class LiveViewServer: ObservableObject {
     // MARK: - Data from the app (any thread)
 
     func updateFrame(camera: String, jpeg: Data) {
-        shared.withLock { $0.frames[camera] = jpeg }
-        queue.async { [weak self] in self?.push(jpeg, camera: camera) }
+        // Watermark for crew phones: made on its own queue, only while one watches; a picture that comes while
+        // the last one is still being marked is skipped for the crew (they get the next one).
+        let mark = shared.withLock { s -> (text: String, quality: Double)? in
+            s.frames[camera] = jpeg
+            guard let text = s.watermark else { return nil }
+            guard Date().timeIntervalSince(s.crewSeen) < 6, !s.marking.contains(camera) else { return ("", 0) }
+            s.marking.insert(camera)
+            return (text, s.jpegQuality)
+        }
+        queue.async { [weak self] in self?.push(jpeg, camera: camera, crew: mark == nil ? nil : false) }
+        guard let mark, mark.quality > 0 else { return }
+        watermarkQueue.async { [weak self] in
+            guard let self else { return }
+            let marked = Watermark.apply(to: jpeg, text: mark.text, quality: mark.quality)
+            self.shared.withLock { s in
+                s.marking.remove(camera)
+                if let marked, s.watermark != nil { s.crewFrames[camera] = marked }
+            }
+            if let marked { self.queue.async { self.push(marked, camera: camera, crew: true) } }
+        }
+    }
+
+    /// Picture for a phone: crew phones get the watermarked one while the watermark is on (nil until it is made).
+    private func latestFrame(camera: String, crew: Bool) -> Data? {
+        shared.withLock { s in crew && s.watermark != nil ? s.crewFrames[camera] : s.frames[camera] }
     }
 
     func updateStatus(_ json: Data) {
@@ -187,9 +242,9 @@ final class LiveViewServer: ObservableObject {
                 connection.cancel()
                 return
             }
-            let (response, streamCamera) = self.respond(to: request, from: connection.endpoint)
-            if let camera = streamCamera {
-                self.openStream(connection, camera: camera, header: response)
+            let (response, stream) = self.respond(to: request, from: connection.endpoint)
+            if let stream {
+                self.openStream(connection, camera: stream.camera, crew: stream.crew, header: response)
             } else {
                 connection.send(content: response, completion: .contentProcessed { _ in connection.cancel() })
             }
@@ -200,10 +255,10 @@ final class LiveViewServer: ObservableObject {
 
     private static let boundary = "dualcamframe"
 
-    private func openStream(_ connection: NWConnection, camera: String, header: Data) {
+    private func openStream(_ connection: NWConnection, camera: String, crew: Bool, header: Data) {
         var host: String?
         if case .hostPort(let h, _) = connection.endpoint { host = "\(h)" }
-        let client = StreamClient(connection: connection, camera: camera, host: host)
+        let client = StreamClient(connection: connection, camera: camera, host: host, crew: crew)
         let id = ObjectIdentifier(client)
         streams[id] = client
         connection.stateUpdateHandler = { [weak self] state in
@@ -218,19 +273,24 @@ final class LiveViewServer: ObservableObject {
                 client.sending = false
                 if error != nil { connection.cancel(); return }
                 // Start with the latest picture instead of waiting for the next one.
-                if let jpeg = self?.shared.withLock({ $0.frames[camera] }) { self?.send(jpeg, to: client) }
+                if let jpeg = self?.latestFrame(camera: camera, crew: crew) { self?.send(jpeg, to: client) }
             }
         })
     }
 
-    private func push(_ jpeg: Data, camera: String) {
-        for client in streams.values where client.camera == camera && !client.sending {
+    /// `crew`: nil = to every phone (no watermark), false = slate-code phones only, true = crew phones only.
+    private func push(_ jpeg: Data, camera: String, crew: Bool?) {
+        for client in streams.values where client.camera == camera && !client.sending && (crew == nil || client.crew == crew) {
             send(jpeg, to: client)
         }
     }
 
     private func send(_ jpeg: Data, to client: StreamClient) {
-        if let host = client.host { shared.withLock { $0.clients[host] = Date() } }
+        let now = Date()
+        shared.withLock { s in
+            if let host = client.host { s.clients[host] = now }
+            if client.crew { s.crewSeen = now }
+        }
         var part = Data("--\(Self.boundary)\r\nContent-Type: image/jpeg\r\nContent-Length: \(jpeg.count)\r\n\r\n".utf8)
         part.append(jpeg)
         part.append(Data("\r\n".utf8))
@@ -243,19 +303,21 @@ final class LiveViewServer: ObservableObject {
         })
     }
 
-    private func respond(to request: String, from endpoint: NWEndpoint) -> (Data, streamCamera: String?) {
+    private func respond(to request: String, from endpoint: NWEndpoint) -> (Data, stream: (camera: String, crew: Bool)?) {
         (respondData(to: request, from: endpoint), streamCamera(in: request))
     }
 
-    /// Camera of a valid "/stream/A.mjpg?k=…" request.
-    private func streamCamera(in request: String) -> String? {
+    /// Camera of a valid "/stream/A.mjpg?k=…" request and whether it uses the crew code.
+    private func streamCamera(in request: String) -> (camera: String, crew: Bool)? {
         let firstLine = request.split(separator: "\r\n", maxSplits: 1).first.map(String.init) ?? ""
         let parts = firstLine.split(separator: " ")
+        let key = parts.count >= 2 ? URLComponents(string: String(parts[1]))?.queryItems?.first(where: { $0.name == "k" })?.value : nil
         guard parts.count >= 2, parts[0] == "GET", let components = URLComponents(string: String(parts[1])),
-              canWatch(components.queryItems?.first(where: { $0.name == "k" })?.value) else { return nil }
+              canWatch(key) else { return nil }
+        let crew = key != editKey
         switch components.path {
-        case "/stream/A.mjpg": return "A"
-        case "/stream/B.mjpg": return "B"
+        case "/stream/A.mjpg": return ("A", crew)
+        case "/stream/B.mjpg": return ("B", crew)
         default: return nil
         }
     }
@@ -276,10 +338,12 @@ final class LiveViewServer: ObservableObject {
             return Self.http(403, "text/html; charset=utf-8",
                              Data("<h2 style='font-family:sans-serif'>DualCamRecorder – scan the QR code in the app to connect.</h2>".utf8))
         }
+        let crew = key != editKey
         if case .hostPort(let host, _) = endpoint {
             let client = "\(host)"
             shared.withLock { $0.clients[client] = Date() }
         }
+        if crew { shared.withLock { $0.crewSeen = Date() } }
 
         // POST /slate?k=…&f=scene&v=12B – one slate field (scene, shot, take, cardA, cardB) typed on the phone.
         if parts[0] == "POST" {
@@ -308,7 +372,7 @@ final class LiveViewServer: ObservableObject {
             return Self.http(200, "application/json", shared.withLock { $0.status })
         case "/frame/A.jpg", "/frame/B.jpg":
             let camera = path.contains("/A.") ? "A" : "B"
-            if let jpeg = shared.withLock({ $0.frames[camera] }) {
+            if let jpeg = latestFrame(camera: camera, crew: crew) {
                 return Self.http(200, "image/jpeg", jpeg)
             }
             return Self.http(204, "text/plain", Data())

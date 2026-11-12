@@ -283,6 +283,10 @@ Rozhranie aplikácie je **v angličtine** (Record / Playback / Slate …); tento
     scéna, záber, pokus a čísla kariet (ako doteraz).
   - Každý kód je náhodný – bez neho server odpovie 403; s kódom štábu server zmenu klapky odmietne.
     **New code** pri každom zneplatní len jeho staré odkazy.
+  - **Watermark** (pri kóde štábu): text cez celý obraz – šikmo, opakovane, polopriehľadne (napr. názov
+    produkcie; prázdne = *CONFIDENTIAL*). Je vpálený priamo do obrázkov, ktoré dostanú telefóny štábu, takže je
+    na každom screenshote aj nahrávke obrazovky a orezaním sa nedá odstrániť. Telefóny s kódom klapky dostávajú
+    čistý obraz. Obraz s watermarkom sa robí na samostatnej fronte a len vtedy, keď sa pozerá telefón štábu.
 - JPEG sa robí len vtedy, keď sa nejaký telefón pozerá, na samostatnej fronte (nespomalí náhľad
   na Macu) → nahrávanie to nezaťaží. Pri prvom spustení macOS môže žiadať povolenie prichádzajúcich spojení / lokálnej siete.
 - Telefóny vidia vstupy kamier (aj keď je na Macu otvorený Playback), nie prehrávané klipy.
