@@ -103,7 +103,7 @@ final class CameraChannel: ObservableObject, VideoSourceDelegate {
         var poolKey: (format: OSType, width: Int, height: Int)?
     }
     private let turn = OSAllocatedUnfairLock(initialState: Turn())
-    /// De-squeeze and mask set on the Record tab – part of every picture from here on (screen, monitor, phones, file).
+    /// Mask set on the Record tab – part of every picture from here on (screen, monitor, phones, file).
     private let adjust = OSAllocatedUnfairLock(uncheckedState: (adjuster: PictureAdjuster(), settings: PictureAdjuster.Settings()))
     private let recDetection = OSAllocatedUnfairLock(initialState: CameraRecDetection.flag)
 
@@ -241,7 +241,7 @@ final class CameraChannel: ObservableObject, VideoSourceDelegate {
         }
     }
 
-    /// Anamorphic de-squeeze and mask for this input (any thread; used from the next frame on).
+    /// Mask for this input (any thread; used from the next frame on).
     func setAdjustments(_ settings: PictureAdjuster.Settings) {
         adjust.withLockUnchecked { $0.settings = settings }
     }
@@ -588,7 +588,7 @@ final class CameraChannel: ObservableObject, VideoSourceDelegate {
                       let rec = userBitsRec(frame.timecodeUserBits, blackmagic: frame.blackmagicCamera, detection: detection) {
                 raw = rec
                 fromFlag = true
-            } else if detection == .recRun, frame.timecode != nil {
+            } else if detection == .recRun, frame.timecode != nil, !frame.timecodeIsFreeRun {
                 raw = qTCMoving >= 2 ? .recording : (qTCStill >= 2 ? .stopped : qCamRec)
             }
         }

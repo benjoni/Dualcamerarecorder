@@ -24,6 +24,8 @@ final class AppModel: ObservableObject {
     let monitor = MonitorOutput()
     private var liveViewTimer: Timer?
     private var cancellables = Set<AnyCancellable>()
+    /// LUT chosen last for each camera (loaded in the background; an older load is dropped).
+    private var lutRequest: [CameraRole: String] = [:]
 
     init() {
         settings = AppSettings()
@@ -74,13 +76,30 @@ final class AppModel: ObservableObject {
         settings.$proResFlavor.filter { $0 == .hevc }.first().sink { _ in HEVCWarmup.run() }.store(in: &cancellables)
         settings.$orientationA.removeDuplicates().sink { [weak recorder = self.recorder] o in recorder?.channelA.setOrientation(o) }.store(in: &cancellables)
         settings.$orientationB.removeDuplicates().sink { [weak recorder = self.recorder] o in recorder?.channelB.setOrientation(o) }.store(in: &cancellables)
-        // Anamorphic de-squeeze and mask: burned into each input's pictures (and so into the recording).
-        settings.$squeezeA.combineLatest(settings.$maskA)
-            .map { PictureAdjuster.Settings(squeeze: $0, maskAspect: $1.aspect) }.removeDuplicates()
+        // Mask: burned into each input's pictures (and so into the recording).
+        settings.$maskA
+            .map { PictureAdjuster.Settings(maskAspect: $0.aspect, maskOpacity: $0.opacity) }.removeDuplicates()
             .sink { [weak recorder = self.recorder] a in recorder?.channelA.setAdjustments(a) }.store(in: &cancellables)
-        settings.$squeezeB.combineLatest(settings.$maskB)
-            .map { PictureAdjuster.Settings(squeeze: $0, maskAspect: $1.aspect) }.removeDuplicates()
+        settings.$maskB
+            .map { PictureAdjuster.Settings(maskAspect: $0.aspect, maskOpacity: $0.opacity) }.removeDuplicates()
             .sink { [weak recorder = self.recorder] a in recorder?.channelB.setAdjustments(a) }.store(in: &cancellables)
+
+        // Viewing LUTs (LUT button above each live picture, per project): Record screen, waveform, live monitor, phones.
+        // Playback and Edit show the recorded material as it is.
+        // (@Published sends the new value before the property has it – the choice is kept in `lutRequest`.)
+        for role in CameraRole.allCases {
+            (role == .a ? settings.$lutA : settings.$lutB)
+                .combineLatest(LUTLibrary.shared.$names, LUTLibrary.shared.$revision)
+                .sink { [weak self] name, _, _ in
+                    self?.lutRequest[role] = name
+                    LUTLibrary.shared.load(name) { lut in
+                        guard let self, self.lutRequest[role] == name else { return }   // a newer choice wins
+                        (role == .a ? self.recorder.channelA : self.recorder.channelB).preview.lut = lut
+                        self.monitor.setLUT(lut, for: role)
+                    }
+                }
+                .store(in: &cancellables)
+        }
         // (The output is the first device found with one – the UltraStudio Monitor.)
         settings.$monitorEnabled.combineLatest(settings.$monitorSource, recorder.$outputDevices)
             .sink { [weak monitor = self.monitor] enabled, source, devices in

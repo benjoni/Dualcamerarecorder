@@ -33,10 +33,10 @@
 		F7ECB134D22BCFEAA2004CFD /* SyncPlaybackController.swift in Sources */ = {isa = PBXBuildFile; fileRef = A57B1970A4CECEE2CD3EACA6 /* SyncPlaybackController.swift */; };
 		0CE80DEB4C70FF63E18D842E /* TakeLibrary.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6524525F456E0CA9FC7AE712 /* TakeLibrary.swift */; };
 		AF4F7E6721D69D5EC7B56450 /* ThumbnailCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36C17967F6FDC1F863F17DDF /* ThumbnailCache.swift */; };
+		CA966AB90978F78CAE4B00AE /* LUT.swift in Sources */ = {isa = PBXBuildFile; fileRef = 302E786F8D5B00E94CBF04A5 /* LUT.swift */; };
 		9168DEFF5C8ACED2D8579F70 /* PreviewRenderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 86EE76A2E0DF03A995D87568 /* PreviewRenderer.swift */; };
 		0D2CA9BB78FD0035D5D36DF6 /* PreviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54A98420FFEC2C998E26B947 /* PreviewView.swift */; };
 		8B1FD6B4543A40394476CF5E /* Waveform.swift in Sources */ = {isa = PBXBuildFile; fileRef = E2FBE3F8BF993A66AAC34180 /* Waveform.swift */; };
-		DE8310335FA842ACA6663B5B /* Anamorphic.swift in Sources */ = {isa = PBXBuildFile; fileRef = F9FB9E3C2ECCDEFE03880370 /* Anamorphic.swift */; };
 		8A95CF0EB055A53010FE371A /* CameraChannel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9C6E675FB14A7235CFCF3850 /* CameraChannel.swift */; };
 		D6F0928CDF8B14EA54D48C44 /* CameraSetup.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70F90FC31A94687C32C227DA /* CameraSetup.swift */; };
 		D51B819347E68186A70BC23A /* ClipLog.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2118891433C5D8100EADE27 /* ClipLog.swift */; };
@@ -51,6 +51,7 @@
 		14824B1BC9EF412021A00277 /* CameraSignalViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB830C2462DAB70FB0FC7C67 /* CameraSignalViews.swift */; };
 		E72739D66FB84EAFDDDD40FB /* Components.swift in Sources */ = {isa = PBXBuildFile; fileRef = D904E764B33B5961920C3080 /* Components.swift */; };
 		F2C8F5F65147FB70DE7E0B40 /* DiskAlertView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C7385998366C664D0AB36512 /* DiskAlertView.swift */; };
+		31E6F58CB6BFD6596B46627C /* LUTView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D211E8FD071597604656BA96 /* LUTView.swift */; };
 		7A4B5578C70A406BAF776EB0 /* FrameMaskView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C64C6B6B9B9063EC1B758467 /* FrameMaskView.swift */; };
 		F838ACAD1CBFBCA534FF435B /* HelpView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A51EA3371A596E1124FF2760 /* HelpView.swift */; };
 		157B03D891981EA9B8801EDB /* LiveViewPrint.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABBAD7C5CCF406EB3A40E906 /* LiveViewPrint.swift */; };
@@ -98,10 +99,10 @@
 		A57B1970A4CECEE2CD3EACA6 /* SyncPlaybackController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SyncPlaybackController.swift; sourceTree = "<group>"; };
 		6524525F456E0CA9FC7AE712 /* TakeLibrary.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TakeLibrary.swift; sourceTree = "<group>"; };
 		36C17967F6FDC1F863F17DDF /* ThumbnailCache.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThumbnailCache.swift; sourceTree = "<group>"; };
+		302E786F8D5B00E94CBF04A5 /* LUT.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LUT.swift; sourceTree = "<group>"; };
 		86EE76A2E0DF03A995D87568 /* PreviewRenderer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PreviewRenderer.swift; sourceTree = "<group>"; };
 		54A98420FFEC2C998E26B947 /* PreviewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PreviewView.swift; sourceTree = "<group>"; };
 		E2FBE3F8BF993A66AAC34180 /* Waveform.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Waveform.swift; sourceTree = "<group>"; };
-		F9FB9E3C2ECCDEFE03880370 /* Anamorphic.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Anamorphic.swift; sourceTree = "<group>"; };
 		9C6E675FB14A7235CFCF3850 /* CameraChannel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraChannel.swift; sourceTree = "<group>"; };
 		70F90FC31A94687C32C227DA /* CameraSetup.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraSetup.swift; sourceTree = "<group>"; };
 		B2118891433C5D8100EADE27 /* ClipLog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClipLog.swift; sourceTree = "<group>"; };
@@ -116,6 +117,7 @@
 		AB830C2462DAB70FB0FC7C67 /* CameraSignalViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraSignalViews.swift; sourceTree = "<group>"; };
 		D904E764B33B5961920C3080 /* Components.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Components.swift; sourceTree = "<group>"; };
 		C7385998366C664D0AB36512 /* DiskAlertView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiskAlertView.swift; sourceTree = "<group>"; };
+		D211E8FD071597604656BA96 /* LUTView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LUTView.swift; sourceTree = "<group>"; };
 		C64C6B6B9B9063EC1B758467 /* FrameMaskView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FrameMaskView.swift; sourceTree = "<group>"; };
 		A51EA3371A596E1124FF2760 /* HelpView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HelpView.swift; sourceTree = "<group>"; };
 		ABBAD7C5CCF406EB3A40E906 /* LiveViewPrint.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveViewPrint.swift; sourceTree = "<group>"; };
@@ -241,6 +243,7 @@
 			isa = PBXGroup;
 			children = (
 				86EE76A2E0DF03A995D87568 /* PreviewRenderer.swift */,
+				302E786F8D5B00E94CBF04A5 /* LUT.swift */,
 				54A98420FFEC2C998E26B947 /* PreviewView.swift */,
 				E2FBE3F8BF993A66AAC34180 /* Waveform.swift */,
 			);
@@ -250,7 +253,6 @@
 		A2B6AD46AD5B1EB0037ED029 /* Recording */ = {
 			isa = PBXGroup;
 			children = (
-				F9FB9E3C2ECCDEFE03880370 /* Anamorphic.swift */,
 				9C6E675FB14A7235CFCF3850 /* CameraChannel.swift */,
 				70F90FC31A94687C32C227DA /* CameraSetup.swift */,
 				B2118891433C5D8100EADE27 /* ClipLog.swift */,
@@ -273,6 +275,7 @@
 				D904E764B33B5961920C3080 /* Components.swift */,
 				C7385998366C664D0AB36512 /* DiskAlertView.swift */,
 				C64C6B6B9B9063EC1B758467 /* FrameMaskView.swift */,
+				D211E8FD071597604656BA96 /* LUTView.swift */,
 				A51EA3371A596E1124FF2760 /* HelpView.swift */,
 				ABBAD7C5CCF406EB3A40E906 /* LiveViewPrint.swift */,
 				1681762CBB9D0175B77FDC8E /* LiveViewSettings.swift */,
@@ -412,9 +415,9 @@
 				0CE80DEB4C70FF63E18D842E /* TakeLibrary.swift in Sources */,
 				AF4F7E6721D69D5EC7B56450 /* ThumbnailCache.swift in Sources */,
 				9168DEFF5C8ACED2D8579F70 /* PreviewRenderer.swift in Sources */,
+				CA966AB90978F78CAE4B00AE /* LUT.swift in Sources */,
 				0D2CA9BB78FD0035D5D36DF6 /* PreviewView.swift in Sources */,
 				8B1FD6B4543A40394476CF5E /* Waveform.swift in Sources */,
-				DE8310335FA842ACA6663B5B /* Anamorphic.swift in Sources */,
 				8A95CF0EB055A53010FE371A /* CameraChannel.swift in Sources */,
 				D6F0928CDF8B14EA54D48C44 /* CameraSetup.swift in Sources */,
 				D51B819347E68186A70BC23A /* ClipLog.swift in Sources */,
@@ -430,6 +433,7 @@
 				E72739D66FB84EAFDDDD40FB /* Components.swift in Sources */,
 				F2C8F5F65147FB70DE7E0B40 /* DiskAlertView.swift in Sources */,
 				7A4B5578C70A406BAF776EB0 /* FrameMaskView.swift in Sources */,
+				31E6F58CB6BFD6596B46627C /* LUTView.swift in Sources */,
 				F838ACAD1CBFBCA534FF435B /* HelpView.swift in Sources */,
 				157B03D891981EA9B8801EDB /* LiveViewPrint.swift in Sources */,
 				EE89B967555C804E880097C6 /* LiveViewSettings.swift in Sources */,
@@ -509,7 +513,7 @@
 				CODE_SIGN_IDENTITY = "-";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 2;
 				ENABLE_APP_SANDBOX = NO;
 				ENABLE_HARDENED_RUNTIME = NO;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -543,7 +547,7 @@
 				CODE_SIGN_IDENTITY = "-";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 2;
 				ENABLE_APP_SANDBOX = NO;
 				ENABLE_HARDENED_RUNTIME = NO;
 				GENERATE_INFOPLIST_FILE = YES;

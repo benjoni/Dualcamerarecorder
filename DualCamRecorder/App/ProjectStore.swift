@@ -50,6 +50,9 @@ struct ProjectSettings: Codable, Equatable {
     /// Aspect ratio mask over each camera's picture on the screen (Record and Playback; not in the file).
     var maskA = FrameMask()
     var maskB = FrameMask()
+    /// Viewing LUT of each camera (file name in the LUT library, "" = none) – screen, monitor, phones; not in the file.
+    var lutA = ""
+    var lutB = ""
     /// How each camera's own REC is read from its SDI signal, and whether the app records together with it.
     var recDetectionA = CameraRecDetection.flag
     var recDetectionB = CameraRecDetection.flag
@@ -64,9 +67,6 @@ struct ProjectSettings: Codable, Equatable {
     var audioInterfaceID = ""
     /// Sound against picture (ms): + delays the sound, − moves it earlier.
     var audioInterfaceDelayMs = 0
-    /// Anamorphic squeeze of each camera's lens (1 = off).
-    var squeezeA = 1.0
-    var squeezeB = 1.0
 }
 
 extension ProjectSettings {
@@ -91,6 +91,8 @@ extension ProjectSettings {
         orientationB = try c.decodeIfPresent(PictureOrientation.self, forKey: .orientationB) ?? orientationB
         maskA = try c.decodeIfPresent(FrameMask.self, forKey: .maskA) ?? maskA
         maskB = try c.decodeIfPresent(FrameMask.self, forKey: .maskB) ?? maskB
+        lutA = (try? c.decodeIfPresent(String.self, forKey: .lutA)) ?? lutA
+        lutB = (try? c.decodeIfPresent(String.self, forKey: .lutB)) ?? lutB
         recDetectionA = (try? c.decodeIfPresent(CameraRecDetection.self, forKey: .recDetectionA)) ?? recDetectionA
         recDetectionB = (try? c.decodeIfPresent(CameraRecDetection.self, forKey: .recDetectionB)) ?? recDetectionB
         cameraTrigger = (try? c.decodeIfPresent(CameraTrigger.self, forKey: .cameraTrigger)) ?? cameraTrigger
@@ -100,8 +102,6 @@ extension ProjectSettings {
         audioInterfaceMode = (try? c.decodeIfPresent(AudioInterfaceMode.self, forKey: .audioInterfaceMode)) ?? audioInterfaceMode
         audioInterfaceID = (try? c.decodeIfPresent(String.self, forKey: .audioInterfaceID)) ?? audioInterfaceID
         audioInterfaceDelayMs = (try? c.decodeIfPresent(Int.self, forKey: .audioInterfaceDelayMs)) ?? audioInterfaceDelayMs
-        squeezeA = (try? c.decodeIfPresent(Double.self, forKey: .squeezeA)) ?? squeezeA
-        squeezeB = (try? c.decodeIfPresent(Double.self, forKey: .squeezeB)) ?? squeezeB
     }
 }
 
@@ -258,7 +258,12 @@ final class ProjectStore: ObservableObject {
         } catch {
             throw ProjectError.cannotCreate(error.localizedDescription)
         }
-        let project = Project(name: name, director: director, dop: dop, notes: notes)
+        var project = Project(name: name, director: director, dop: dop, notes: notes)
+        // A new project records H.265 at the default data rate; the rest comes from the current settings.
+        var initial = settings.projectSettings
+        initial.proResFlavor = ProResFlavor.hevc.rawValue
+        initial.hevcMbps = ProResFlavor.defaultHEVCRate
+        project.settings = initial
         try Self.save(project, folder: folder)
         remember(folder)
         reload()

@@ -68,8 +68,8 @@ struct FrameMaskButton: View {
         }
         .buttonStyle(.bordered)
         .background(mask.isOn ? RoundedRectangle(cornerRadius: 5).fill(Color.yellow) : nil)
-        .help("Mask – black bars cropping the picture to 1.85, 2:1, 2.35 or a custom ratio. Recorded into the file "
-              + "(also on the monitor and the phones); Playback and Edit show the clip as recorded.")
+        .help("Mask – bars cropping the picture to 1.85, 2:1, 2.35 or a custom ratio, with adjustable opacity. "
+              + "Recorded into the file (also on the monitor and the phones); Playback and Edit show the clip as recorded.")
         .accessibilityLabel("Mask")
         .disabled(locked)
         .popover(isPresented: $open, arrowEdge: .bottom) {
@@ -110,8 +110,24 @@ struct FrameMaskSettings: View {
                 }
             }
 
-            Text("Black bars in the picture – recorded into the file, also on the monitor and the phones. With an "
-                 + "anamorphic lens (Ana) the ratio is measured on the de-squeezed picture.")
+            VStack(alignment: .leading, spacing: 4) {
+                HStack {
+                    Text("Opacity").foregroundStyle(.secondary)
+                    Spacer()
+                    Text("\(Int((mask.opacity * 100).rounded())) %").monospacedDigit()
+                }
+                Slider(value: $mask.opacity, in: 0...1)
+                HStack {
+                    ForEach([0.25, 0.5, 0.75, 1.0], id: \.self) { value in
+                        Button("\(Int(value * 100)) %") { mask.opacity = value }
+                            .controlSize(.small)
+                    }
+                }
+            }
+            .disabled(!mask.isOn)
+
+            Text("Bars in the picture – recorded into the file as you see them, also on the monitor and the phones. "
+                 + "100 % is black; below that the picture under the bars is darkened.")
                 .font(.caption).foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
         }

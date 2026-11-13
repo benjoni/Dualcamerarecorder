@@ -133,6 +133,7 @@ final class SimulatedSource: VideoSource {
                                   audio: audio)
         let camera = cameraState(index: index)
         frame.timecode = camera.timecode
+        frame.timecodeIsFreeRun = Self.recCycleSeconds == 0
         frame.cameraRecording = camera.recording
         if captureAncillary {
             // Like a real signal: an ATC packet with the timecode and a "vendor" packet whose byte follows REC.

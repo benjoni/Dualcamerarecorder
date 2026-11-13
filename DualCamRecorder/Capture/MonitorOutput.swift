@@ -53,6 +53,9 @@ final class MonitorOutput: ObservableObject {
     private var busy = false
     /// The picture shown is the cut (one full picture, camera choice ignored).
     private var program = false
+    /// Viewing LUT of each camera on the live pictures only (clips in Playback / Edit go out as recorded).
+    private var luts: [CameraRole: CubeLUT] = [:]
+    private var lutRenders: [CameraRole: LUTRender] = [.a: LUTRender(), .b: LUTRender()]
 
     // MARK: - Settings (main queue)
 
@@ -78,6 +81,14 @@ final class MonitorOutput: ObservableObject {
                 renderLatest()
             }
             updatePlaybackTimer()
+        }
+    }
+
+    /// Viewing LUT of a camera's live picture (nil = none).
+    func setLUT(_ lut: CubeLUT?, for role: CameraRole) {
+        queue.async { [self] in
+            luts[role] = lut
+            renderLatest()
         }
     }
 
@@ -125,8 +136,10 @@ final class MonitorOutput: ObservableObject {
 
     private func renderLatest() {
         guard let device, !busy else { return }
-        let a = source == .b ? nil : latest[.a]
-        let b = source == .a ? nil : latest[.b]
+        // Clips (Playback, Edit) go out as recorded – the LUT is for the live pictures only.
+        let live = playback == nil
+        let a = source == .b ? nil : latest[.a].map { live ? withLUT($0, role: .a) : $0 }
+        let b = source == .a ? nil : latest[.b].map { live ? withLUT($0, role: .b) : $0 }
         guard a != nil || b != nil else { return }
         let format = formats[source == .b ? .b : .a] ?? formats[.b] ?? formats[.a]
         let size = format.map { (Int($0.width), Int($0.height)) } ?? size(of: (a ?? b)!)
@@ -148,6 +161,21 @@ final class MonitorOutput: ObservableObject {
             guard let picture = a ?? b, copy(picture, to: out) else { return }
         }
         _ = device.display(out)
+    }
+
+    /// Live picture through the camera's LUT – converted to BGRA first, as the preview does.
+    private func withLUT(_ picture: CVPixelBuffer, role: CameraRole) -> CVPixelBuffer {
+        guard let lut = luts[role], let render = lutRenders[role] else { return picture }
+        let rgb: CVPixelBuffer
+        if CVPixelBufferGetPixelFormatType(picture) == kCVPixelFormatType_32BGRA {
+            rgb = picture
+        } else {
+            guard let converted = buffer(width: CVPixelBufferGetWidth(picture), height: CVPixelBufferGetHeight(picture),
+                                         format: kCVPixelFormatType_32BGRA), copy(picture, to: converted) else { return picture }
+            CVBufferPropagateAttachments(picture, converted)
+            rgb = converted
+        }
+        return render.apply(lut, to: rgb) ?? picture
     }
 
     /// Output mode follows the shown picture's format; started again only when it changes.

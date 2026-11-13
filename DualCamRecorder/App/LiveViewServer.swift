@@ -102,13 +102,16 @@ final class LiveViewServer: ObservableObject {
         crewWatermarkText = UserDefaults.standard.string(forKey: "liveViewCrewWatermarkText") ?? ""
         wifiName = UserDefaults.standard.string(forKey: "liveViewWifiName") ?? ""
         wifiPassword = UserDefaults.standard.string(forKey: "liveViewWifiPassword") ?? ""
+        // A local copy: `self.accessKey` cannot be read before `editKey` is set too.
+        let crewKey: String
         if let key = UserDefaults.standard.string(forKey: "liveViewKey"), !key.isEmpty {
-            accessKey = key
+            crewKey = key
         } else {
-            accessKey = Self.randomKey()
-            UserDefaults.standard.set(accessKey, forKey: "liveViewKey")
+            crewKey = Self.randomKey()
+            UserDefaults.standard.set(crewKey, forKey: "liveViewKey")
         }
-        if let key = UserDefaults.standard.string(forKey: "liveViewEditKey"), !key.isEmpty, key != accessKey {
+        accessKey = crewKey
+        if let key = UserDefaults.standard.string(forKey: "liveViewEditKey"), !key.isEmpty, key != crewKey {
             editKey = key
         } else {
             editKey = Self.randomKey()

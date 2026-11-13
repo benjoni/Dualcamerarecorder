@@ -42,7 +42,15 @@ final class PreviewRenderer {
     private struct State {
         var busy = false; var active = true; var waveform = false; var stream = false
         var streamQuality = LiveViewQuality.standard; var jpegBusy = false
+        var lut: CubeLUT?
     }
+    /// Viewing LUT on the screen, the waveform and the phones (nil = none).
+    var lut: CubeLUT? {
+        get { state.withLock { $0.lut } }
+        set { state.withLock { $0.lut = newValue } }
+    }
+    private let lutRender = LUTRender()         // preview queue only
+    private let streamLUTRender = LUTRender()   // preview queue only
     private var lastWaveformNanos: UInt64 = 0   // preview queue only
     private var lastJPEGNanos: UInt64 = 0       // preview queue only
 
@@ -97,9 +105,10 @@ final class PreviewRenderer {
         queue.async { [weak self] in
             guard let self else { return }
             defer { self.state.withLock { $0.busy = false } }
-            guard let result = self.makePreviewSample(from: pixelBuffer) else { return }
-            let sample = result.0
-            let small = result.1
+            let lut = self.lut
+            guard let scaled = self.scaledPicture(from: pixelBuffer) else { return }
+            let small = lut.flatMap { self.lutRender.apply($0, to: scaled) } ?? scaled
+            guard let sample = Self.sample(for: small) else { return }
             // Waveform from the already downscaled BGRA picture, ~12 Hz.
             let now = HostClock.nowNanos
             if self.waveformEnabled, now - self.lastWaveformNanos > 80_000_000 {
@@ -113,6 +122,7 @@ final class PreviewRenderer {
                self.beginJPEG() {
                 self.lastJPEGNanos = now
                 let picture = quality.width == self.outWidth ? small : self.streamPicture(from: pixelBuffer, quality: quality)
+                    .map { stream in lut.flatMap { self.streamLUTRender.apply($0, to: stream) } ?? stream }
                 if let picture {
                     self.jpegQueue.async {
                         defer { self.state.withLock { $0.jpegBusy = false } }
@@ -179,12 +189,16 @@ final class PreviewRenderer {
         return data as Data
     }
 
-    private func makePreviewSample(from source: CVPixelBuffer) -> (CMSampleBuffer, CVPixelBuffer)? {
+    /// Source frame scaled to the 960×540 BGRA preview.
+    private func scaledPicture(from source: CVPixelBuffer) -> CVPixelBuffer? {
         guard let transferSession, let pool else { return nil }
         var out: CVPixelBuffer?
         guard CVPixelBufferPoolCreatePixelBuffer(kCFAllocatorDefault, pool, &out) == kCVReturnSuccess, let dst = out else { return nil }
         guard VTPixelTransferSessionTransferImage(transferSession, from: source, to: dst) == noErr else { return nil }
+        return dst
+    }
 
+    private static func sample(for dst: CVPixelBuffer) -> CMSampleBuffer? {
         var format: CMVideoFormatDescription?
         CMVideoFormatDescriptionCreateForImageBuffer(allocator: kCFAllocatorDefault, imageBuffer: dst, formatDescriptionOut: &format)
         guard let format else { return nil }
@@ -203,6 +217,6 @@ final class PreviewRenderer {
                                  Unmanaged.passUnretained(kCMSampleAttachmentKey_DisplayImmediately).toOpaque(),
                                  Unmanaged.passUnretained(kCFBooleanTrue).toOpaque())
         }
-        return (sample, dst)
+        return sample
     }
 }

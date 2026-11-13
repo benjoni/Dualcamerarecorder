@@ -50,9 +50,10 @@ final class AppSettings: ObservableObject {
     /// Aspect ratio mask over each camera's picture (per project) – Record and Playback screens only.
     @Published var maskA = FrameMask()
     @Published var maskB = FrameMask()
-    /// Anamorphic squeeze of each camera's lens (per project): 1 = off, 1.33 / 1.5 / 1.8 / 2.
-    @Published var squeezeA = 1.0
-    @Published var squeezeB = 1.0
+    /// Viewing LUT of each camera (per project): file name in the LUT library, "" = none.
+    /// Screen, monitor and phones only – the recorded file stays as the camera sends it.
+    @Published var lutA = ""
+    @Published var lutB = ""
     /// Camera's own REC read from the SDI signal (per input) and recording together with the camera (per project).
     @Published var recDetectionA = CameraRecDetection.flag
     @Published var recDetectionB = CameraRecDetection.flag
@@ -106,20 +107,20 @@ final class AppSettings: ObservableObject {
         if role == .a { orientationA = o } else { orientationB = o }
     }
 
-    func squeeze(_ role: CameraRole) -> Double {
-        role == .a ? squeezeA : squeezeB
-    }
-
-    func setSqueeze(_ factor: Double, for role: CameraRole) {
-        if role == .a { squeezeA = factor } else { squeezeB = factor }
-    }
-
     func mask(_ role: CameraRole) -> FrameMask {
         role == .a ? maskA : maskB
     }
 
     func setMask(_ m: FrameMask, for role: CameraRole) {
         if role == .a { maskA = m } else { maskB = m }
+    }
+
+    func lut(_ role: CameraRole) -> String {
+        role == .a ? lutA : lutB
+    }
+
+    func setLUT(_ name: String, for role: CameraRole) {
+        if role == .a { lutA = name } else { lutB = name }
     }
 
     func recDetection(_ role: CameraRole) -> CameraRecDetection {
@@ -153,12 +154,11 @@ final class AppSettings: ObservableObject {
                         cameras: cameras, deviceA: deviceA, deviceB: deviceB,
                         monitorEnabled: monitorEnabled, monitorSource: monitorSource.rawValue,
                         orientationA: orientationA, orientationB: orientationB,
-                        maskA: maskA, maskB: maskB,
+                        maskA: maskA, maskB: maskB, lutA: lutA, lutB: lutB,
                         recDetectionA: recDetectionA, recDetectionB: recDetectionB, cameraTrigger: cameraTrigger,
                         backupEnabled: backupEnabled, backupRootPath: backupRootPath, hevcMbps: hevcMbps,
                         audioInterfaceMode: audioInterfaceMode, audioInterfaceID: audioInterfaceID,
-                        audioInterfaceDelayMs: audioInterfaceDelayMs,
-                        squeezeA: squeezeA, squeezeB: squeezeB)
+                        audioInterfaceDelayMs: audioInterfaceDelayMs)
     }
 
     func apply(_ p: ProjectSettings) {
@@ -182,6 +182,8 @@ final class AppSettings: ObservableObject {
         orientationB = p.orientationB
         maskA = p.maskA
         maskB = p.maskB
+        lutA = p.lutA
+        lutB = p.lutB
         recDetectionA = p.recDetectionA
         recDetectionB = p.recDetectionB
         cameraTrigger = p.cameraTrigger
@@ -191,8 +193,6 @@ final class AppSettings: ObservableObject {
         audioInterfaceMode = p.audioInterfaceMode
         audioInterfaceID = p.audioInterfaceID
         audioInterfaceDelayMs = p.audioInterfaceDelayMs
-        squeezeA = p.squeezeA
-        squeezeB = p.squeezeB
     }
 
     /// Sanitized, guaranteed-distinct camera names.

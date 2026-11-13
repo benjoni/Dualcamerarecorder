@@ -112,24 +112,15 @@ Rozhranie aplikácie je **v angličtine** (Record / Playback / Slate …); tento
 - Na obraze je žlté **FLIP / FLOP**. Nastavenie je pre každý vstup a ukladá sa do projektu (PROJECT.JSON);
   počas nahrávania sa nedá meniť.
 
-### Úpravy obrazu v Record sa nahrajú (Flip / Flop, Ana, Mask)
+### Úpravy obrazu v Record sa nahrajú (Flip / Flop, Mask)
 - Logika: obraz si upravíš **pri nahrávaní** a tak sa aj **nahrá na disk**. Playback a Edit už len ukazujú
   nahratý klip – nič sa tam nenastavuje. Rovnaký upravený obraz ide aj na Blackmagic monitor a na telefóny.
 - Úpravy sa nedajú meniť počas záberu (boli by v polovici súboru iné).
 
-### Anamorfné objektívy – tlačidlo Ana nad obrazom (Record)
-- **Off / 1.33× / 1.5× / 1.8× / 2×** pre každú kameru, ukladá sa do projektu. Na obraze je fialové **ANA 2×**.
-- Kamera posiela **stlačený** obraz → aplikácia ho roztiahne: obraz má celú šírku a 1/koeficient výšky
-  (2× → 1920×540, 1.33× → 1920×812) a je v strede snímky 1920×1080 s čiernymi pruhmi hore a dole – ako na monitore
-  s de-squeeze. Súbor ostáva štandardné HD (rovnaký formát, kodek, bitová hĺbka).
-- Ak kamera už posiela roztiahnutý obraz (de-squeeze na SDI výstupe kamery), nechaj **Off**.
-- Test: guľatý predmet v obraze – vajce na výšku = treba Ana, kruh = netreba.
-
 ### Maska formátu (orez) – 1.85 / 2:1 / 2.35 / Custom (Record, tlačidlo Mask nad obrazom)
 - Čierne pruhy, ktoré orežú obraz na širší formát (hore / dole) alebo užší (Custom napr. 1.33 – vľavo / vpravo).
   Custom pomer 1.00–3.00, rýchle voľby 1.33 / 1.66 / 2.39.
-- **Nahrá sa do súboru** (aj monitor a telefóny). Pri anamorfe sa pomer počíta z roztiahnutého obrazu
-  (napr. 2× → obraz 3.56:1, maska 2.39 → pruhy vľavo a vpravo).
+- **Nahrá sa do súboru** (aj monitor a telefóny).
 - Pre každú kameru zvlášť, ukladá sa do projektu.
 
 ### Timecode a REC kamery zo SDI (Project settings → Camera timecode and REC)
