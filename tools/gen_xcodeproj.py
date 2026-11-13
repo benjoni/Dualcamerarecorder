@@ -51,6 +51,18 @@ def collect():
     return tree
 
 
+def existing_setting(key, default):
+    """Value of `key` in the current project.pbxproj (version and build number survive a regeneration)."""
+    path = os.path.join(ROOT, f"{PROJECT}.xcodeproj", "project.pbxproj")
+    try:
+        text = open(path).read()
+    except OSError:
+        return default
+    import re
+    match = re.search(r"\b" + key + r" = ([^;]+);", text)
+    return match.group(1).strip().strip('"') if match else default
+
+
 def main():
     tree = collect()
     objects = []
@@ -185,8 +197,8 @@ def main():
     target_s = {
         "PRODUCT_NAME": "$(TARGET_NAME)",
         "PRODUCT_BUNDLE_IDENTIFIER": BUNDLE_ID,
-        "MARKETING_VERSION": "1.0",
-        "CURRENT_PROJECT_VERSION": "1",
+        "MARKETING_VERSION": existing_setting("MARKETING_VERSION", "1.0"),
+        "CURRENT_PROJECT_VERSION": existing_setting("CURRENT_PROJECT_VERSION", "1"),
         "GENERATE_INFOPLIST_FILE": "YES",
         "ASSETCATALOG_COMPILER_APPICON_NAME": "AppIcon",
         "INFOPLIST_KEY_CFBundleDisplayName": "DualCamRecorder",
