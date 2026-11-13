@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>DualCamRecorder</title>
-<meta name="description" content="Record two SDI cameras into ProRes on one Mac, play the take back in sync, slate it, cut it and hand it over on set.">
+<meta name="description" content="Record two SDI cameras into ProRes or H.265 on one Mac, play the take back in sync, slate it, cut it and hand it over on set.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@600;800;900&family=Archivo:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
@@ -126,21 +126,6 @@ section { padding: 96px 0; }
 .lut-actions { display: flex; justify-content: space-between; gap: 12px; font-size: 14px; }
 .lut-actions span { padding: 5px 10px; border-radius: 5px; background: #2f2f32; white-space: nowrap; }
 
-/* pricing */
-.plans { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
-.plan { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 34px; display: grid; gap: 12px; align-content: start; }
-.plan.best { border: 2px solid var(--tally); }
-.plan .name { font: 700 13px/1 var(--mono); letter-spacing: .16em; text-transform: uppercase; color: var(--muted); }
-.plan .amount { font: 900 clamp(64px, 8vw, 96px)/1 var(--display); }
-.plan .amount small { font: 500 18px/1 var(--body); color: var(--muted); margin-left: 6px; }
-.plan .save { font: 700 14px/1.4 var(--mono); color: var(--amber); }
-.plan-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; }
-.deal { font: 700 13px/1 var(--mono); letter-spacing: .04em; padding: 7px 10px; border-radius: 4px; background: var(--tally); color: #fff; }
-.was { font-size: 20px; color: var(--muted); }
-.was s { font-family: var(--display); font-weight: 800; font-size: 34px; color: var(--ink); text-decoration-color: var(--tally); text-decoration-thickness: 3px; margin-inline: 4px; }
-.plan .deal-price { color: var(--tally); }
-.pricing-note { margin-top: 22px; font-size: 15px; color: var(--muted); }
-@media (max-width: 720px) { .plans { grid-template-columns: 1fr; } .plan { padding: 26px; } }
 
 /* phone slate */
 .clapper { background: #000; border-block: 3px solid var(--ink); position: relative; }
@@ -198,7 +183,6 @@ footer b { color: var(--ink); font-family: var(--display); font-size: 20px; lett
       <a href="#features">Features</a>
       <a href="#phone">Phone slate</a>
       <a href="#paperwork">Reports</a>
-      <a href="#pricing">Pricing</a>
       <a href="#requirements">Requirements</a>
     </nav>
     <a class="btn small" href="#requirements"><span class="dot"></span>What you need</a>
@@ -217,7 +201,7 @@ footer b { color: var(--ink); font-family: var(--display); font-size: 20px; lett
             <div class="field"><small>TAKE</small><b>1</b></div>
           </div>
           <h1>Two cameras.<br><em>One REC.</em></h1>
-          <p class="lede">Record two SDI cameras into ProRes on one Mac. Play the take back in sync, slate it, cut it and hand it over before the next setup.</p>
+          <p class="lede">Record two SDI cameras into ProRes or H.265 on one Mac. Play the take back in sync, slate it, cut it and hand it over before the next setup.</p>
           <div class="cta">
             <a class="btn live" href="#features"><span class="dot" style="background:#fff"></span>See how it works</a>
             <span class="note">For macOS, Apple Silicon and Intel.</span>
@@ -233,7 +217,7 @@ footer b { color: var(--ink); font-family: var(--display); font-size: 20px; lett
     <div class="wrap specs">
       <ul>
         <li>Blackmagic DeckLink &amp; UltraStudio</li>
-        <li>ProRes 422 .mov</li>
+        <li>ProRes 422 or H.265 .mov</li>
         <li>SDI timecode &amp; camera REC flag</li>
         <li>Viewing LUTs (.cube)</li>
         <li>macOS 14 Sonoma or later</li>
@@ -268,6 +252,7 @@ footer b { color: var(--ink); font-family: var(--display); font-size: 20px; lett
             <li><b>IN / OUT</b> while rolling, so playback starts where the action does.</li>
             <li><b>Card and camera clip</b> numbers per camera, saved with the slate.</li>
             <li><b>Cameras A and B</b> out of the box. Add more cameras in Project settings and pick which one sits on each input.</li>
+            <li><b>ProRes 422, HQ or LT, or H.265</b> per camera. New projects start on H.265 at 5 Mbit/s, so a long shooting day fits on a small disk.</li>
             <li>Captured, written and dropped frames counted live, with free disk time.</li>
           </ul>
         </div>
@@ -290,7 +275,12 @@ footer b { color: var(--ink); font-family: var(--display); font-size: 20px; lett
         <div class="text">
           <span class="kicker">Rigging</span>
           <h2>Camera upside down? Flip it.</h2>
-          <p>Flip and Flop turn the picture on screen, on the monitor, on the phones and in the recorded file. Frame lines for 1.85, 2:1, 2.35 or your own ratio sit on top.</p>
+          <p>Flip and Flop turn the picture on screen, on the monitor, on the phones and in the recorded file.</p>
+          <ul class="ticks">
+            <li><b>Mask</b> for 1.85, 2:1, 2.35 or your own ratio from 1.00 to 3.00, for each camera.</li>
+            <li><b>Opacity</b> from solid black bars down to a light shade, so the crew still sees what is outside the frame.</li>
+            <li><b>In the recording too:</b> the mask is written into the file, the monitor feed and the phones, just as you see it.</li>
+          </ul>
         </div>
         <figure><img src="media/flip.jpg" alt="A camera picture being flipped the right way up" loading="lazy"></figure>
       </div>
@@ -431,29 +421,6 @@ footer b { color: var(--ink); font-family: var(--display); font-size: 20px; lett
     </div>
   </section>
 
-  <section id="pricing">
-    <div class="wrap">
-      <div class="section-head">
-        <span class="kicker">Pricing</span>
-        <h2>One app. Everything in it.</h2>
-        <p>Record, Playback, Edit, reports, LUTs and live view on phones are in both plans.</p>
-      </div>
-      <div class="plans">
-        <div class="plan">
-          <span class="name">Monthly</span>
-          <p class="amount">€200<small>/ month</small></p>
-          <p class="muted">For a single production.</p>
-        </div>
-        <div class="plan best">
-          <div class="plan-head"><span class="name">Yearly</span><span class="deal">Black Friday −50%</span></div>
-          <p class="was">Regular price <s>€2,000</s> / year</p>
-          <p class="amount deal-price">€1,000<small>first year</small></p>
-          <p class="save">Black Friday price until 30 November 2026. Renews at €2,000 / year.</p>
-        </div>
-      </div>
-      <p class="pricing-note">Prices exclude VAT. Any applicable VAT is added at checkout. Sales open soon.</p>
-    </div>
-  </section>
 
   <section id="requirements">
     <div class="wrap two">
@@ -472,6 +439,7 @@ footer b { color: var(--ink); font-family: var(--display); font-size: 20px; lett
         <div>
           <details><summary>Do the cameras need genlock?</summary><p>No. Both inputs start on hardware timestamps, so takes line up within half a frame without genlock.</p></details>
           <details><summary>Why A and B? We call our second camera C.</summary><p>The cameras are A and B out of the box. In Project settings you can add more cameras to the list, for example C, and switch which camera is on input 1 and input 2. File names, slate, log and report follow.</p></details>
+          <details><summary>ProRes or H.265?</summary><p>Your choice, per project. ProRes 422, HQ or LT for the edit, or H.265 at 5, 10, 20 or 45 Mbit/s when disk space matters. New projects start on H.265 at 5 Mbit/s.</p></details>
           <details><summary>Can I record just one camera?</summary><p>Yes. Switch the project to one camera and camera A fills the screen. A camera can also be switched off for a few takes.</p></details>
           <details><summary>Does the crew need an app on their phones?</summary><p>No. They scan the QR code and the live view opens in the browser, on any phone or tablet on the same Wi-Fi.</p></details>
           <details><summary>Can the camera start the recording?</summary><p>Yes. With Record with the camera turned on, the REC flag in the camera’s SDI signal starts and stops the take, and the camera’s timecode is saved with every clip.</p></details>
