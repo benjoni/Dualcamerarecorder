@@ -478,6 +478,8 @@ enum LiveViewPage {
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
 <title>DualCamRecorder</title>
 <style>
   html,body{margin:0;background:#000;color:#eee;font-family:-apple-system,system-ui,sans-serif}
@@ -671,18 +673,48 @@ const slateBtn = document.getElementById('slateBtn');
 function setBoard(on){
   board.classList.toggle('on', on);
   slateBtn.classList.toggle('on', on);
-  if (!on) board.classList.remove('full');
+  if (!on) { board.classList.remove('full'); browserFullScreen(false); }
   fitTitle();
   try { localStorage.setItem('dcrSlate', on ? '1' : '0'); } catch (e) {}
 }
 slateBtn.onclick = () => setBoard(!board.classList.contains('on'));
+// Full-screen slate also asks the browser for full screen, so its address bar and menus are gone
+// (Android, iPad; on iPhone Safari only a page opened from the Home Screen icon has no bars).
+function browserFullScreen(on){
+  const d = document, el = d.documentElement;
+  try {
+    if (on && !(d.fullscreenElement || d.webkitFullscreenElement)) {
+      const req = el.requestFullscreen || el.webkitRequestFullscreen;
+      if (req) { const p = req.call(el, {navigationUI: 'hide'}); if (p && p.catch) p.catch(() => {}); }
+    } else if (!on && (d.fullscreenElement || d.webkitFullscreenElement)) {
+      const exit = d.exitFullscreen || d.webkitExitFullscreen;
+      if (exit) { const p = exit.call(d); if (p && p.catch) p.catch(() => {}); }
+    }
+  } catch (e) {}
+}
+// Leaving the browser's full screen (back gesture, Esc) also closes the full-screen slate.
+function fullScreenChanged(){
+  if (!(document.fullscreenElement || document.webkitFullscreenElement) && board.classList.contains('full')) {
+    board.classList.remove('full');
+    fitTitle();
+    document.getElementById('bHint').textContent = 'Tap the slate for full screen';
+  }
+}
+document.addEventListener('fullscreenchange', fullScreenChanged);
+document.addEventListener('webkitfullscreenchange', fullScreenChanged);
 board.onclick = () => {
   const full = !board.classList.contains('full');
+  browserFullScreen(full);
   board.classList.toggle('full', full);
   fitTitle();
   document.getElementById('bHint').textContent = full ? 'Tap to close full screen' : 'Tap the slate for full screen';
 };
-try { setBoard(localStorage.getItem('dcrSlate') === '1'); } catch (e) {}
+// Crew code (view only): no Slate button and no black slate – the slate line in the header is enough.
+if (__CAN_EDIT__) {
+  try { setBoard(localStorage.getItem('dcrSlate') === '1'); } catch (e) {}
+} else {
+  slateBtn.remove();   // the black slate stays hidden (it is shown only with the class "on")
+}
 
 // Clap: hold the phone in front of the cameras, tap CLAP – 3 · 2 · 1 with short pips, then the screen is white
 // for one camera frame together with a beep (sync point for picture and sound).
