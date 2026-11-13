@@ -7,3 +7,5 @@ DualCamRecorder.xcodeproj/project.xcworkspace/xcuserdata/
 # Blackmagic SDK is licensed separately – keep it local.
 DeckLinkSDK/*
 !DeckLinkSDK/README.md
+build-release/
+dist/
