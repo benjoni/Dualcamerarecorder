@@ -100,6 +100,11 @@ final class AppModel: ObservableObject {
                 }
                 .store(in: &cancellables)
         }
+        // Info bar (operator, focus puller …) of each input on the Blackmagic monitor, with the camera's name.
+        settings.$infoA.combineLatest(settings.$cameraNameA).removeDuplicates { $0 == $1 }
+            .sink { [weak monitor = self.monitor] text, name in monitor?.setInfo(text, name: name, for: .a) }.store(in: &cancellables)
+        settings.$infoB.combineLatest(settings.$cameraNameB).removeDuplicates { $0 == $1 }
+            .sink { [weak monitor = self.monitor] text, name in monitor?.setInfo(text, name: name, for: .b) }.store(in: &cancellables)
         // (The output is the first device found with one – the UltraStudio Monitor.)
         settings.$monitorEnabled.combineLatest(settings.$monitorSource, recorder.$outputDevices)
             .sink { [weak monitor = self.monitor] enabled, source, devices in

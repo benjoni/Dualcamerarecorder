@@ -28,12 +28,18 @@ struct RecordView: View {
     private var screensOnlyBody: some View {
         HStack(spacing: 8) {
             if settings.isCameraOn(.a) {
-                CameraScreen(channel: controller.channelA, showWaveform: settings.showWaveform, mask: settings.maskA,
-                             rehearsal: controller.isRehearsal)
+                VStack(spacing: 4) {
+                    CameraScreen(channel: controller.channelA, showWaveform: settings.showWaveform, mask: settings.maskA,
+                                 rehearsal: controller.isRehearsal)
+                    CameraInfoBar(settings: settings, role: .a, editable: false)
+                }
             }
             if settings.isCameraOn(.b) {
-                CameraScreen(channel: controller.channelB, showWaveform: settings.showWaveform, mask: settings.maskB,
-                             rehearsal: controller.isRehearsal)
+                VStack(spacing: 4) {
+                    CameraScreen(channel: controller.channelB, showWaveform: settings.showWaveform, mask: settings.maskB,
+                                 rehearsal: controller.isRehearsal)
+                    CameraInfoBar(settings: settings, role: .b, editable: false)
+                }
             }
         }
         .padding(8)
@@ -347,6 +353,9 @@ struct CameraPanel: View {
                 }
                 .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { pictureWidth = $0 }
 
+            CameraInfoBar(settings: settings, role: channel.role)
+                .frame(maxWidth: pictureWidth ?? .infinity)
+
             if settings.showCameraSetup {
                 CameraSetupFields(setup: setupBinding, locked: controller.isRecording)
                     .frame(maxWidth: pictureWidth.map { max($0, Self.infoMinWidth) } ?? .infinity, alignment: .leading)
@@ -518,6 +527,41 @@ struct CameraScreen: View {
                 }
             }
             .padding(8)
+        }
+    }
+}
+
+/// Info bar under a camera's picture: who is on the camera (operator, focus puller …), typed in by hand.
+/// Saved with the project, shown also on the Blackmagic monitor; not in the recorded file.
+struct CameraInfoBar: View {
+    @ObservedObject var settings: AppSettings
+    let role: CameraRole
+    /// Screens-only view (⌘F): the text only, no field (and nothing when it is empty).
+    var editable = true
+
+    var body: some View {
+        let text = settings.info(role)
+        if editable || !text.isEmpty {
+            HStack(spacing: 10) {
+                Text(settings.cameraNames.name(role))
+                    .font(.callout.weight(.heavy))
+                    .foregroundStyle(.yellow)
+                    .fixedSize()
+                if editable {
+                    TextField("Info – e.g. Operator: Jana Nová · Focus: Peter Kováč",
+                              text: Binding(get: { settings.info(role) }, set: { settings.setInfo($0, for: role) }))
+                        .textFieldStyle(.plain)
+                        .font(.callout)
+                        .foregroundStyle(.white)
+                } else {
+                    Text(text).font(.callout).foregroundStyle(.white).lineLimit(1).truncationMode(.tail)
+                }
+            }
+            .padding(.horizontal, 10).padding(.vertical, 5)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(Color.black.opacity(0.85), in: RoundedRectangle(cornerRadius: 6))
+            .overlay(RoundedRectangle(cornerRadius: 6).strokeBorder(Color.white.opacity(0.12)))
+            .help("Info bar of camera \(settings.cameraNames.name(role)): who is on it (operator, focus puller …). Saved with the project and shown on the Blackmagic monitor too – not in the recorded file.")
         }
     }
 }

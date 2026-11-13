@@ -67,6 +67,9 @@ struct ProjectSettings: Codable, Equatable {
     var audioInterfaceID = ""
     /// Sound against picture (ms): + delays the sound, − moves it earlier.
     var audioInterfaceDelayMs = 0
+    /// Info bar of each input (operator, focus puller …): under the picture on Record and on the Blackmagic monitor.
+    var infoA = ""
+    var infoB = ""
 }
 
 extension ProjectSettings {
@@ -102,6 +105,8 @@ extension ProjectSettings {
         audioInterfaceMode = (try? c.decodeIfPresent(AudioInterfaceMode.self, forKey: .audioInterfaceMode)) ?? audioInterfaceMode
         audioInterfaceID = (try? c.decodeIfPresent(String.self, forKey: .audioInterfaceID)) ?? audioInterfaceID
         audioInterfaceDelayMs = (try? c.decodeIfPresent(Int.self, forKey: .audioInterfaceDelayMs)) ?? audioInterfaceDelayMs
+        infoA = (try? c.decodeIfPresent(String.self, forKey: .infoA)) ?? infoA
+        infoB = (try? c.decodeIfPresent(String.self, forKey: .infoB)) ?? infoB
     }
 }
 

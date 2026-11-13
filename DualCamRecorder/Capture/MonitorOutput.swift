@@ -14,6 +14,7 @@ import CoreMedia
 import CoreVideo
 import QuartzCore
 import VideoToolbox
+import CoreText
 
 enum MonitorSource: String, CaseIterable, Identifiable {
     case a, b, both
@@ -56,6 +57,10 @@ final class MonitorOutput: ObservableObject {
     /// Viewing LUT of each camera on the live pictures only (clips in Playback / Edit go out as recorded).
     private var luts: [CameraRole: CubeLUT] = [:]
     private var lutRenders: [CameraRole: LUTRender] = [.a: LUTRender(), .b: LUTRender()]
+    /// Info bar of each camera (operator, focus puller …) with the camera's name – on the live pictures only.
+    private var infos: [CameraRole: (text: String, name: String)] = [:]
+    /// Last laid-out text of each bar (made again only when the text or the bar's size changes).
+    private var infoLines: [CameraRole: (key: String, line: CTLine, ascent: CGFloat, descent: CGFloat)] = [:]
 
     // MARK: - Settings (main queue)
 
@@ -88,6 +93,15 @@ final class MonitorOutput: ObservableObject {
     func setLUT(_ lut: CubeLUT?, for role: CameraRole) {
         queue.async { [self] in
             luts[role] = lut
+            renderLatest()
+        }
+    }
+
+    /// Info bar of a camera's live picture ("" = no bar).
+    func setInfo(_ text: String, name: String, for role: CameraRole) {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        queue.async { [self] in
+            infos[role] = trimmed.isEmpty ? nil : (trimmed, name)
             renderLatest()
         }
     }
@@ -145,22 +159,84 @@ final class MonitorOutput: ObservableObject {
         let size = format.map { (Int($0.width), Int($0.height)) } ?? size(of: (a ?? b)!)
         send(a: a, b: b, width: size.0, height: size.1,
              frameDuration: format?.frameDuration ?? CMTime(value: 1, timescale: 25),
-             interlaced: format?.interlaced ?? false, device: device)
+             interlaced: format?.interlaced ?? false, device: device, live: live)
     }
 
     private func send(a: CVPixelBuffer?, b: CVPixelBuffer?, width: Int, height: Int,
-                      frameDuration: CMTime, interlaced: Bool, device: DLOutputDevice) {
+                      frameDuration: CMTime, interlaced: Bool, device: DLOutputDevice, live: Bool = false) {
         busy = true
         defer { busy = false }
         if !ensureRunning(width: width, height: height, frameDuration: frameDuration, interlaced: interlaced, device: device) { return }
         guard let out = buffer(width: width, height: height, format: kCVPixelFormatType_422YpCbCr8) else { return }
         if source == .both && !program {
             guard let canvas = sideBySide(a: a, b: b, width: width, height: height) else { return }
+            // Info bars on the black under each half picture (they cover nothing).
+            if live {
+                let halfW = width / 2, halfH = height / 2
+                let barH = CGFloat(height) * 0.05
+                let below = CGFloat((height - halfH) / 2)   // black under the pictures (bottom-up coordinates)
+                for (index, role) in [CameraRole.a, .b].enumerated() where (index == 0 ? a : b) != nil {
+                    guard let info = infos[role] else { continue }
+                    drawInfo(info, role: role, in: canvas, background: 0.0,
+                             rect: CGRect(x: CGFloat(index * halfW), y: below - barH - barH * 0.25, width: CGFloat(halfW), height: barH))
+                }
+            }
             guard copy(canvas, to: out) else { return }
         } else {
-            guard let picture = a ?? b, copy(picture, to: out) else { return }
+            guard let picture = a ?? b else { return }
+            let role: CameraRole = a != nil ? .a : .b
+            if live, let info = infos[role] {
+                // One camera: the bar over the bottom of its picture, on a dark band.
+                guard let canvas = buffer(width: width, height: height, format: kCVPixelFormatType_32BGRA),
+                      copy(picture, to: canvas) else { return }
+                drawInfo(info, role: role, in: canvas, background: 0.6,
+                         rect: CGRect(x: 0, y: 0, width: CGFloat(width), height: CGFloat(height) * 0.06))
+                guard copy(canvas, to: out) else { return }
+            } else {
+                guard copy(picture, to: out) else { return }
+            }
         }
         _ = device.display(out)
+    }
+
+    /// Camera name (yellow) and the info text (white) in one line, on a band of black with the given opacity.
+    /// `rect` in bottom-up coordinates of the BGRA picture; a text too long for the bar ends with "…".
+    private func drawInfo(_ info: (text: String, name: String), role: CameraRole, in picture: CVPixelBuffer,
+                          background: CGFloat, rect: CGRect) {
+        CVPixelBufferLockBaseAddress(picture, [])
+        defer { CVPixelBufferUnlockBaseAddress(picture, []) }
+        guard let base = CVPixelBufferGetBaseAddress(picture),
+              let space = CGColorSpace(name: CGColorSpace.itur_709) ?? CGColorSpace(name: CGColorSpace.sRGB),
+              let ctx = CGContext(data: base, width: CVPixelBufferGetWidth(picture), height: CVPixelBufferGetHeight(picture),
+                                  bitsPerComponent: 8, bytesPerRow: CVPixelBufferGetBytesPerRow(picture), space: space,
+                                  bitmapInfo: CGImageAlphaInfo.premultipliedFirst.rawValue | CGBitmapInfo.byteOrder32Little.rawValue)
+        else { return }
+        if background > 0 {
+            ctx.setFillColor(CGColor(gray: 0, alpha: background))
+            ctx.fill(rect)
+        }
+        let pad = rect.height * 0.4
+        let key = "\(info.name)|\(info.text)|\(Int(rect.width))x\(Int(rect.height))"
+        if infoLines[role]?.key != key {
+            let size = rect.height * 0.6
+            let bold = CTFontCreateUIFontForLanguage(.emphasizedSystem, size, nil)
+                ?? CTFontCreateWithName("Helvetica-Bold" as CFString, size, nil)
+            let regular = CTFontCreateUIFontForLanguage(.system, size, nil) ?? bold
+            let fontKey = NSAttributedString.Key(kCTFontAttributeName as String)
+            let colorKey = NSAttributedString.Key(kCTForegroundColorAttributeName as String)
+            let text = NSMutableAttributedString(string: info.name + "   ",
+                                                 attributes: [fontKey: bold, colorKey: CGColor(red: 1, green: 0.84, blue: 0.04, alpha: 1)])
+            text.append(NSAttributedString(string: info.text, attributes: [fontKey: regular, colorKey: CGColor(gray: 1, alpha: 1)]))
+            let full = CTLineCreateWithAttributedString(text)
+            let token = CTLineCreateWithAttributedString(NSAttributedString(string: "…", attributes: [fontKey: regular, colorKey: CGColor(gray: 1, alpha: 1)]))
+            let line = CTLineCreateTruncatedLine(full, Double(rect.width - 2 * pad), .end, token) ?? full
+            var ascent: CGFloat = 0, descent: CGFloat = 0, leading: CGFloat = 0
+            _ = CTLineGetTypographicBounds(line, &ascent, &descent, &leading)
+            infoLines[role] = (key, line, ascent, descent)
+        }
+        guard let laid = infoLines[role] else { return }
+        ctx.textPosition = CGPoint(x: rect.minX + pad, y: rect.midY - (laid.ascent - laid.descent) / 2)
+        CTLineDraw(laid.line, ctx)
     }
 
     /// Live picture through the camera's LUT – converted to BGRA first, as the preview does.

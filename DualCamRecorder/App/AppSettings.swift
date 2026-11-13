@@ -54,6 +54,10 @@ final class AppSettings: ObservableObject {
     /// Screen, monitor and phones only – the recorded file stays as the camera sends it.
     @Published var lutA = ""
     @Published var lutB = ""
+    /// Info bar of each input (per project): who is on the camera – operator, focus puller …
+    /// Under the picture on Record and on the Blackmagic monitor; not in the recorded file.
+    @Published var infoA = ""
+    @Published var infoB = ""
     /// Camera's own REC read from the SDI signal (per input) and recording together with the camera (per project).
     @Published var recDetectionA = CameraRecDetection.flag
     @Published var recDetectionB = CameraRecDetection.flag
@@ -123,6 +127,14 @@ final class AppSettings: ObservableObject {
         if role == .a { lutA = name } else { lutB = name }
     }
 
+    func info(_ role: CameraRole) -> String {
+        role == .a ? infoA : infoB
+    }
+
+    func setInfo(_ text: String, for role: CameraRole) {
+        if role == .a { infoA = text } else { infoB = text }
+    }
+
     func recDetection(_ role: CameraRole) -> CameraRecDetection {
         role == .a ? recDetectionA : recDetectionB
     }
@@ -158,7 +170,7 @@ final class AppSettings: ObservableObject {
                         recDetectionA: recDetectionA, recDetectionB: recDetectionB, cameraTrigger: cameraTrigger,
                         backupEnabled: backupEnabled, backupRootPath: backupRootPath, hevcMbps: hevcMbps,
                         audioInterfaceMode: audioInterfaceMode, audioInterfaceID: audioInterfaceID,
-                        audioInterfaceDelayMs: audioInterfaceDelayMs)
+                        audioInterfaceDelayMs: audioInterfaceDelayMs, infoA: infoA, infoB: infoB)
     }
 
     func apply(_ p: ProjectSettings) {
@@ -193,6 +205,8 @@ final class AppSettings: ObservableObject {
         audioInterfaceMode = p.audioInterfaceMode
         audioInterfaceID = p.audioInterfaceID
         audioInterfaceDelayMs = p.audioInterfaceDelayMs
+        infoA = p.infoA
+        infoB = p.infoB
     }
 
     /// Sanitized, guaranteed-distinct camera names.
