@@ -2,10 +2,12 @@
 //  PictureAdjuster.swift
 //  DualCamRecorder
 //
-//  Picture adjustment set on the Record tab that becomes part of the recording: the aspect ratio mask (crop). Applied to every frame of an input before the screen, the monitor, the phones and the
-//  file – Playback and Edit then show the clip exactly as recorded, nothing to set there.
+//  Picture adjustments set on the Record tab that become part of the recording: the LUT and the aspect ratio mask
+//  (crop). Applied to every frame of an input before the screen, the monitor, the phones and the file – Playback and
+//  Edit then show the clip exactly as recorded, nothing to set there.
 //
-//  The frame keeps its size and pixel format (e.g. 1920×1080, 2vuy or v210); the mask is bars over the picture
+//  The frame keeps its size and pixel format (e.g. 1920×1080, 2vuy or v210). The LUT is applied first (GPU, through
+//  an RGB copy – 16-bit half float for 10-bit v210, so no 8-bit banding); the mask is bars over the picture
 //  down to the chosen ratio (1.85, 2:1, 2.35, custom) – black at 100 % opacity, below that the picture under the
 //  bars is darkened (luma toward black, chroma toward grey) by the opacity.
 //  Used on the input's capture thread only.
@@ -14,6 +16,7 @@
 import Foundation
 import CoreVideo
 import VideoToolbox
+import CoreImage
 
 final class PictureAdjuster {
     struct Settings: Equatable {
@@ -21,8 +24,15 @@ final class PictureAdjuster {
         var maskAspect: Double?
         /// How dark the bars are: 1 = black, 0.5 = the picture under them at half brightness.
         var maskOpacity = 1.0
+        /// LUT burned into the picture (nil = none).
+        var lut: CubeLUT?
 
-        var isNeutral: Bool { maskAspect == nil || maskOpacity < 0.005 }
+        var hasMask: Bool { maskAspect != nil && maskOpacity >= 0.005 }
+        var isNeutral: Bool { !hasMask && lut == nil }
+
+        static func == (l: Settings, r: Settings) -> Bool {
+            l.maskAspect == r.maskAspect && l.maskOpacity == r.maskOpacity && l.lut === r.lut
+        }
     }
 
     private var session: VTPixelTransferSession?
@@ -40,12 +50,16 @@ final class PictureAdjuster {
         let width = CVPixelBufferGetWidth(source), height = CVPixelBufferGetHeight(source)
         guard let output = buffer(width: width, height: height, format: format) else { return source }
 
-        guard VTPixelTransferSessionTransferImage(session, from: source, to: output) == noErr else { return source }
+        if let lut = settings.lut {
+            guard applyLUT(lut, from: source, to: output, format: format, session: session) else { return source }
+        } else {
+            guard VTPixelTransferSessionTransferImage(session, from: source, to: output) == noErr else { return source }
+        }
         // Rectangle of the picture inside the frame (rows).
         let top = 0, pictureHeight = height
 
         // Mask: bars inside the picture rectangle.
-        if let aspect = settings.maskAspect, pictureHeight > 0 {
+        if settings.hasMask, let aspect = settings.maskAspect, pictureHeight > 0 {
             let pictureAspect = Double(width) / Double(pictureHeight)
             if aspect > pictureAspect + 0.005 {
                 // Wider frame → bars above and below.
@@ -88,6 +102,31 @@ final class PictureAdjuster {
         guard let pool = pools[key] else { return nil }
         var out: CVPixelBuffer?
         return CVPixelBufferPoolCreatePixelBuffer(nil, pool, &out) == kCVReturnSuccess ? out : nil
+    }
+
+    // MARK: - LUT
+
+    /// source (YUV or BGRA) → RGB → through the LUT → `output` in the source's format. False if a step fails.
+    private func applyLUT(_ lut: CubeLUT, from source: CVPixelBuffer, to output: CVPixelBuffer, format: OSType,
+                          session: VTPixelTransferSession) -> Bool {
+        let width = CVPixelBufferGetWidth(source), height = CVPixelBufferGetHeight(source)
+        let rgbFormat = format == kCVPixelFormatType_422YpCbCr10 ? kCVPixelFormatType_64RGBAHalf : kCVPixelFormatType_32BGRA
+        let input: CVPixelBuffer
+        if format == rgbFormat {
+            input = source
+        } else {
+            guard let rgb = buffer(width: width, height: height, format: rgbFormat),
+                  VTPixelTransferSessionTransferImage(session, from: source, to: rgb) == noErr else { return false }
+            CVBufferPropagateAttachments(source, rgb)
+            input = rgb
+        }
+        guard let graded = buffer(width: width, height: height, format: rgbFormat) else { return false }
+        let image = CIImage(cvPixelBuffer: input, options: [.colorSpace: NSNull()])
+        LUTRender.context.render(lut.apply(to: image), to: graded, bounds: image.extent, colorSpace: nil)
+        // Same colour tags as the source, so the way back to YUV uses the same matrix.
+        CVBufferPropagateAttachments(source, graded)
+        CVBufferPropagateAttachments(source, output)
+        return VTPixelTransferSessionTransferImage(session, from: graded, to: output) == noErr
     }
 
     // MARK: - Black

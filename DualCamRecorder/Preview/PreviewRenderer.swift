@@ -42,15 +42,7 @@ final class PreviewRenderer {
     private struct State {
         var busy = false; var active = true; var waveform = false; var stream = false
         var streamQuality = LiveViewQuality.standard; var jpegBusy = false
-        var lut: CubeLUT?
     }
-    /// Viewing LUT on the screen, the waveform and the phones (nil = none).
-    var lut: CubeLUT? {
-        get { state.withLock { $0.lut } }
-        set { state.withLock { $0.lut = newValue } }
-    }
-    private let lutRender = LUTRender()         // preview queue only
-    private let streamLUTRender = LUTRender()   // preview queue only
     private var lastWaveformNanos: UInt64 = 0   // preview queue only
     private var lastJPEGNanos: UInt64 = 0       // preview queue only
 
@@ -105,9 +97,8 @@ final class PreviewRenderer {
         queue.async { [weak self] in
             guard let self else { return }
             defer { self.state.withLock { $0.busy = false } }
-            let lut = self.lut
             guard let scaled = self.scaledPicture(from: pixelBuffer) else { return }
-            let small = lut.flatMap { self.lutRender.apply($0, to: scaled) } ?? scaled
+            let small = scaled   // mask and LUT are already in the picture (PictureAdjuster)
             guard let sample = Self.sample(for: small) else { return }
             // Waveform from the already downscaled BGRA picture, ~12 Hz.
             let now = HostClock.nowNanos
@@ -122,7 +113,6 @@ final class PreviewRenderer {
                self.beginJPEG() {
                 self.lastJPEGNanos = now
                 let picture = quality.width == self.outWidth ? small : self.streamPicture(from: pixelBuffer, quality: quality)
-                    .map { stream in lut.flatMap { self.streamLUTRender.apply($0, to: stream) } ?? stream }
                 if let picture {
                     self.jpegQueue.async {
                         defer { self.state.withLock { $0.jpegBusy = false } }

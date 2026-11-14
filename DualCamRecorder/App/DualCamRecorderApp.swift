@@ -26,6 +26,17 @@ final class AppModel: ObservableObject {
     private var cancellables = Set<AnyCancellable>()
     /// LUT chosen last for each camera (loaded in the background; an older load is dropped).
     private var lutRequest: [CameraRole: String] = [:]
+    /// Mask and LUT of each input, sent together to its channel.
+    private var adjustments: [CameraRole: PictureAdjuster.Settings] = [.a: .init(), .b: .init()]
+
+    /// Changes the mask / LUT of one input and hands both to its channel (main thread).
+    private func setAdjustments(for role: CameraRole, _ change: (inout PictureAdjuster.Settings) -> Void) {
+        var new = adjustments[role] ?? .init()
+        change(&new)
+        guard new != adjustments[role] else { return }
+        adjustments[role] = new
+        (role == .a ? recorder.channelA : recorder.channelB).setAdjustments(new)
+    }
 
     init() {
         settings = AppSettings()
@@ -76,16 +87,16 @@ final class AppModel: ObservableObject {
         settings.$proResFlavor.filter { $0 == .hevc }.first().sink { _ in HEVCWarmup.run() }.store(in: &cancellables)
         settings.$orientationA.removeDuplicates().sink { [weak recorder = self.recorder] o in recorder?.channelA.setOrientation(o) }.store(in: &cancellables)
         settings.$orientationB.removeDuplicates().sink { [weak recorder = self.recorder] o in recorder?.channelB.setOrientation(o) }.store(in: &cancellables)
-        // Mask: burned into each input's pictures (and so into the recording).
-        settings.$maskA
-            .map { PictureAdjuster.Settings(maskAspect: $0.aspect, maskOpacity: $0.opacity) }.removeDuplicates()
-            .sink { [weak recorder = self.recorder] a in recorder?.channelA.setAdjustments(a) }.store(in: &cancellables)
-        settings.$maskB
-            .map { PictureAdjuster.Settings(maskAspect: $0.aspect, maskOpacity: $0.opacity) }.removeDuplicates()
-            .sink { [weak recorder = self.recorder] a in recorder?.channelB.setAdjustments(a) }.store(in: &cancellables)
+        // Mask and LUT: burned into each input's pictures – screen, monitor, phones and the recording.
+        for role in CameraRole.allCases {
+            (role == .a ? settings.$maskA : settings.$maskB)
+                .sink { [weak self] mask in
+                    self?.setAdjustments(for: role) { $0.maskAspect = mask.aspect; $0.maskOpacity = mask.opacity }
+                }
+                .store(in: &cancellables)
+        }
 
-        // Viewing LUTs (LUT button above each live picture, per project): Record screen, waveform, live monitor, phones.
-        // Playback and Edit show the recorded material as it is.
+        // LUT button above each live picture, per project.
         // (@Published sends the new value before the property has it – the choice is kept in `lutRequest`.)
         for role in CameraRole.allCases {
             (role == .a ? settings.$lutA : settings.$lutB)
@@ -94,8 +105,7 @@ final class AppModel: ObservableObject {
                     self?.lutRequest[role] = name
                     LUTLibrary.shared.load(name) { lut in
                         guard let self, self.lutRequest[role] == name else { return }   // a newer choice wins
-                        (role == .a ? self.recorder.channelA : self.recorder.channelB).preview.lut = lut
-                        self.monitor.setLUT(lut, for: role)
+                        self.setAdjustments(for: role) { $0.lut = lut }
                     }
                 }
                 .store(in: &cancellables)

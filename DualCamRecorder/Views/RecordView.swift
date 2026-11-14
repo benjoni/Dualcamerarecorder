@@ -281,7 +281,7 @@ struct CameraPanel: View {
         HStack {
             FlipFlopButtons(settings: settings, role: channel.role, locked: controller.isRecording)
             FrameMaskButton(settings: settings, role: channel.role, locked: controller.isRecording)
-            LUTButton(settings: settings, role: channel.role)
+            LUTButton(settings: settings, role: channel.role, locked: controller.isRecording)
         }
         .fixedSize()
     }

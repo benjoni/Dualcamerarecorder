@@ -50,7 +50,7 @@ final class AppSettings: ObservableObject {
     /// Aspect ratio mask over each camera's picture (per project) – Record and Playback screens only.
     @Published var maskA = FrameMask()
     @Published var maskB = FrameMask()
-    /// Viewing LUT of each camera (per project): file name in the LUT library, "" = none.
+    /// LUT of each camera (per project), burned into the pictures and the file: file name in the LUT library, "" = none.
     /// Screen, monitor and phones only – the recorded file stays as the camera sends it.
     @Published var lutA = ""
     @Published var lutB = ""

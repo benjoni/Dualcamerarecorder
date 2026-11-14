@@ -241,7 +241,7 @@ final class CameraChannel: ObservableObject, VideoSourceDelegate {
         }
     }
 
-    /// Mask for this input (any thread; used from the next frame on).
+    /// Mask and LUT for this input (any thread; used from the next frame on).
     func setAdjustments(_ settings: PictureAdjuster.Settings) {
         adjust.withLockUnchecked { $0.settings = settings }
     }

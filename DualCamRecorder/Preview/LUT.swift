@@ -2,9 +2,8 @@
 //  LUT.swift
 //  DualCamRecorder
 //
-//  Viewing LUTs (.cube): the library of imported LUTs and the colour cube that is applied to the live
-//  picture (Record screen, waveform, Blackmagic monitor, phones). The recorded file stays as the camera
-//  sends it, and Playback / Edit show it that way.
+//  LUTs (.cube): the library of imported LUTs and the colour cube. PictureAdjuster burns the chosen LUT into
+//  each input's pictures – Record screen, waveform, Blackmagic monitor, phones and the recorded file.
 //
 
 import Foundation

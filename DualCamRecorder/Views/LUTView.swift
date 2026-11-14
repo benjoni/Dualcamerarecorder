@@ -15,6 +15,8 @@ struct LUTButton: View {
     @ObservedObject var settings: AppSettings
     @ObservedObject var library = LUTLibrary.shared
     var role: CameraRole
+    /// While recording the LUT cannot change (it is part of the recorded picture).
+    var locked = false
     @State private var open = false
 
     var body: some View {
@@ -30,9 +32,10 @@ struct LUTButton: View {
         .buttonStyle(.bordered)
         .background(on ? RoundedRectangle(cornerRadius: 5).fill(Color.yellow) : nil)
         .fixedSize()
-        .help(on ? "LUT \(LUTLibrary.title(name)) – on the screen, the monitor and the phones, not in the recorded file. Click to change."
-                 : "LUT – show the picture through a viewing LUT (.cube). Only on the screen, the monitor and the phones, not in the recorded file.")
+        .help(on ? "LUT \(LUTLibrary.title(name)) – recorded into the file, also on the monitor and the phones. Click to change."
+                 : "LUT – put the picture through a LUT (.cube). Recorded into the file (also on the monitor and the phones); Playback and Edit show the clip as recorded.")
         .accessibilityLabel("LUT")
+        .disabled(locked)
         .popover(isPresented: $open, arrowEdge: .bottom) {
             LUTPicker(selection: Binding(get: { settings.lut(role) }, set: { settings.setLUT($0, for: role) }),
                       title: "LUT – Camera \(settings.cameraNames.name(role))")
@@ -94,7 +97,7 @@ struct LUTPicker: View {
                     .fixedSize(horizontal: false, vertical: true)
             }
 
-            Text("3D or 1D .cube files (DaVinci Resolve, camera makers). Only on the live picture – screen, waveform, monitor and phones. The recorded file stays as the camera sends it; Playback and Edit show it without the LUT.")
+            Text("3D or 1D .cube files (DaVinci Resolve, camera makers). Recorded into the file as you see it – also on the waveform, the monitor and the phones; Playback and Edit show the clip with the LUT. Off records the picture as the camera sends it.")
                 .font(.caption).foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
         }

@@ -112,7 +112,7 @@ Rozhranie aplikácie je **v angličtine** (Record / Playback / Slate …); tento
 - Na obraze je žlté **FLIP / FLOP**. Nastavenie je pre každý vstup a ukladá sa do projektu (PROJECT.JSON);
   počas nahrávania sa nedá meniť.
 
-### Úpravy obrazu v Record sa nahrajú (Flip / Flop, Mask)
+### Úpravy obrazu v Record sa nahrajú (Flip / Flop, LUT, Mask)
 - Logika: obraz si upravíš **pri nahrávaní** a tak sa aj **nahrá na disk**. Playback a Edit už len ukazujú
   nahratý klip – nič sa tam nenastavuje. Rovnaký upravený obraz ide aj na Blackmagic monitor a na telefóny.
 - Úpravy sa nedajú meniť počas záberu (boli by v polovici súboru iné).
@@ -122,6 +122,13 @@ Rozhranie aplikácie je **v angličtine** (Record / Playback / Slate …); tento
   Custom pomer 1.00–3.00, rýchle voľby 1.33 / 1.66 / 2.39.
 - **Nahrá sa do súboru** (aj monitor a telefóny).
 - Pre každú kameru zvlášť, ukladá sa do projektu.
+
+### LUT (Record, tlačidlo LUT nad obrazom)
+- Importované .cube súbory (3D aj 1D, z DaVinci Resolve alebo od výrobcu kamery), viac naraz alebo pretiahnutím
+  do zoznamu. Pre každú kameru zvlášť, ukladá sa do projektu.
+- **Nahrá sa do súboru** (aj obrazovka, waveform, monitor a telefóny) – Playback a Edit ukazujú klip s LUT.
+  Off = súbor tak, ako ho posiela kamera (napr. Log).
+- Najprv LUT, potom maska. 10-bit (v210) ide cez 16-bit RGB, takže bez 8-bit pásov; ~2–6 ms na snímku (GPU).
 
 ### Timecode a REC kamery zo SDI (Project settings → Camera timecode and REC)
 - **Timecode** z SDI signálu kamery (RP188 ATC/LTC, inak VITC) je vpravo dole na obraze v Record.
