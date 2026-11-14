@@ -23,9 +23,13 @@ final class LiveViewServer: ObservableObject {
     @Published private(set) var error: String?
     @Published private(set) var clientCount = 0
     /// Crew code: watch only.
-    @Published private(set) var accessKey: String
+    @Published private(set) var accessKey: String {
+        didSet { shared.withLock { $0.keys.crew = accessKey } }
+    }
     /// Slate code: watch + change scene / shot / take / cards on the phone.
-    @Published private(set) var editKey: String
+    @Published private(set) var editKey: String {
+        didSet { shared.withLock { $0.keys.edit = editKey } }
+    }
     /// "dualcam.local" (or the Mac's own name) – stays the same when the IP address changes.
     @Published private(set) var hostName: String?
     /// Size / rate / JPEG quality of the pictures sent to phones (app-wide setting).
@@ -63,6 +67,8 @@ final class LiveViewServer: ObservableObject {
     private var listener: NWListener?
     private let queue = DispatchQueue(label: "liveview-server", qos: .utility)
     private struct Shared {
+        /// Copies of the two codes for the server queue (the properties change on the main thread).
+        var keys = (crew: "", edit: "")
         var frames: [String: Data] = [:]
         /// Watermarked pictures for crew phones (only made while the watermark is on and a crew phone watches).
         var crewFrames: [String: Data] = [:]
@@ -118,7 +124,8 @@ final class LiveViewServer: ObservableObject {
             UserDefaults.standard.set(editKey, forKey: "liveViewEditKey")
         }
         let (mark, jpegQuality) = (crewWatermark ? crewWatermarkText : nil, quality.jpegQuality)
-        shared.withLock { $0.watermark = mark; $0.jpegQuality = jpegQuality }
+        let keys = (crew: accessKey, edit: editKey)
+        shared.withLock { $0.watermark = mark; $0.jpegQuality = jpegQuality; $0.keys = keys }
         localName.onChange = { [weak self] name in self?.hostName = name }
     }
 
@@ -184,10 +191,14 @@ final class LiveViewServer: ObservableObject {
         shared.withLock { $0.clients = [:] }
     }
 
-    /// Either code lets a phone watch (read on the server queue; the keys only change on the main thread).
+    /// The two codes as the server queue sees them.
+    private var serverKeys: (crew: String, edit: String) { shared.withLock { $0.keys } }
+
+    /// Either code lets a phone watch (server queue).
     private func canWatch(_ key: String?) -> Bool {
         guard let key else { return false }
-        return key == accessKey || key == editKey
+        let keys = serverKeys
+        return key == keys.crew || key == keys.edit
     }
 
     /// True while at least one phone requested something in the last few seconds.
@@ -326,7 +337,7 @@ final class LiveViewServer: ObservableObject {
         let key = parts.count >= 2 ? URLComponents(string: String(parts[1]))?.queryItems?.first(where: { $0.name == "k" })?.value : nil
         guard parts.count >= 2, parts[0] == "GET", let components = URLComponents(string: String(parts[1])),
               canWatch(key) else { return nil }
-        let crew = key != editKey
+        let crew = key != serverKeys.edit
         switch components.path {
         case "/stream/A.mjpg": return ("A", crew)
         case "/stream/B.mjpg": return ("B", crew)
@@ -350,7 +361,8 @@ final class LiveViewServer: ObservableObject {
             return Self.http(403, "text/html; charset=utf-8",
                              Data("<h2 style='font-family:sans-serif'>DualCamRecorder – scan the QR code in the app to connect.</h2>".utf8))
         }
-        let crew = key != editKey
+        let editCode = serverKeys.edit
+        let crew = key != editCode
         if case .hostPort(let host, _) = endpoint {
             let client = "\(host)"
             shared.withLock { $0.clients[client] = Date() }
@@ -360,7 +372,7 @@ final class LiveViewServer: ObservableObject {
         // POST /slate?k=…&f=scene&v=12B – one slate field (scene, shot, take, cardA, cardB) typed on the phone.
         if parts[0] == "POST" {
             // Only the slate code may change the slate; the crew code just watches.
-            guard key == editKey else {
+            guard key == editCode else {
                 return Self.http(403, "text/plain", Data("View only".utf8))
             }
             let fields: Set<String> = ["scene", "shot", "take", "cardA", "cardB"]
@@ -378,7 +390,7 @@ final class LiveViewServer: ObservableObject {
         switch path {
         case "/", "/index.html":
             // The page knows whether its code may change the slate (taps on the slate fields).
-            let page = LiveViewPage.html.replacingOccurrences(of: "__CAN_EDIT__", with: key == editKey ? "true" : "false")
+            let page = LiveViewPage.html.replacingOccurrences(of: "__CAN_EDIT__", with: key == editCode ? "true" : "false")
             return Self.http(200, "text/html; charset=utf-8", Data(page.utf8))
         case "/status.json":
             return Self.http(200, "application/json", shared.withLock { $0.status })
