@@ -50,7 +50,7 @@ struct ProjectSettings: Codable, Equatable {
     /// Aspect ratio mask over each camera's picture on the screen (Record and Playback; not in the file).
     var maskA = FrameMask()
     var maskB = FrameMask()
-    /// Viewing LUT of each camera (file name in the LUT library, "" = none) – screen, monitor, phones; not in the file.
+    /// LUT of each camera (file name in the LUT library, "" = none) – burned into the pictures and the file.
     var lutA = ""
     var lutB = ""
     /// How each camera's own REC is read from its SDI signal, and whether the app records together with it.
@@ -188,8 +188,10 @@ struct ProjectEntry: Identifiable, Equatable {
     var folder: URL
     var project: Project
     var id: String { folder.standardizedFileURL.path }
+    /// Number of recorded clips, counted when the list was read (A/B pairs count once).
+    var clips = 0
 
-    /// Number of recorded clips (A/B pairs count once).
+    /// Number of recorded clips (A/B pairs count once) – reads the folder.
     func clipCount(names: CameraNames) -> Int {
         let files = (try? FileManager.default.contentsOfDirectory(atPath: folder.path)) ?? []
         return Set(files.compactMap { TakeNaming.parse($0, names: names)?.take }).count
@@ -215,10 +217,14 @@ final class ProjectStore: ObservableObject {
 
     @Published private(set) var projects: [ProjectEntry] = []
     @Published private(set) var current: ProjectEntry?
+    /// True while the list is being read (the first time it is still empty).
+    @Published private(set) var loading = false
 
     private let settings: AppSettings
     private let defaults = UserDefaults.standard
     private let knownKey = "knownProjectFolders"
+    private let scanQueue = DispatchQueue(label: "project-scan", qos: .userInitiated)
+    private var scanGeneration = 0   // main thread
 
     init(settings: AppSettings) {
         self.settings = settings
@@ -229,7 +235,25 @@ final class ProjectStore: ObservableObject {
 
     // MARK: - Listing
 
+    /// Reads the list in the background – a slow, sleeping or network disk, or macOS asking for access to it, must
+    /// not freeze the window. The list is replaced on the main thread when done; a newer reload wins.
     func reload() {
+        scanGeneration += 1
+        let generation = scanGeneration
+        let root = rootURL, known = defaults.stringArray(forKey: knownKey) ?? [], names = settings.cameraNames
+        loading = true
+        scanQueue.async { [weak self] in
+            let found = Self.scan(root: root, known: known, names: names)
+            DispatchQueue.main.async {
+                guard let self, generation == self.scanGeneration else { return }
+                self.projects = found
+                self.loading = false
+            }
+        }
+    }
+
+    /// Projects in the projects location and the known folders elsewhere, newest first (any thread).
+    private static func scan(root rootURL: URL, known: [String], names: CameraNames) -> [ProjectEntry] {
         var folders = Set<String>()
         let fm = FileManager.default
         if let subs = try? fm.contentsOfDirectory(at: rootURL, includingPropertiesForKeys: [.isDirectoryKey],
@@ -238,13 +262,16 @@ final class ProjectStore: ObservableObject {
                 folders.insert(url.standardizedFileURL.path)
             }
         }
-        for path in defaults.stringArray(forKey: knownKey) ?? [] where
+        for path in known where
             fm.fileExists(atPath: URL(fileURLWithPath: path).appendingPathComponent(Self.fileName).path) {
             folders.insert(path)
         }
-        projects = folders.compactMap { path in
+        return folders.compactMap { path -> ProjectEntry? in
             let url = URL(fileURLWithPath: path, isDirectory: true)
-            return Self.load(folder: url).map { ProjectEntry(folder: url, project: $0) }
+            guard let project = load(folder: url) else { return nil }
+            var entry = ProjectEntry(folder: url, project: project)
+            entry.clips = entry.clipCount(names: names)
+            return entry
         }
         .sorted { ($0.project.lastOpenedAt ?? $0.project.createdAt) > ($1.project.lastOpenedAt ?? $1.project.createdAt) }
     }

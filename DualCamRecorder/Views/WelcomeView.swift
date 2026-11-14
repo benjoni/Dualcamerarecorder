@@ -121,7 +121,10 @@ struct WelcomeView: View {
             .padding([.horizontal, .top], 24)
             .padding(.bottom, 12)
 
-            if projects.projects.isEmpty {
+            if projects.projects.isEmpty && projects.loading {
+                ProgressView("Reading projects…")
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else if projects.projects.isEmpty {
                 VStack(spacing: 10) {
                     Image(systemName: "film.stack").font(.system(size: 40)).foregroundStyle(.secondary)
                     Text("No projects yet").font(.title3)
@@ -133,7 +136,7 @@ struct WelcomeView: View {
                     LazyVStack(spacing: 10) {
                         ForEach(projects.projects) { entry in
                             ProjectRow(entry: entry,
-                                       clipCount: entry.clipCount(names: settings.cameraNames),
+                                       clipCount: entry.clips,
                                        onOpen: { model.open(entry) },
                                        onEdit: { editing = .edit(entry) },
                                        onFinder: { projects.showInFinder(entry) },
