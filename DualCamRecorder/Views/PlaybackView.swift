@@ -22,6 +22,8 @@ struct PlaybackView: View {
     @State private var deleteError: String?
     /// Clip list search (scene, shot, take, file, cam clip, note, "good", "mos" …).
     @State private var searchText = ""
+    /// Episode / scene / shot / take menus under the search field (values of the recorded clips only).
+    @State private var slateFilter = SlateFilter()
     /// While typing in the search field, single-key shortcuts (space, I, O, arrows) are switched off.
     @FocusState private var searchFocused: Bool
     /// Clip list is hidden by default – opened with the "Clips" button (⌘L) and hidden again by the user.
@@ -233,7 +235,7 @@ struct PlaybackView: View {
 
             HStack(spacing: 6) {
                 Image(systemName: "magnifyingglass").foregroundStyle(.secondary)
-                TextField("Search scene, shot, take, file, note, good…", text: $searchText)
+                TextField("Search: S22 SH5 T4, file, note, good…", text: $searchText)
                     .textFieldStyle(.plain)
                     .focused($searchFocused)
                     .onSubmit { searchFocused = false }
@@ -250,7 +252,10 @@ struct PlaybackView: View {
             .background(RoundedRectangle(cornerRadius: 7).fill(Color.gray.opacity(0.15)))
             .padding(.horizontal, 8)
             .padding(.top, 8)
-            if !searchText.isEmpty {
+            slateFilterMenus
+                .padding(.horizontal, 8)
+                .padding(.top, 6)
+            if !searchText.isEmpty || slateFilter.isActive {
                 Text("\(visibleTakes.count) of \(library.takes.count) clips")
                     .font(.caption).foregroundStyle(.secondary)
                     .padding(.horizontal, 10).padding(.top, 4)
@@ -442,6 +447,7 @@ struct PlaybackView: View {
         .sheet(isPresented: $editingSlate) {
             SlateEditSheet(slate: player.slate ?? SlateInfo(),
                            takeName: player.take?.name ?? "",
+                           showEpisode: settings.episodes || player.slate?.episode.isEmpty == false,
                            onSave: { saveSlate($0) })
         }
     }
@@ -625,9 +631,80 @@ struct PlaybackView: View {
         searchFocused ? nil : KeyboardShortcut(key, modifiers: modifiers)
     }
 
-    /// Clips shown in the list (all, or those matching the search).
+    /// Clips shown in the list (all, or those matching the episode / scene / shot / take menus and the search).
     private var visibleTakes: [Take] {
-        searchText.trimmingCharacters(in: .whitespaces).isEmpty ? library.takes : library.takes.filter { $0.matches(searchText) }
+        let filtered = slateFilter.isActive ? library.takes.filter { slateFilter.matches($0) } : library.takes
+        return searchText.trimmingCharacters(in: .whitespaces).isEmpty ? filtered : filtered.filter { $0.matches(searchText) }
+    }
+
+    // MARK: - Episode / scene / shot / take menus
+
+    /// Episode menu only in a series project or when some clip has an episode.
+    private var showEpisodeMenu: Bool {
+        settings.episodes || library.takes.contains { $0.slate?.episode.isEmpty == false }
+    }
+
+    private var slateFilterMenus: some View {
+        let takes = library.takes
+        return HStack(spacing: 4) {
+            if showEpisodeMenu {
+                filterMenu("Ep", all: "All episodes", current: slateFilter.episode,
+                           options: slateFilter.episodes(in: takes).map { ($0.key, $0.title) }) { slateFilter.episode = $0 }
+            }
+            filterMenu("Sc", all: "All scenes", current: slateFilter.scene,
+                       options: slateFilter.scenes(in: takes).map { ($0.key, $0.title) }) { slateFilter.scene = $0 }
+            filterMenu("Sh", all: "All shots", current: slateFilter.shot,
+                       options: slateFilter.shots(in: takes).map { ($0.key, $0.title) }) { slateFilter.shot = $0 }
+            filterMenu("T", all: "All takes", current: slateFilter.take.map(String.init),
+                       options: slateFilter.takes(in: takes).map { (String($0), String($0)) }) { slateFilter.take = $0.flatMap { Int($0) } }
+            if slateFilter.isActive {
+                Button { slateFilter = SlateFilter() } label: { Image(systemName: "xmark.circle.fill") }
+                    .buttonStyle(.borderless)
+                    .foregroundStyle(.secondary)
+                    .help("Show all clips")
+            }
+        }
+        // A clip that was renamed or deleted can take the chosen value away – the menu then goes back to all.
+        .onChange(of: library.takes) { _, takes in
+            if let e = slateFilter.episode, !slateFilter.episodes(in: takes).contains(where: { $0.key == e }) { slateFilter.episode = nil }
+            slateFilter.dropMissing(in: takes)
+        }
+    }
+
+    /// One pop-up menu: "Sc ▾" (all) or "Sc 22" (chosen); lists only the values of the recorded clips.
+    private func filterMenu(_ short: String, all: String, current: String?, options: [(key: String, title: String)],
+                            set: @escaping (String?) -> Void) -> some View {
+        let chosenTitle = options.first { $0.key == current }?.title ?? current
+        return Menu {
+            Button(all) { set(nil); slateFilter.dropMissing(in: library.takes) }
+            if !options.isEmpty { Divider() }
+            ForEach(options, id: \.key) { option in
+                Button {
+                    set(option.key)
+                    slateFilter.dropMissing(in: library.takes)
+                } label: {
+                    if option.key == current { Label(option.title, systemImage: "checkmark") } else { Text(option.title) }
+                }
+            }
+        } label: {
+            HStack(spacing: 3) {
+                Text(short).foregroundStyle(.secondary)
+                Text(chosenTitle ?? "All").fontWeight(current == nil ? .regular : .semibold)
+                    .foregroundStyle(current == nil ? Color.secondary : Color.primary)
+                    .lineLimit(1)
+            }
+            .font(.callout)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 4)
+            .background(RoundedRectangle(cornerRadius: 6)
+                .fill(current == nil ? Color.gray.opacity(0.15) : Color.accentColor.opacity(0.3)))
+            .contentShape(RoundedRectangle(cornerRadius: 6))
+        }
+        .menuStyle(.button)
+        .buttonStyle(.plain)
+        .menuIndicator(.hidden)
+        .frame(maxWidth: .infinity)
+        .help(all == "All takes" ? "Take" : String(all.dropFirst(4).dropLast()).capitalized)
     }
 
     // MARK: - Previous / next clip (by clip number, i.e. recording order)

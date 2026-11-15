@@ -7,6 +7,8 @@
 //  camera_setup = lens / stop / distance / height / tilt … of that camera ("Lens 32mm · Stop T2.8 · …").
 //  camera_card = number of the memory card in that camera (e.g. A001).
 //  tc_in / tc_out = camera timecode of the file's first and last frame (from the SDI signal).
+//  episode = episode of a series (empty without episodes) – the last column, so scripts reading the
+//  older columns by position keep working.
 //  Rebuilt from the C###_SLATE.JSON files after every take and after editing a slate.
 //
 
@@ -17,7 +19,7 @@ enum ClipLog {
 
     static let header = ["clip", "camera", "camera_name", "file", "camera_clip", "shooting_day", "scene", "shot",
                          "take", "good", "mos", "int_ext", "day_night", "recorded_at", "production", "note", "camera_setup",
-                         "tc_in", "tc_out", "rehearsal", "camera_card"]
+                         "tc_in", "tc_out", "rehearsal", "camera_card", "episode"]
 
     /// Rewrites CLIPLOG.CSV for `folder`. Safe to call from any thread.
     static func rebuild(folder: URL, names: CameraNames) {
@@ -61,6 +63,7 @@ enum ClipLog {
                 s?.timecode(entry.role)?.end.string ?? "",
                 s?.rehearsal == true ? "1" : "0",
                 s?.card(entry.role) ?? "",
+                s?.episode ?? "",
             ]
             lines.append(row.map(csvField).joined(separator: ","))
         }

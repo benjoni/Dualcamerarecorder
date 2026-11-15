@@ -211,7 +211,8 @@ private struct ReportPage: View {
                         if showB { Color.clear.frame(width: 104, height: 1) }
                     }
                     Text("Clip").frame(width: 46, alignment: .leading)
-                    Text("Scene / Shot / Take").frame(width: 100, alignment: .leading)
+                    Text(clips.contains { $0.slate?.episode.isEmpty == false } ? "Ep / Scene / Shot / Take" : "Scene / Shot / Take")
+                        .frame(width: 100, alignment: .leading)
                     Text("Files · Camera clip").frame(width: 170, alignment: .leading)
                     Text("Duration · IN / OUT").frame(width: 96, alignment: .leading)
                     Text("Note").frame(maxWidth: .infinity, alignment: .leading)
@@ -283,7 +284,7 @@ private struct ReportRow: View {
             .frame(width: 46, alignment: .leading)
 
             VStack(alignment: .leading, spacing: 2) {
-                Text("\(s?.scene.isEmpty == false ? s!.scene : "–") / \(s?.shot.isEmpty == false ? s!.shot : "–") / \(s.map { String($0.take) } ?? "–")")
+                Text(s?.numbers ?? "– / – / –")
                     .font(.system(size: 13, weight: .semibold))
                 Text([s?.location.rawValue ?? "", s?.timeOfDay.rawValue ?? ""]
                         .filter { !$0.isEmpty }.joined(separator: " · "))
@@ -380,7 +381,7 @@ private struct ReportRowPortrait: View {
             VStack(alignment: .leading, spacing: 3) {
                 HStack(alignment: .firstTextBaseline, spacing: 8) {
                     Text(String(format: "%03d", clip.take.number)).font(.system(size: 13, weight: .bold))
-                    Text("\(s?.scene.isEmpty == false ? s!.scene : "–") / \(s?.shot.isEmpty == false ? s!.shot : "–") / \(s.map { String($0.take) } ?? "–")")
+                    Text(s?.numbers ?? "– / – / –")
                         .font(.system(size: 12, weight: .semibold))
                     if s?.rehearsal == true { tag("REHEARSAL", Color.orange) }
                 if s?.good == true { tag("★ GOOD", Color(red: 0.75, green: 0.55, blue: 0)) }

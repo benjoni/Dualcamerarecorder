@@ -390,6 +390,13 @@ final class RecordingController: NSObject, ObservableObject, DLDeviceBrowserDele
     var slateLocked: Bool { isRecording }
 
     /// Changing scene or shot starts counting takes from 1 again.
+    /// A new episode starts again at take 1, like a new scene or shot.
+    func setSlateEpisode(_ value: String) {
+        guard !slateLocked, value != settings.slate.episode else { return }
+        settings.slate.episode = value
+        settings.slate.take = 1
+    }
+
     func setSlateScene(_ value: String) {
         guard !slateLocked, value != settings.slate.scene else { return }
         settings.slate.scene = value

@@ -37,6 +37,8 @@ struct SlateInfo: Codable, Hashable {
     var shootingDay = ""     // shooting day (e.g. "3" or "D03")
     var director = ""        // director
     var cameraOperator = ""  // camera operator (DoP)
+    /// Episode (series; Project settings → Episodes). Empty = no episode – then it is left out everywhere.
+    var episode = ""
     var scene = ""           // scene
     var shot = ""            // shot
     var take = 1             // take
@@ -68,18 +70,25 @@ struct SlateInfo: Codable, Hashable {
     func card(_ role: CameraRole) -> String { role == .a ? cardA : cardB }
     func setup(_ role: CameraRole) -> CameraSetup { role == .a ? setupA : setupB }
 
-    /// "Day 3 · Scene 12 · Shot 3 · Take 2"
+    /// "Day 3 · Ep 3 · Scene 12 · Shot 3 · Take 2"
     var shortLabel: String {
         shootingDay.isEmpty ? sceneShotTake : "Day \(shootingDay) · " + sceneShotTake
     }
 
-    /// "Scene 12 · Shot 3 · Take 2"
+    /// "Ep 3 · Scene 12 · Shot 3 · Take 2" (without "Ep" when there is no episode)
     var sceneShotTake: String {
         var parts: [String] = []
+        if !episode.isEmpty { parts.append("Ep \(episode)") }
         if !scene.isEmpty { parts.append("Scene \(scene)") }
         if !shot.isEmpty { parts.append("Shot \(shot)") }
         parts.append("Take \(take)")
         return parts.joined(separator: " · ")
+    }
+
+    /// "3 / 22 / 5 / 4" – episode (when set) / scene / shot / take, "–" for an empty field (PDF report).
+    var numbers: String {
+        let parts = [scene.isEmpty ? "–" : scene, shot.isEmpty ? "–" : shot, String(take)]
+        return ((episode.isEmpty ? [] : [episode]) + parts).joined(separator: " / ")
     }
 
     /// Multi-line description used in the movie metadata.
@@ -169,6 +178,7 @@ extension SlateInfo {
         shootingDay = try c.decodeIfPresent(String.self, forKey: .shootingDay) ?? shootingDay
         director = try c.decodeIfPresent(String.self, forKey: .director) ?? director
         cameraOperator = try c.decodeIfPresent(String.self, forKey: .cameraOperator) ?? cameraOperator
+        episode = (try? c.decodeIfPresent(String.self, forKey: .episode)) ?? episode
         scene = try c.decodeIfPresent(String.self, forKey: .scene) ?? scene
         shot = try c.decodeIfPresent(String.self, forKey: .shot) ?? shot
         take = try c.decodeIfPresent(Int.self, forKey: .take) ?? take

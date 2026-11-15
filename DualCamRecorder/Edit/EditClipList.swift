@@ -54,7 +54,7 @@ struct EditClipList: View {
 
             HStack(spacing: 6) {
                 Image(systemName: "magnifyingglass").foregroundStyle(.secondary)
-                TextField("Search scene, shot, take, camera, note…", text: $searchText)
+                TextField("Search: S22 SH5 T4, camera, note…", text: $searchText)
                     .textFieldStyle(.plain)
                     .focused($searchFocused)
                     .onSubmit { searchFocused = false }

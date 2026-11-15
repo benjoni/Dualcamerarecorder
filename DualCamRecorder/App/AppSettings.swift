@@ -58,6 +58,10 @@ final class AppSettings: ObservableObject {
     /// Under the picture on Record and on the Blackmagic monitor; not in the recorded file.
     @Published var infoA = ""
     @Published var infoB = ""
+    /// Series (per project): the slate has an episode number. Turning it off clears the episode of the next take.
+    @Published var episodes = false {
+        didSet { if !episodes && !slate.episode.isEmpty { slate.episode = "" } }
+    }
     /// Camera's own REC read from the SDI signal (per input) and recording together with the camera (per project).
     @Published var recDetectionA = CameraRecDetection.flag
     @Published var recDetectionB = CameraRecDetection.flag
@@ -170,7 +174,8 @@ final class AppSettings: ObservableObject {
                         recDetectionA: recDetectionA, recDetectionB: recDetectionB, cameraTrigger: cameraTrigger,
                         backupEnabled: backupEnabled, backupRootPath: backupRootPath, hevcMbps: hevcMbps,
                         audioInterfaceMode: audioInterfaceMode, audioInterfaceID: audioInterfaceID,
-                        audioInterfaceDelayMs: audioInterfaceDelayMs, infoA: infoA, infoB: infoB)
+                        audioInterfaceDelayMs: audioInterfaceDelayMs, infoA: infoA, infoB: infoB,
+                        episodes: episodes)
     }
 
     func apply(_ p: ProjectSettings) {
@@ -207,6 +212,7 @@ final class AppSettings: ObservableObject {
         audioInterfaceDelayMs = p.audioInterfaceDelayMs
         infoA = p.infoA
         infoB = p.infoB
+        episodes = p.episodes
     }
 
     /// Sanitized, guaranteed-distinct camera names.

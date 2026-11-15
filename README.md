@@ -86,7 +86,8 @@ Rozhranie aplikácie je **v angličtine** (Record / Playback / Slate …); tento
   - metadáta každého `.MOV`: vlastný kľúč `sk.dualcam.camera-clip` (celé ID),
     `com.apple.quicktime.information` = `Camera clip A001C0023` a riadok v popise,
   - **`CLIPLOG.CSV`** v priečinku projektu – riadok na každý súbor:
-    `clip,camera,camera_name,file,camera_clip,shooting_day,scene,shot,take,good,mos,int_ext,day_night,recorded_at,production,note,camera_setup`.
+    `clip,camera,camera_name,file,camera_clip,shooting_day,scene,shot,take,good,mos,int_ext,day_night,recorded_at,production,note,camera_setup,tc_in,tc_out,rehearsal,camera_card,episode`
+    (`episode` je posledný stĺpec, aby skripty čítajúce staršie stĺpce podľa poradia fungovali ďalej).
     Prepíše sa po každom zábere, po úprave klapky a pri otvorení projektu.
 - Čítanie skriptom, napr. `exiftool -Keys:All A007_S12_SH3B_T04.MOV` alebo priamo CSV.
 - V Playback → **Edit slate…** sa dajú hodnoty dodatočne opraviť.
@@ -247,6 +248,11 @@ Rozhranie aplikácie je **v angličtine** (Record / Playback / Slate …); tento
   QuickTime metadáta do oboch `.mov` (názov, popis, komentár, réžia, kamera A/B, dátum) –
   vidno ich napr. vo Finderi (Informácie) alebo v DaVinci Resolve.
   Posledná klapka sa pamätá aj po reštarte aplikácie.
+- **Epizódy (seriál):** Project settings → Slate → **Episodes (series)**. Klapka dostane pole **Episode** pred
+  Scene (v appke, na telefóne s kódom klapky aj v Edit slate…). Epizóda je prvé číslo všade: názov súboru
+  `A007_E3_S22_SH5_T04.MOV`, klapka „EP 3 · SCENE 22 …“, popis klipu „Ep 3 · Scene 22 · Shot 5 · Take 4“,
+  PDF report `3 / 22 / 5 / 4`, metadáta `.MOV` a stĺpec `episode` v `CLIPLOG.CSV`. Zmena epizódy nastaví
+  pokus na 1. Vypnutie epizód vymaže epizódu z klapky pre ďalší záber (nahraté klipy ostanú, ako sú).
 - **REHEARSAL** (vedľa REC, **⇧⌘R**) – skúška: oba obrazy nahrá len appka (kamery nenahrávajú), take sa
   označí ako Rehearsal (oranžový rámček a „● REHEARSAL“, v Playbacku štítok REHEARSAL / REH, v CSV stĺpec
   `rehearsal`, v PDF a metadátach). Nezvýši číslo take ani Cam clip; „Record with the camera“ sa počas skúšky
@@ -265,7 +271,13 @@ Rozhranie aplikácie je **v angličtine** (Record / Playback / Slate …); tento
   Klipy bez shooting day sú na konci.
 - **Hľadanie** v zozname klipov: číslo klipu, súbor, scéna, záber, pokus (`T04`), shooting day,
   Cam clip, poznámka, INT/EXT, DAY/NIGHT a slová `good` / `mos`; viac slov = všetky musia sedieť
-  (napr. `12 3B good`). Počas písania sú jednoklávesové skratky (medzerník, I, O, šípky) vypnuté.
+  (napr. `12 3B good`). Čísla klapky presne: `E3 S22 SH5 T4` (epizóda 3, obraz 22, záber 5, pokus 4),
+  aj `ep 3 scene 22 shot 5 take 4`, `epizoda 3 obraz 22 zaber 5 pokus 4` alebo skrátene `3/22/5/4`
+  (bez epizódy `22/5/4`); `S2` nenájde obraz 22. Ktorékoľvek sa dá vynechať (`E3 S22` = celý obraz 22 v 3. epizóde).
+  Rovnako v Edit a Overlay.
+- **Menu pod hľadaním v Playbacku:** **Ep · Sc · Sh · T** – každé ponúka len hodnoty natočených klipov a len tie,
+  ktoré sedia s menu pred ním (scény zvolenej epizódy, zábery zvolenej scény …). Ep je len pri epizódach.
+  Platí spolu s hľadaním; ✕ vedľa nich zobrazí všetky klipy. Počas písania sú jednoklávesové skratky (medzerník, I, O, šípky) vypnuté.
 - **Prev / Next** (↑ / ↓, aj ⌘← / ⌘→) prepne na predchádzajúci / nasledujúci klip (podľa čísla klipu),
   funguje aj v Screens only.
 - **Zoznam klipov je predvolene skrytý** – otvorí/skryje ho tlačidlo **Clips** (⌘L), takže

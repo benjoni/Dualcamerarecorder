@@ -13,6 +13,8 @@ struct SlateBoard: View {
     var recording = false
     /// Bigger board (recording tab).
     var large = false
+    /// Series: an EP cell before SCENE (also shown whenever the slate has an episode).
+    var showEpisode = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: large ? 8 : 6) {
@@ -31,6 +33,9 @@ struct SlateBoard: View {
             }
             .font(large ? .body.weight(.bold) : .caption.weight(.bold))
             HStack(alignment: .top, spacing: large ? 20 : 14) {
+                if showEpisode || !slate.episode.isEmpty {
+                    cell("EP", slate.episode.isEmpty ? "–" : slate.episode)
+                }
                 cell("SCENE", slate.scene.isEmpty ? "–" : slate.scene)
                 cell("SHOT", slate.shot.isEmpty ? "–" : slate.shot)
                 cell("TAKE", "\(slate.take)")
@@ -79,12 +84,15 @@ struct SlateFields: View {
     @Binding var slate: SlateInfo
     var locked = false
     /// Custom setters (recording resets the take number when scene/shot change).
+    var setEpisode: ((String) -> Void)?
     var setScene: ((String) -> Void)?
     var setShot: ((String) -> Void)?
     /// Bigger fields with larger text (recording tab).
     var large = false
     /// Fields grouped in the middle with larger text, also in the compact size (recording tab).
     var centered = false
+    /// Series: an Episode field before Scene.
+    var showEpisode = false
 
     /// Grouped layout (recording tab, both sizes).
     private var grouped: Bool { large || centered }
@@ -102,6 +110,7 @@ struct SlateFields: View {
                 // Scene · shot · take · EXT / DAY / MOS as one group, centered under the fields.
                 GridRow {
                     HStack(alignment: .top, spacing: 16) {
+                        if showEpisode { episodeField }
                         sceneField
                         shotField
                         takeField
@@ -113,7 +122,11 @@ struct SlateFields: View {
                 .disabled(locked)
             } else {
                 GridRow {
-                    sceneField
+                    if showEpisode {
+                        HStack(alignment: .top, spacing: 10) { episodeField; sceneField }
+                    } else {
+                        sceneField
+                    }
                     shotField
                     takeField
                     extrasGroup
@@ -138,6 +151,12 @@ struct SlateFields: View {
                 }
             }
         }
+    }
+
+    private var episodeField: some View {
+        field("Episode", text: Binding(get: { slate.episode },
+                                       set: { v in if let setEpisode { setEpisode(v) } else { slate.episode = v } }))
+            .frame(maxWidth: grouped ? 75 : 110)
     }
 
     private var sceneField: some View {
@@ -312,7 +331,7 @@ struct SlatePanel: View {
                 Spacer(minLength: 16)
                 fields
                 Spacer(minLength: 16)
-                SlateBoard(slate: displayedSlate, large: !compact).hidden()
+                SlateBoard(slate: displayedSlate, large: !compact, showEpisode: settings.episodes).hidden()
             }
             HStack(alignment: .top, spacing: 16) {
                 board
@@ -322,7 +341,7 @@ struct SlatePanel: View {
     }
 
     private var board: some View {
-        SlateBoard(slate: displayedSlate, recording: controller.isRecording, large: !compact)
+        SlateBoard(slate: displayedSlate, recording: controller.isRecording, large: !compact, showEpisode: settings.episodes)
     }
 
     private var fields: some View {
@@ -343,17 +362,18 @@ struct SlatePanel: View {
                 .help(compact ? slateHint : "")
                 SlateFields(slate: $settings.slate,
                             locked: controller.slateLocked,
+                            setEpisode: { controller.setSlateEpisode($0) },
                             setScene: { controller.setSlateScene($0) },
                             setShot: { controller.setSlateShot($0) },
-                            large: !compact, centered: true)
+                            large: !compact, centered: true, showEpisode: settings.episodes)
                     .font(compact ? .title3 : .title2)
             }
     }
 
     private var slateHint: String {
         controller.isRecording
-            ? "Scene / shot / take are locked while recording – note and “good take” can still be changed."
-            : "Take goes up by 1 after each recording; changing scene or shot resets it to 1."
+            ? "\(settings.episodes ? "Episode / scene" : "Scene") / shot / take are locked while recording – note and “good take” can still be changed."
+            : "Take goes up by 1 after each recording; changing \(settings.episodes ? "episode, scene" : "scene") or shot resets it to 1."
     }
 }
 
@@ -361,6 +381,8 @@ struct SlatePanel: View {
 struct SlateEditSheet: View {
     @State var slate: SlateInfo
     let takeName: String
+    /// Series project (or the take has an episode): Episode field.
+    var showEpisode = false
     let onSave: (SlateInfo) -> Void
     @Environment(\.dismiss) private var dismiss
 
@@ -368,9 +390,9 @@ struct SlateEditSheet: View {
         VStack(alignment: .leading, spacing: 14) {
             Text("Slate – \(takeName)").font(.title3.weight(.bold))
             HStack(alignment: .top, spacing: 16) {
-                SlateBoard(slate: slate)
+                SlateBoard(slate: slate, showEpisode: showEpisode)
                 VStack(alignment: .leading, spacing: 10) {
-                    SlateFields(slate: $slate)
+                    SlateFields(slate: $slate, showEpisode: showEpisode)
                     HStack(spacing: 10) {
                         Text("Camera clip #").foregroundStyle(.secondary).fixedSize()
                         Text("A")

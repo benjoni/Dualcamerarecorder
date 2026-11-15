@@ -53,11 +53,14 @@ final class AppModel: ObservableObject {
         // Live view for phones: camera JPEGs go straight from the preview queue to the server.
         recorder.channelA.preview.onJPEG = { [weak liveView = self.liveView] jpeg in liveView?.updateFrame(camera: "A", jpeg: jpeg) }
         recorder.channelB.preview.onJPEG = { [weak liveView = self.liveView] jpeg in liveView?.updateFrame(camera: "B", jpeg: jpeg) }
-        // Slate field changed on the phone (script): scene / shot / take / card / INT-EXT / DAY-NIGHT – like in Record,
+        // Slate field changed on the phone (script): episode / scene / shot / take / card / INT-EXT / DAY-NIGHT – like in Record,
         // not while recording (a new scene or shot starts again at take 1).
         liveView.onSetSlate = { [weak self] field, value in
             guard let self, !self.recorder.isRecording else { return false }
             switch field {
+            case "episode":
+                guard self.settings.episodes else { return false }
+                self.recorder.setSlateEpisode(value)
             case "scene": self.recorder.setSlateScene(value)
             case "shot": self.recorder.setSlateShot(value)
             case "take":
@@ -182,6 +185,7 @@ final class AppModel: ObservableObject {
         slate.note = ""
         slate.good = false
         slate.recordedAt = nil
+        if !settings.episodes { slate.episode = "" }
         settings.slate = slate
 
         player.load(nil)
@@ -271,6 +275,8 @@ final class AppModel: ObservableObject {
             "board": [
                 "production": slate.production,
                 "day": slate.shootingDay,
+                "episodes": settings.episodes,
+                "episode": slate.episode,
                 "scene": slate.scene,
                 "shot": slate.shot,
                 "take": slate.take,

@@ -139,6 +139,8 @@ struct HelpView: View {
 
                 section("Files") {
                     term("A005_S12_SH3_T07.MOV", "Camera name A · clip 005 · scene 12 · shot 3 · take 07")
+                    term("A005_E3_S12_SH3_T07.MOV", "With episodes (Project settings → Slate): episode 3 first")
+                    term("E3 S12 SH3 T7", "Clip search: exact episode, scene, shot, take – any of them can be left out")
                     term("C005_SLATE.JSON", "Slate of clip 005 (scene, shot, take, good, MOS, note …)")
                     term("C005_MARKS.JSON", "IN / OUT of clip 005")
                     term("CLIPLOG.CSV", "All clips of the project in one table (opens in Excel / Numbers)")

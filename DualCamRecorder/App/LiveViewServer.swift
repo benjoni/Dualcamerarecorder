@@ -369,13 +369,13 @@ final class LiveViewServer: ObservableObject {
         }
         if crew { shared.withLock { $0.crewSeen = Date() } }
 
-        // POST /slate?k=…&f=scene&v=12B – one slate field (scene, shot, take, cardA, cardB, location, time) set on the phone.
+        // POST /slate?k=…&f=scene&v=12B – one slate field (episode, scene, shot, take, cardA, cardB, location, time) set on the phone.
         if parts[0] == "POST" {
             // Only the slate code may change the slate; the crew code just watches.
             guard key == editCode else {
                 return Self.http(403, "text/plain", Data("View only".utf8))
             }
-            let fields: Set<String> = ["scene", "shot", "take", "cardA", "cardB", "location", "time"]
+            let fields: Set<String> = ["episode", "scene", "shot", "take", "cardA", "cardB", "location", "time"]
             guard path == "/slate", let field = components?.queryItems?.first(where: { $0.name == "f" })?.value,
                   fields.contains(field) else {
                 return Self.http(404, "text/plain", Data("Not found".utf8))
@@ -610,6 +610,7 @@ enum LiveViewPage {
     </div>
   </div>
   <div class="big">
+    <div class="cell" id="bEpCell" style="display:none"><div class="t">EP</div><div class="v" id="bEp">–</div></div>
     <div class="cell"><div class="t">SCENE</div><div class="v" id="bScene">–</div></div>
     <div class="cell"><div class="t">SHOT</div><div class="v" id="bShot">–</div></div>
     <div class="cell"><div class="t">TAKE</div><div class="v" id="bTake">1</div></div>
@@ -772,7 +773,7 @@ async function editField(field, title, ev){
     const r = await fetch('/slate?k=' + k + '&f=' + field + '&v=' + encodeURIComponent(v.trim()), {method:'POST', cache:'no-store'});
     if (r.ok) {
       // Shown at once; the next status (within a second) brings the app's values (e.g. take 1 after a new scene).
-      const ids = {scene: 'bScene', shot: 'bShot', take: 'bTake', cardA: 'bCardA', cardB: 'bCardB'};
+      const ids = {episode: 'bEp', scene: 'bScene', shot: 'bShot', take: 'bTake', cardA: 'bCardA', cardB: 'bCardB'};
       document.getElementById(ids[field]).textContent = v.trim() || '–';
       if (field === 'cardA') cards.A = v.trim();
       if (field === 'cardB') cards.B = v.trim();
@@ -782,7 +783,7 @@ async function editField(field, title, ev){
     else alert(field === 'take' ? 'Take must be a number 1–999.' : 'Could not change it.');
   } catch (e) { alert('No connection to the Mac.'); }
 }
-const editable = [['bScene', 'scene', () => 'Scene'], ['bShot', 'shot', () => 'Shot'], ['bTake', 'take', () => 'Take'],
+const editable = [['bEp', 'episode', () => 'Episode'], ['bScene', 'scene', () => 'Scene'], ['bShot', 'shot', () => 'Shot'], ['bTake', 'take', () => 'Take'],
                   ['bCardACell', 'cardA', () => 'Card number – camera ' + camNames.A],
                   ['bCardBCell', 'cardB', () => 'Card number – camera ' + camNames.B]];
 // Only phones opened with the slate code can change it (crew code: view only).
@@ -848,6 +849,9 @@ function fillBoard(b){
   const set = (id, v) => { document.getElementById(id).textContent = v; };
   set('bProd', (b.production || 'PRODUCTION').toUpperCase());
   set('bDay', b.day ? 'DAY ' + b.day : '');
+  // Episode (series): shown when the project uses episodes or the take has one.
+  document.getElementById('bEpCell').style.display = (b.episodes || b.episode) ? '' : 'none';
+  set('bEp', b.episode || '–');
   set('bScene', b.scene || '–');
   set('bShot', b.shot || '–');
   set('bTake', String(b.take || 1));
@@ -887,7 +891,8 @@ function shrinkToFit(el, size, min){
   while (el.scrollWidth > el.clientWidth + 1 && size > min) { size -= 1; el.style.fontSize = size + 'px'; }
 }
 function fitTitle(){
-  const nums = ['bScene', 'bShot', 'bTake'].map(id => document.getElementById(id));
+  const nums = ['bEp', 'bScene', 'bShot', 'bTake'].map(id => document.getElementById(id))
+    .filter(n => n.parentElement.style.display !== 'none');
   nums.forEach(n => { n.style.fontSize = ''; n.style.height = ''; });
   const numSize = parseFloat(getComputedStyle(nums[0]).fontSize) || 44;
   nums.forEach(n => { n.style.height = Math.ceil(numSize * 1.05) + 'px'; shrinkToFit(n, numSize, 14); });

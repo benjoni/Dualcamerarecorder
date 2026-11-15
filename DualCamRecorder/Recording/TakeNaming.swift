@@ -6,8 +6,9 @@
 //      A007_S12_SH3B_T04.MOV     A / B = camera name (configurable, e.g. RONIN1 → RONIN1_007_…)
 //      B007_S12_SH3B_T04.MOV     007 = running clip number (shared by both cameras of one take)
 //                                S = scene, SH = shot, T = take (2 digits)
+//      A007_E3_S12_SH3B_T04.MOV  E = episode (series, Project settings → Episodes)
 //  Sidecars (shared by A and B): C007_MARKS.JSON, C007_SLATE.JSON.
-//  S / SH are left out when the slate field is empty.
+//  E / S / SH are left out when the slate field is empty.
 //  Older names (C007_…_CAMA.MOV, TAKE_007_…_CAMA.MOV, Take_001_CamA.mov) are still recognised.
 //
 
@@ -63,8 +64,10 @@ enum TakeNaming {
     static func fileName(take: Int, role: CameraRole, slate: SlateInfo? = nil, names: CameraNames = CameraNames()) -> String {
         var parts = [clipPrefix(take: take, cameraName: names.name(role))]
         if let slate {
+            let episode = sanitize(slate.episode)
             let scene = sanitize(slate.scene)
             let shot = sanitize(slate.shot)
+            if !episode.isEmpty { parts.append("E" + episode) }
             if !scene.isEmpty { parts.append("S" + scene) }
             if !shot.isEmpty { parts.append("SH" + shot) }
             parts.append(String(format: "T%02d", slate.take))

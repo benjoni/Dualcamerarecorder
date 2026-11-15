@@ -49,6 +49,13 @@ struct ProjectSettingsView: View {
                         .font(.callout.monospaced()).foregroundStyle(.secondary)
                 }
 
+                Section("Slate") {
+                    Toggle("Episodes (series)", isOn: $settings.episodes)
+                    Text("The slate gets an Episode field before Scene – also on the phones. The episode is the first number in the clip names (A007_E3_S22_SH5_T04.MOV), the clip info, CLIPLOG.CSV and the PDF report, and the clip search finds e.g. “E3 S22 SH5 T4”.")
+                        .font(.callout).foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+
                 Section("Camera list") {
                     ForEach($settings.cameras) { $camera in
                         HStack(spacing: 10) {

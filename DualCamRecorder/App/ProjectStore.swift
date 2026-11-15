@@ -70,6 +70,8 @@ struct ProjectSettings: Codable, Equatable {
     /// Info bar of each input (operator, focus puller …): under the picture on Record and on the Blackmagic monitor.
     var infoA = ""
     var infoB = ""
+    /// Series: an episode number on the slate, first in the clip names, the log, the report and the search.
+    var episodes = false
 }
 
 extension ProjectSettings {
@@ -107,6 +109,7 @@ extension ProjectSettings {
         audioInterfaceDelayMs = (try? c.decodeIfPresent(Int.self, forKey: .audioInterfaceDelayMs)) ?? audioInterfaceDelayMs
         infoA = (try? c.decodeIfPresent(String.self, forKey: .infoA)) ?? infoA
         infoB = (try? c.decodeIfPresent(String.self, forKey: .infoB)) ?? infoB
+        episodes = (try? c.decodeIfPresent(Bool.self, forKey: .episodes)) ?? episodes
     }
 }
 
@@ -295,6 +298,7 @@ final class ProjectStore: ObservableObject {
         var initial = settings.projectSettings
         initial.proResFlavor = ProResFlavor.hevc.rawValue
         initial.hevcMbps = ProResFlavor.defaultHEVCRate
+        initial.episodes = false   // turned on in Project settings for a series
         project.settings = initial
         try Self.save(project, folder: folder)
         remember(folder)

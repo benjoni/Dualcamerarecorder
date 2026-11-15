@@ -208,7 +208,7 @@ struct OverlayView: View {
             .padding(.horizontal, 10).padding(.top, 10)
             HStack(spacing: 6) {
                 Image(systemName: "magnifyingglass").foregroundStyle(.secondary)
-                TextField("Search scene, shot, take, camera, note…", text: $searchText).textFieldStyle(.plain)
+                TextField("Search: S22 SH5 T4, camera, note…", text: $searchText).textFieldStyle(.plain)
             }
             .padding(.horizontal, 8).padding(.vertical, 6)
             .background(RoundedRectangle(cornerRadius: 7).fill(Color.gray.opacity(0.15)))
