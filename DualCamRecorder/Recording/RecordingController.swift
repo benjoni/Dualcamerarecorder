@@ -284,6 +284,12 @@ final class RecordingController: NSObject, ObservableObject, DLDeviceBrowserDele
     func startRecording(rehearsal: Bool = false) {
         guard state == .idle else { return }
         errorMessage = nil
+        // Licence (expiry is checked again before every take).
+        License.shared.refresh()
+        guard License.shared.allowsRecording else {
+            errorMessage = License.shared.blockedMessage
+            return
+        }
         let folder = settings.recordFolderURL
         do {
             try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)

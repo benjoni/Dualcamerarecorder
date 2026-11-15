@@ -101,6 +101,7 @@ struct WelcomeView: View {
                 Text(errorMessage).foregroundStyle(.red).font(.callout)
             }
             Spacer()
+            LicenseBadge()
             Text(model.recorder.sdkStatus)
                 .font(.caption).foregroundStyle(.secondary)
         }

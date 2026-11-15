@@ -9,3 +9,5 @@ DeckLinkSDK/*
 !DeckLinkSDK/README.md
 build-release/
 dist/
+# Licences are per Mac and personal – never in the repository.
+*.dcrlicense

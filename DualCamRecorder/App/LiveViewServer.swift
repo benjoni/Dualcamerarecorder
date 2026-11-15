@@ -369,13 +369,13 @@ final class LiveViewServer: ObservableObject {
         }
         if crew { shared.withLock { $0.crewSeen = Date() } }
 
-        // POST /slate?k=…&f=scene&v=12B – one slate field (scene, shot, take, cardA, cardB) typed on the phone.
+        // POST /slate?k=…&f=scene&v=12B – one slate field (scene, shot, take, cardA, cardB, location, time) set on the phone.
         if parts[0] == "POST" {
             // Only the slate code may change the slate; the crew code just watches.
             guard key == editCode else {
                 return Self.http(403, "text/plain", Data("View only".utf8))
             }
-            let fields: Set<String> = ["scene", "shot", "take", "cardA", "cardB"]
+            let fields: Set<String> = ["scene", "shot", "take", "cardA", "cardB", "location", "time"]
             guard path == "/slate", let field = components?.queryItems?.first(where: { $0.name == "f" })?.value,
                   fields.contains(field) else {
                 return Self.http(404, "text/plain", Data("Not found".utf8))
@@ -543,6 +543,8 @@ enum LiveViewPage {
   .tags{font-weight:800;font-size:16px;display:flex;gap:10px;flex-wrap:wrap;min-height:20px;margin-top:2px}
   .tags .reh{color:#000;background:#ff9500;border-radius:4px;padding:0 6px}
   .tags .good{color:#ffd60a}
+  .tags .unset{opacity:.3}   /* INT/EXT or DAY/NIGHT not set – shown only to the slate code, a tap sets it */
+  #homeTip{display:none;margin:10px 12px 0;font-size:13px;color:#bbb;text-align:center}
   .people{display:flex;gap:22px;margin-top:8px}
   .people .v{font-weight:700;font-size:14px}
   .note{margin-top:6px;font-size:13px;color:#bbb}
@@ -571,6 +573,7 @@ enum LiveViewPage {
   #board.full .people .v{font-size:max(16px,4.5vmin)}
   #board.full .note{font-size:3.5vmin}
   #board.full .hint{font-size:2.4vmin}
+  #board.full .hint.tip{font-size:max(13px,3vmin);color:#bbb}
   /* Clap: countdown, then the whole screen white for one camera frame + a beep */
   #claps{display:none;margin-top:3vmin;gap:3vmin;flex-wrap:wrap}
   #board.full #claps{display:flex}
@@ -632,6 +635,7 @@ enum LiveViewPage {
   <div class="cam" id="boxA"><img id="camA" alt=""><span class="label" id="nameA">A</span></div>
   <div class="cam" id="boxB"><img id="camB" alt=""><span class="label" id="nameB">B</span></div>
 </main>
+<div id="homeTip">Without Safari's bars: Share → Add to Home Screen, then open the icon</div>
 <footer><span class="app"><svg class="logo" viewBox="0 0 294 245" fill="none" stroke="currentColor" stroke-width="16"><g id="bb2"><path d="M169 0V245M169 8H244A42 42 0 0 1 286 50V51A42 42 0 0 1 244 93H169M169 152H244A42 42 0 0 1 286 194V195A42 42 0 0 1 244 237H169"/></g><use href="#bb2" transform="matrix(-1 0 0 1 293 0)"/></svg>Made by BENJONI</span><span>DualCamRecorder</span></footer>
 <script>
 const k = new URLSearchParams(location.search).get('k');
@@ -685,7 +689,11 @@ const slateBtn = document.getElementById('slateBtn');
 function setBoard(on){
   board.classList.toggle('on', on);
   slateBtn.classList.toggle('on', on);
-  if (!on) { board.classList.remove('full'); browserFullScreen(false); }
+  if (!on) {
+    board.classList.remove('full'); browserFullScreen(false);
+    const hint = document.getElementById('bHint');
+    hint.classList.remove('tip'); hint.textContent = 'Tap the slate for full screen';
+  }
   fitTitle();
   try { localStorage.setItem('dcrSlate', on ? '1' : '0'); } catch (e) {}
 }
@@ -719,13 +727,22 @@ board.onclick = () => {
   browserFullScreen(full);
   board.classList.toggle('full', full);
   fitTitle();
-  document.getElementById('bHint').textContent = full ? 'Tap to close full screen' : 'Tap the slate for full screen';
+  const hint = document.getElementById('bHint');
+  hint.classList.toggle('tip', full && iPhoneSafari);
+  hint.textContent = full
+    ? (iPhoneSafari ? 'Tap to close · Without Safari\'s bars: Share → Add to Home Screen, then open the icon'
+                    : 'Tap to close full screen')
+    : 'Tap the slate for full screen';
 };
+// iPhone Safari has no full screen for pages – only a page opened from the Home Screen icon has no bars.
+const iPhoneSafari = /iPhone|iPod/.test(navigator.userAgent) && !navigator.standalone
+  && !(window.matchMedia && matchMedia('(display-mode: standalone)').matches);
 // Crew code (view only): no Slate button and no black slate – the slate line in the header is enough.
 if (__CAN_EDIT__) {
   try { setBoard(localStorage.getItem('dcrSlate') === '1'); } catch (e) {}
 } else {
   slateBtn.remove();   // the black slate stays hidden (it is shown only with the class "on")
+  if (iPhoneSafari) document.getElementById('homeTip').style.display = 'block';
 }
 
 // Clap: hold the phone in front of the cameras, tap CLAP – 3 · 2 · 1 with short pips, then the screen is white
@@ -811,6 +828,20 @@ function clap(cam){
     });
   }, 3000 - (performance.now() - start));
 }
+// INT → EXT → INT/EXT → not set, DAY → NIGHT → DUSK → not set (the values of the app's slate).
+const tagOrder = {location: ['INT', 'EXT', 'INT/EXT', ''], time: ['DAY', 'NIGHT', 'DUSK', '']};
+async function cycleTag(field, ev){
+  if (!board.classList.contains('full')) return;   // the tap opens full screen instead
+  ev.stopPropagation();
+  if (recording) { alert('The slate cannot be changed while recording.'); return; }
+  const order = tagOrder[field];
+  const next = order[(order.indexOf(board_[field] || '') + 1) % order.length];
+  try {
+    const r = await fetch('/slate?k=' + k + '&f=' + field + '&v=' + encodeURIComponent(next), {method:'POST', cache:'no-store'});
+    if (r.ok) { board_[field] = next; fillBoard(board_); }
+    else alert(recording ? 'The slate cannot be changed while recording.' : 'Could not change it.');
+  } catch (e) { alert('No connection to the Mac.'); }
+}
 function fillBoard(b){
   if (!b) return;
   board_ = b;
@@ -831,8 +862,19 @@ function fillBoard(b){
   const tags = document.getElementById('bTags');
   tags.textContent = '';
   const add = (text, cls) => { const s = document.createElement('span'); s.textContent = text; if (cls) s.className = cls; tags.appendChild(s); };
-  if (b.location) add(b.location);
-  if (b.time) add(b.time);
+  // Slate code: INT / EXT and DAY / NIGHT always shown (dim when not set); on the full-screen slate a tap
+  // goes to the next value.
+  const tag = (field, value, placeholder) => {
+    if (!value && !__CAN_EDIT__) return;
+    add(value || placeholder, value ? '' : 'unset');
+    if (__CAN_EDIT__) {
+      const el = tags.lastChild;
+      el.classList.add('edit');
+      el.onclick = (ev) => cycleTag(field, ev);
+    }
+  };
+  tag('location', b.location, 'INT/EXT');
+  tag('time', b.time, 'DAY/NIGHT');
   if (b.mos) add('MOS');
   if (b.good) add('★ GOOD', 'good');
   if (b.rehearsal) add('REHEARSAL', 'reh');

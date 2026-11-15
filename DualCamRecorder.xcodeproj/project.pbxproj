@@ -10,6 +10,7 @@
 		0EB300BCE1A456A16C129D71 /* AppSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 65B2A27984C255B7C483E047 /* AppSettings.swift */; };
 		48FCDAA4CAF4337EB0D7D93D /* BackupManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = F26B18EEDBBAC2D21DB1389B /* BackupManager.swift */; };
 		3D6B891F11CC0CE302C654E7 /* DualCamRecorderApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 01DEF721423275B1A7F6323A /* DualCamRecorderApp.swift */; };
+		8E92C1CB1D499B3BA3D599C1 /* License.swift in Sources */ = {isa = PBXBuildFile; fileRef = E984455AA5BB686C032766A9 /* License.swift */; };
 		4069D153DC8A41A0EBB19E6A /* LiveViewServer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 12488A3A64E60A6C38A73F10 /* LiveViewServer.swift */; };
 		F7D9437B767E7B118C8041E7 /* LocalName.swift in Sources */ = {isa = PBXBuildFile; fileRef = 161BB4F5FCBD0E08067AE87A /* LocalName.swift */; };
 		2C588EFFB2A5C116880E0887 /* ProjectStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = CD5109A5E98FE81FDE5290F5 /* ProjectStore.swift */; };
@@ -54,6 +55,7 @@
 		7A4B5578C70A406BAF776EB0 /* FrameMaskView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C64C6B6B9B9063EC1B758467 /* FrameMaskView.swift */; };
 		F838ACAD1CBFBCA534FF435B /* HelpView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A51EA3371A596E1124FF2760 /* HelpView.swift */; };
 		4914DEDBF3F8FD116CD59592 /* LUTView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D5D0FC1AF1FA14CB6926CB7C /* LUTView.swift */; };
+		818B642C6D569274FE34A5AC /* LicenseView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7041C7D7D04B7C33F7FD852A /* LicenseView.swift */; };
 		157B03D891981EA9B8801EDB /* LiveViewPrint.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABBAD7C5CCF406EB3A40E906 /* LiveViewPrint.swift */; };
 		EE89B967555C804E880097C6 /* LiveViewSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1681762CBB9D0175B77FDC8E /* LiveViewSettings.swift */; };
 		9C38C3FC26E697763DF1A65B /* PlaybackView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 912ECBEF9548220CA52C8564 /* PlaybackView.swift */; };
@@ -74,6 +76,7 @@
 		65B2A27984C255B7C483E047 /* AppSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppSettings.swift; sourceTree = "<group>"; };
 		F26B18EEDBBAC2D21DB1389B /* BackupManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackupManager.swift; sourceTree = "<group>"; };
 		01DEF721423275B1A7F6323A /* DualCamRecorderApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DualCamRecorderApp.swift; sourceTree = "<group>"; };
+		E984455AA5BB686C032766A9 /* License.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = License.swift; sourceTree = "<group>"; };
 		12488A3A64E60A6C38A73F10 /* LiveViewServer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveViewServer.swift; sourceTree = "<group>"; };
 		161BB4F5FCBD0E08067AE87A /* LocalName.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalName.swift; sourceTree = "<group>"; };
 		CD5109A5E98FE81FDE5290F5 /* ProjectStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProjectStore.swift; sourceTree = "<group>"; };
@@ -120,6 +123,7 @@
 		C64C6B6B9B9063EC1B758467 /* FrameMaskView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FrameMaskView.swift; sourceTree = "<group>"; };
 		A51EA3371A596E1124FF2760 /* HelpView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HelpView.swift; sourceTree = "<group>"; };
 		D5D0FC1AF1FA14CB6926CB7C /* LUTView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LUTView.swift; sourceTree = "<group>"; };
+		7041C7D7D04B7C33F7FD852A /* LicenseView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LicenseView.swift; sourceTree = "<group>"; };
 		ABBAD7C5CCF406EB3A40E906 /* LiveViewPrint.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveViewPrint.swift; sourceTree = "<group>"; };
 		1681762CBB9D0175B77FDC8E /* LiveViewSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveViewSettings.swift; sourceTree = "<group>"; };
 		912ECBEF9548220CA52C8564 /* PlaybackView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaybackView.swift; sourceTree = "<group>"; };
@@ -175,6 +179,7 @@
 				65B2A27984C255B7C483E047 /* AppSettings.swift */,
 				F26B18EEDBBAC2D21DB1389B /* BackupManager.swift */,
 				01DEF721423275B1A7F6323A /* DualCamRecorderApp.swift */,
+				E984455AA5BB686C032766A9 /* License.swift */,
 				12488A3A64E60A6C38A73F10 /* LiveViewServer.swift */,
 				161BB4F5FCBD0E08067AE87A /* LocalName.swift */,
 				CD5109A5E98FE81FDE5290F5 /* ProjectStore.swift */,
@@ -277,6 +282,7 @@
 				C64C6B6B9B9063EC1B758467 /* FrameMaskView.swift */,
 				A51EA3371A596E1124FF2760 /* HelpView.swift */,
 				D5D0FC1AF1FA14CB6926CB7C /* LUTView.swift */,
+				7041C7D7D04B7C33F7FD852A /* LicenseView.swift */,
 				ABBAD7C5CCF406EB3A40E906 /* LiveViewPrint.swift */,
 				1681762CBB9D0175B77FDC8E /* LiveViewSettings.swift */,
 				912ECBEF9548220CA52C8564 /* PlaybackView.swift */,
@@ -391,6 +397,7 @@
 				0EB300BCE1A456A16C129D71 /* AppSettings.swift in Sources */,
 				48FCDAA4CAF4337EB0D7D93D /* BackupManager.swift in Sources */,
 				3D6B891F11CC0CE302C654E7 /* DualCamRecorderApp.swift in Sources */,
+				8E92C1CB1D499B3BA3D599C1 /* License.swift in Sources */,
 				4069D153DC8A41A0EBB19E6A /* LiveViewServer.swift in Sources */,
 				F7D9437B767E7B118C8041E7 /* LocalName.swift in Sources */,
 				2C588EFFB2A5C116880E0887 /* ProjectStore.swift in Sources */,
@@ -435,6 +442,7 @@
 				7A4B5578C70A406BAF776EB0 /* FrameMaskView.swift in Sources */,
 				F838ACAD1CBFBCA534FF435B /* HelpView.swift in Sources */,
 				4914DEDBF3F8FD116CD59592 /* LUTView.swift in Sources */,
+				818B642C6D569274FE34A5AC /* LicenseView.swift in Sources */,
 				157B03D891981EA9B8801EDB /* LiveViewPrint.swift in Sources */,
 				EE89B967555C804E880097C6 /* LiveViewSettings.swift in Sources */,
 				9C38C3FC26E697763DF1A65B /* PlaybackView.swift in Sources */,
@@ -513,7 +521,7 @@
 				CODE_SIGN_IDENTITY = "-";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 2;
+				CURRENT_PROJECT_VERSION = 3;
 				ENABLE_APP_SANDBOX = NO;
 				ENABLE_HARDENED_RUNTIME = NO;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -547,7 +555,7 @@
 				CODE_SIGN_IDENTITY = "-";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 2;
+				CURRENT_PROJECT_VERSION = 3;
 				ENABLE_APP_SANDBOX = NO;
 				ENABLE_HARDENED_RUNTIME = NO;
 				GENERATE_INFOPLIST_FILE = YES;

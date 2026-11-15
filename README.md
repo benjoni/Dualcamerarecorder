@@ -29,6 +29,19 @@ Rozhranie aplikácie je **v angličtine** (Record / Playback / Slate …); tento
   skryje (súbory ostanú); 🔍 ho ukáže vo Finderi.
 - Tlačidlo **Projects** v lište sa vráti na úvod (nie počas nahrávania).
 
+### Licencia (DualCamRecorder → License…, riadok vľavo dole na úvodnej stránke)
+- Release build nahráva len s platnou licenciou **pre tento Mac**. Bez nej sa dajú otvárať projekty, prehrávať,
+  strihať aj exportovať – vypnuté je iba nahrávanie (REC, záber od kamery, skúška).
+- Okno License ukáže **ID tohto Macu** (16 znakov, z hardvérového UUID – po reinštalácii macOS ostáva) s tlačidlom
+  Copy. Licenciu (súbor `.dcrlicense`) importuješ tlačidlom Import License… alebo ho pretiahneš do okna.
+- Licencia je podpísaná (Ed25519), appka má len verejný kľúč – súbor sa nedá upraviť ani preniesť na iný Mac.
+  Pri vrátení dátumu v Macu dozadu o viac ako deň sa nahrávanie vypne, kým sa dátum neopraví.
+- 7 dní pred koncom sa okno License otvorí pri štarte a riadok na úvodnej stránke je oranžový.
+- Licenciu vyrobíš z ID, ktoré ti tester pošle (počet dní podľa seba):
+  `swift tools/make_license.swift --name "Meno" --mac ABCD-EFGH-JKMN-PQRS --days 30` → súbor na ploche.
+- Podpisový kľúč: `~/Library/Application Support/DualCamRecorder License Key/private.key` – **nie je v gite,
+  zálohuj ho**; bez neho sa pre vydanú appku nové licencie vyrobiť nedajú.
+
 ### Malé okno
 - Keď je okno nižšie ako 1050 bodov, záložka Record sa zhustí: menšie REC / IN / OUT s časomierou v jednom
   riadku, menšia klapka a polia slate (nápoveda len ako tooltip), počítadlá v jednom riadku. Počítadlá a

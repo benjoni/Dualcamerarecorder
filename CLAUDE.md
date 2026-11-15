@@ -42,6 +42,9 @@ xcodebuild -project DualCamRecorder.xcodeproj -scheme DualCamRecorder -configura
 - Výsledok: `build/Build/Products/<Debug|Release>/DualCamRecorder.app`.
 - DeckLink SDK je v `DeckLinkSDK/` (nie je v gite). Bez neho build prejde, ale len so simulovaným vstupom.
 - **Nový alebo zmazaný zdrojový súbor:** `python3 tools/gen_xcodeproj.py` (zachová verziu aj číslo buildu).
+- **Licencia:** Release nahráva len s licenciou pre daný Mac (`App/License.swift`); Debug len s `-requireLicense YES`.
+  Licencie robí `swift tools/make_license.swift --name … --mac … --days …`, kľúč je v
+  `~/Library/Application Support/DualCamRecorder License Key/` (nikdy do gitu, `*.dcrlicense` je v .gitignore).
 - **Vydanie** (podpis Developer ID, Hardened Runtime, notarizácia, zip do `dist/`): `tools/release.sh`.
   Podpisuje v dočasnom priečinku mimo iCloudu. Notarizácia potrebuje odomknutý Mac (keychain profil
   `DualCamNotary`). Pred vydaním zvýš `CURRENT_PROJECT_VERSION` v `project.pbxproj`.

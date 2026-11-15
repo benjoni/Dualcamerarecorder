@@ -53,7 +53,7 @@ final class AppModel: ObservableObject {
         // Live view for phones: camera JPEGs go straight from the preview queue to the server.
         recorder.channelA.preview.onJPEG = { [weak liveView = self.liveView] jpeg in liveView?.updateFrame(camera: "A", jpeg: jpeg) }
         recorder.channelB.preview.onJPEG = { [weak liveView = self.liveView] jpeg in liveView?.updateFrame(camera: "B", jpeg: jpeg) }
-        // Slate field changed on the phone (script): scene / shot / take / card – like typing it in Record,
+        // Slate field changed on the phone (script): scene / shot / take / card / INT-EXT / DAY-NIGHT – like in Record,
         // not while recording (a new scene or shot starts again at take 1).
         liveView.onSetSlate = { [weak self] field, value in
             guard let self, !self.recorder.isRecording else { return false }
@@ -65,6 +65,12 @@ final class AppModel: ObservableObject {
                 self.settings.slate.take = take
             case "cardA": self.settings.slate.cardA = value
             case "cardB": self.settings.slate.cardB = value
+            case "location":
+                guard let location = SlateInfo.Location(rawValue: value) else { return false }
+                self.settings.slate.location = location
+            case "time":
+                guard let time = SlateInfo.TimeOfDay(rawValue: value) else { return false }
+                self.settings.slate.timeOfDay = time
             default: return false
             }
             self.updateLiveView()
@@ -332,7 +338,14 @@ struct DualCamRecorderApp: App {
         .defaultSize(width: 1500, height: 950)
         .commands {
             CommandGroup(replacing: .help) { HelpMenuButton() }
+            CommandGroup(after: .appInfo) { LicenseMenuButton() }
         }
+
+        Window("License", id: "license") {
+            LicenseView()
+                .preferredColorScheme(.dark)
+        }
+        .windowResizability(.contentSize)
 
         Window("DualCamRecorder Help", id: "help") {
             HelpView()
@@ -387,6 +400,13 @@ struct ContentView: View {
             applyActivity()
         }
         .onAppear { installTabKeys() }
+        // No valid license, or only a few days left: the License window opens at launch.
+        .onAppear {
+            let license = License.shared
+            if license.isRequired, !license.isValid || (license.daysLeft ?? 99) <= License.warningDays {
+                openWindow(id: "license")
+            }
+        }
         #if DEBUG
         .task { await runSnapshotsIfRequested() }
         .task { await runDiskTestIfRequested() }
@@ -974,6 +994,14 @@ private struct HiddenToolbarTitle: ViewModifier {
 }
 
 /// Help menu → DualCamRecorder Help (⌘?).
+private struct LicenseMenuButton: View {
+    @Environment(\.openWindow) private var openWindow
+
+    var body: some View {
+        Button("License…") { openWindow(id: "license") }
+    }
+}
+
 private struct HelpMenuButton: View {
     @Environment(\.openWindow) private var openWindow
 
