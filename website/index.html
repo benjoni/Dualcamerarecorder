@@ -88,7 +88,7 @@ header.nav { position: sticky; top: 0; z-index: 10; background: color-mix(in srg
 @media (max-width: 480px) { .fields { gap: 6px 20px; } .field b { font-size: 32px; } .board-body { padding: 20px; } }
 
 /* sections */
-section { padding: 96px 0; }
+section { padding: 96px 0; scroll-margin-top: 64px; }
 .section-head { display: grid; gap: 18px; max-width: 760px; margin-bottom: 48px; }
 .section-head p { font-size: 19px; color: #d6d3cc; }
 .kicker { font: 700 13px/1 var(--mono); letter-spacing: .16em; color: var(--tally); text-transform: uppercase; }
@@ -125,6 +125,46 @@ section { padding: 96px 0; }
 .lut-list li.on::before { content: "✓"; position: absolute; left: 10px; color: var(--amber); }
 .lut-actions { display: flex; justify-content: space-between; gap: 12px; font-size: 14px; }
 .lut-actions span { padding: 5px 10px; border-radius: 5px; background: #2f2f32; white-space: nowrap; }
+
+/* app panels drawn in HTML (audio interface, live view codes, licence) */
+figure.mock { margin: 0; border-radius: 10px; border: 1px solid var(--line); background: var(--panel); padding: 24px;
+  display: grid; place-items: center; }
+.row figure.mock { aspect-ratio: 1290 / 1000; }
+@media (max-width: 920px) { .row figure.mock { aspect-ratio: auto; } }
+.panel { width: min(460px, 100%); display: grid; gap: 14px; padding: 20px; border: 1px solid var(--line); border-radius: 10px;
+  background: #202023; font-size: 15px; }
+.panel-title { font-weight: 700; font-size: 18px; display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.toggle { width: 38px; height: 22px; border-radius: 11px; background: #3a7bf0; position: relative; flex: none; }
+.toggle::after { content: ""; position: absolute; right: 2px; top: 2px; width: 18px; height: 18px; border-radius: 50%; background: #fff; }
+.toggle.off { background: #48484c; }
+.toggle.off::after { right: auto; left: 2px; }
+.prow { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.prow > span:first-child { color: var(--muted); }
+.select { padding: 4px 10px; border-radius: 5px; background: #2f2f32; white-space: nowrap; }
+.radio { display: grid; gap: 6px; }
+.radio span { padding-left: 24px; position: relative; }
+.radio span::before { content: ""; position: absolute; left: 0; top: .3em; width: 12px; height: 12px; border-radius: 50%; border: 2px solid #5a5a5e; }
+.radio span.on::before { border: 4px solid #3a7bf0; width: 8px; height: 8px; background: #fff; }
+.meter { display: grid; grid-template-columns: 22px 1fr; gap: 8px; align-items: center; font: 700 12px/1 var(--mono); color: var(--muted); }
+.meter i { height: 8px; border-radius: 4px; background: linear-gradient(90deg, #2fbf5b 0 60%, #e0c23a 60% 82%, #3a3a3e 82%); }
+.meter i.low { background: linear-gradient(90deg, #2fbf5b 0 42%, #3a3a3e 42%); }
+.codes { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.code { display: grid; gap: 8px; align-content: start; }
+.code img { width: 100%; max-width: 150px; border-radius: 6px; background: #fff; padding: 6px; }
+.code b { font-size: 14px; }
+.code .addr { font: 600 11px/1.3 var(--mono); color: #4ea1ff; word-break: break-all; }
+.code .acts { display: flex; flex-wrap: wrap; gap: 6px; font-size: 13px; }
+.code .acts span { padding: 3px 8px; border-radius: 5px; background: #2f2f32; }
+.wm { font: 600 12px/1.3 var(--body); color: var(--muted); display: flex; align-items: center; gap: 8px; }
+.wm .toggle { transform: scale(.8); }
+@media (max-width: 480px) { .codes { grid-template-columns: 1fr; } }
+.macid { font: 700 clamp(20px, 4.4vw, 28px)/1.1 var(--mono); letter-spacing: .04em; }
+
+/* try it */
+#try { background: var(--panel); border-block: 1px solid var(--line); }
+#try .wrap.split { display: grid; grid-template-columns: minmax(0, 6fr) minmax(0, 5fr); gap: 56px; align-items: center; }
+@media (max-width: 920px) { #try .wrap.split { grid-template-columns: 1fr; } }
+#try figure.mock { background: var(--bg); }
 
 
 /* phone slate */
@@ -182,10 +222,11 @@ footer b { color: var(--ink); font-family: var(--display); font-size: 20px; lett
     <nav aria-label="Sections">
       <a href="#features">Features</a>
       <a href="#phone">Phone slate</a>
+      <a href="#sound">Sound</a>
       <a href="#paperwork">Reports</a>
       <a href="#requirements">Requirements</a>
     </nav>
-    <a class="btn small" href="#requirements"><span class="dot"></span>What you need</a>
+    <a class="btn small" href="#try"><span class="dot"></span>Try it</a>
   </div>
 </header>
 
@@ -204,6 +245,7 @@ footer b { color: var(--ink); font-family: var(--display); font-size: 20px; lett
           <p class="lede">Record two SDI cameras into ProRes or H.265 on one Mac. Play the take back in sync, slate it, cut it and hand it over before the next setup.</p>
           <div class="cta">
             <a class="btn live" href="#features"><span class="dot" style="background:#fff"></span>See how it works</a>
+            <a class="btn" href="#try">Get a test licence</a>
             <span class="note">For macOS, Apple Silicon and Intel.</span>
           </div>
         </div>
@@ -220,6 +262,8 @@ footer b { color: var(--ink); font-family: var(--display); font-size: 20px; lett
         <li>ProRes 422 or H.265 .mov</li>
         <li>SDI timecode &amp; camera REC flag</li>
         <li>LUTs (.cube) recorded into the file</li>
+        <li>Mixer sound via USB audio interface</li>
+        <li>Live view &amp; slate on any phone</li>
         <li>macOS 14 Sonoma or later</li>
         <li>Apple Silicon &amp; Intel</li>
       </ul>
@@ -253,6 +297,7 @@ footer b { color: var(--ink); font-family: var(--display); font-size: 20px; lett
             <li><b>Card and camera clip</b> numbers per camera, saved with the slate.</li>
             <li><b>Cameras A and B</b> out of the box. Add more cameras in Project settings and pick which one sits on each input.</li>
             <li><b>ProRes 422, HQ or LT, or H.265</b> per camera. New projects start on H.265 at 5 Mbit/s, so a long shooting day fits on a small disk.</li>
+            <li><b>Info line</b> under each picture for the operator or focus puller, also shown on the Blackmagic monitor.</li>
             <li>Captured, written and dropped frames counted live, with free disk time.</li>
           </ul>
         </div>
@@ -329,17 +374,74 @@ footer b { color: var(--ink); font-family: var(--display); font-size: 20px; lett
     </div>
   </section>
 
+  <section id="sound" style="padding-top:0">
+    <div class="wrap rows">
+      <div class="row">
+        <div class="text">
+          <span class="kicker">Sound</span>
+          <h2>The mixer’s sound in both files</h2>
+          <p>Plug a USB audio interface, such as a Focusrite Scarlett, into the Mac and take the sound recordist’s mix straight into the camera files. No driver needed.</p>
+          <ul class="ticks">
+            <li><b>Cameras only, interface only, or both:</b> with both, the mix plays and the cameras’ SDI sound stays in the file as a second track for the edit.</li>
+            <li><b>Lined up with the picture</b> on the Mac’s clock, and kept in line on long takes.</li>
+            <li><b>Sound delay</b> in milliseconds when the mix arrives early or late. One frame is 40 ms at 25p.</li>
+            <li><b>Live meters</b> under the pictures show what goes into the file. If the interface is unplugged, a red warning says so and the take keeps the cameras’ sound.</li>
+          </ul>
+        </div>
+        <figure class="mock" role="img" aria-label="Project settings: audio interface section with Focusrite Scarlett Solo selected, interface and cameras chosen, two level meters and a sound delay of 40 milliseconds">
+          <div class="panel" aria-hidden="true">
+            <p class="panel-title">Audio interface</p>
+            <div class="radio">
+              <span>Cameras only (SDI)</span>
+              <span>Audio interface only</span>
+              <span class="on">Audio interface + cameras (SDI)</span>
+            </div>
+            <div class="prow"><span>Device</span><span class="select">Scarlett Solo USB ▾</span></div>
+            <div class="meter"><span>1</span><i></i></div>
+            <div class="meter"><span>2</span><i class="low"></i></div>
+            <div class="prow"><span>Sound delay</span><span class="select mono">40 ms</span></div>
+          </div>
+        </figure>
+      </div>
+    </div>
+  </section>
+
   <section id="phone" class="clapper">
     <div class="wrap" style="margin-bottom:80px">
-      <figure><img src="media/qr.jpg" alt="Live view settings on the Mac with a QR code, and a phone scanning it" loading="lazy"></figure>
+      <figure class="mock" role="img" aria-label="Live view settings on the Mac with two QR codes: Crew, watch only, with a watermark; and Slate, can change the slate">
+        <div class="panel" aria-hidden="true">
+          <p class="panel-title">Live view on phones <span class="toggle"></span></p>
+          <div class="codes">
+            <div class="code">
+              <b>Crew – watch only</b>
+              <img src="media/qr-code.jpg" alt="">
+              <span class="addr">dualcam.local:8090/?k=c7f2…</span>
+              <span class="acts"><span>Print…</span><span>New code</span></span>
+              <span class="wm"><span class="toggle"></span>Watermark: NIGHT FERRY</span>
+            </div>
+            <div class="code">
+              <b>Slate – can change the slate</b>
+              <img src="media/qr-code.jpg" alt="">
+              <span class="addr">dualcam.local:8090/?k=9ab1…</span>
+              <span class="acts"><span>Print…</span><span>New code</span></span>
+            </div>
+          </div>
+          <span class="muted" style="font-size:13px">📱 4 phones watching</span>
+        </div>
+      </figure>
       <div class="text" style="display:grid;gap:22px">
         <span class="kicker">Connect a phone</span>
         <h2>Scan. Watch.</h2>
         <ol class="steps">
-          <li><span>On the Mac, turn on <b>Settings → Live view on phones</b>. A QR code appears.</span></li>
-          <li><span>Point the phone camera at it and open the link. Same Wi-Fi, any browser, no app.</span></li>
+          <li><span>On the Mac, turn on <b>Settings → Live view on phones</b>. Two QR codes appear.</span></li>
+          <li><span>Point the phone camera at one and open the link. Same Wi-Fi, any browser, no app.</span></li>
           <li><span>Both cameras play live, with the REC light, timecode and the current slate. The Mac shows how many phones are watching.</span></li>
         </ol>
+        <ul class="ticks">
+          <li><b>Crew code</b> for everyone: watch only. An optional <b>watermark</b>, such as the film’s title, is burned into their pictures, so it is on every screenshot.</li>
+          <li><b>Slate code</b> for the script supervisor or 2nd AC: a clean picture, and the slate can be changed from the phone.</li>
+          <li><b>Print…</b> puts each code on an A4 sheet with the project, the Wi-Fi and three steps. <b>New code</b> shuts out old links.</li>
+        </ul>
         <p class="muted">The address <span class="mono">dualcam.local</span> stays the same when the router hands out a new IP, so a printed QR code keeps working.</p>
       </div>
     </div>
@@ -354,7 +456,9 @@ footer b { color: var(--ink); font-family: var(--display); font-size: 20px; lett
           <li><span>Three short beeps count down: <span class="mono">3 · 2 · 1</span>.</span></li>
           <li class="flash"><span>The screen flashes white for exactly one frame, with a beep. Sync picture and sound to it in the edit.</span></li>
         </ol>
-        <p class="muted">In full screen, scene, shot, take and card numbers can be corrected right on the phone.</p>
+        <p class="muted">With the slate code, tap a field in full screen to correct scene, shot, take and card numbers, and tap <b>INT / EXT</b> or <b>DAY / NIGHT / DUSK</b> to switch them, right on the phone.</p>
+        <div class="chips"><span class="chip on">INT</span><span class="chip">EXT</span><span class="chip">INT/EXT</span><span class="chip on">DAY</span><span class="chip">NIGHT</span><span class="chip">DUSK</span></div>
+        <p class="muted">The slate fills the whole screen on Android and iPad. On iPhone, add the page to the Home Screen once and it opens without the Safari bars.</p>
       </div>
     </div>
   </section>
@@ -422,6 +526,31 @@ footer b { color: var(--ink); font-family: var(--display); font-size: 20px; lett
   </section>
 
 
+  <section id="try">
+    <div class="wrap split">
+      <div style="display:grid;gap:22px">
+        <span class="kicker">Test version</span>
+        <h2>Try it on your Mac</h2>
+        <p class="lede">The test version is a full DualCamRecorder with a licence for one Mac, for as many days as you agree with Benjoni.</p>
+        <ol class="steps">
+          <li><span>Install the app and open <b>DualCamRecorder → License…</b>. It shows the ID of your Mac. Press <b>Copy</b>.</span></li>
+          <li><span>Send the ID to Benjoni. You get back a small licence file made for that Mac only.</span></li>
+          <li><span>Drop the file on the License window, or press <b>Import License…</b>. Recording is on.</span></li>
+        </ol>
+        <p class="muted">Without a valid licence the app still opens projects, plays, edits and exports. Only recording is off. A week before the end, the app reminds you.</p>
+      </div>
+      <figure class="mock" role="img" aria-label="License window: Licensed to Jan Novak, valid for 30 more days, with the ID of this Mac and a Copy button">
+        <div class="panel" aria-hidden="true">
+          <p class="panel-title" style="justify-content:flex-start"><span style="color:#2fbf5b;font-size:26px">✓</span>Licensed to Jan Novak</p>
+          <span class="muted" style="margin-top:-8px">Valid until 15 December 2026 – 30 days left</span>
+          <span style="font-weight:700;font-size:14px">ID of this Mac</span>
+          <div class="prow"><span class="macid" style="color:var(--ink)">ABCD-EFGH-JKMN-PQRS</span><span class="select">Copy</span></div>
+          <div class="prow" style="justify-content:flex-start"><span class="select" style="color:var(--ink)">🔑 Import License…</span><span class="muted" style="font-size:13px">or drop the .dcrlicense file here</span></div>
+        </div>
+      </figure>
+    </div>
+  </section>
+
   <section id="requirements">
     <div class="wrap two">
       <div style="display:grid;gap:28px;align-content:start">
@@ -431,7 +560,9 @@ footer b { color: var(--ink); font-family: var(--display); font-size: 20px; lett
           <div><dt>Capture</dt><dd>Blackmagic DeckLink or UltraStudio, one SDI input per camera</dd></div>
           <div><dt>Driver</dt><dd>Blackmagic Desktop Video, with its driver extension allowed in System Settings</dd></div>
           <div><dt>Monitor</dt><dd>Optional: a Blackmagic device with video output, such as UltraStudio Monitor 3G</dd></div>
+          <div><dt>Sound</dt><dd>Optional: a USB audio interface, such as Focusrite Scarlett, for the mixer’s sound</dd></div>
           <div><dt>Phones</dt><dd>Any phone or tablet with a browser, on the same Wi-Fi</dd></div>
+          <div><dt>Licence</dt><dd>One per Mac, from Benjoni</dd></div>
         </dl>
       </div>
       <div style="display:grid;gap:28px;align-content:start">
@@ -442,6 +573,9 @@ footer b { color: var(--ink); font-family: var(--display); font-size: 20px; lett
           <details><summary>ProRes or H.265?</summary><p>Your choice, per project. ProRes 422, HQ or LT for the edit, or H.265 at 5, 10, 20 or 45 Mbit/s when disk space matters. New projects start on H.265 at 5 Mbit/s.</p></details>
           <details><summary>Can I record just one camera?</summary><p>Yes. Switch the project to one camera and camera A fills the screen. A camera can also be switched off for a few takes.</p></details>
           <details><summary>Does the crew need an app on their phones?</summary><p>No. They scan the QR code and the live view opens in the browser, on any phone or tablet on the same Wi-Fi.</p></details>
+          <details><summary>Can we record the sound recordist’s mix?</summary><p>Yes. Plug a USB audio interface into the Mac and pick it in Project settings → Audio interface. The mix goes into the files of both cameras, with the cameras’ own sound kept as a second track if you want it.</p></details>
+          <details><summary>Can the whole crew change the slate from their phones?</summary><p>No, only phones with the slate code. The crew code is watch only, and the Mac refuses slate changes from it.</p></details>
+          <details><summary>Does the licence move with me to another Mac?</summary><p>No. A licence is made for the ID of one Mac. For another Mac, send its ID and you get a new licence.</p></details>
           <details><summary>Can the camera start the recording?</summary><p>Yes. With Record with the camera turned on, the REC flag in the camera’s SDI signal starts and stops the take, and the camera’s timecode is saved with every clip.</p></details>
           <details><summary>What happens when the disk fills up or is pulled out?</summary><p>You see the remaining recording time all the time. If the disk disappears, the take stops and everything written so far is saved and playable.</p></details>
         </div>
