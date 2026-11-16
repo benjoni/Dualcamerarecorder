@@ -6,6 +6,9 @@
 #   tools/release.sh                 build + sign + notarize + staple + zip
 #   tools/release.sh --no-notarize   build + sign + zip only (local testing)
 #
+# Before a release: write what is new into tools/release-notes.txt (one line each) – it goes into
+# website/version.json, which the app's update check reads.
+#
 # One-time setup for notarization (stores the app-specific password in the keychain):
 #   xcrun notarytool store-credentials DualCamNotary --apple-id <apple-id> --team-id T8QNB934G2
 set -euo pipefail
@@ -62,3 +65,22 @@ fi
 
 mv -f "$ZIP" "dist/$NAME.zip"
 echo "==> Done: dist/$NAME.zip"
+
+# Website: the zip in website/download/ and version.json (what the app's update check reads), with the lines of
+# tools/release-notes.txt as "What's new". Only for a notarized build. Upload both, then the app offers it.
+if (( NOTARIZE )); then
+  mkdir -p website/download
+  cp -f "dist/$NAME.zip" "website/download/$NAME.zip"
+  python3 - "$VERSION" "$BUILD" "$NAME.zip" tools/release-notes.txt > website/version.json <<'PY'
+import json, sys, datetime, os
+version, build, zip_name, notes_file = sys.argv[1:5]
+notes = []
+if os.path.exists(notes_file):
+    notes = [l.strip().lstrip("-•").strip() for l in open(notes_file, encoding="utf-8") if l.strip() and not l.startswith("#")]
+print(json.dumps({"version": version, "build": int(build),
+                  "url": f"https://dualrecorder.benjoni.com/download/{zip_name}",
+                  "notes": notes, "date": datetime.date.today().isoformat()}, ensure_ascii=False, indent=2))
+PY
+  echo "==> Website: website/download/$NAME.zip and website/version.json – upload them:"
+  echo "    cd website && printf 'cd benjoni.com/sub/dualrecorder\nmkdir download\nput download/$NAME.zip download/\nput version.json\nbye\n' | sftp dualrecorder.benjoni.com@benjoni.com"
+fi

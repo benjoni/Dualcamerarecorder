@@ -37,6 +37,8 @@ struct HelpView: View {
                     key("⌘R", "REC / STOP")
                     key("⌘I  ⌘O", "IN / OUT at the current take time (while recording)")
                     key("⌥1  ⌥2", "Camera A / B on or off – not while recording; the other camera records alone")
+                    key("1  2", "Live edit: cut to camera A / B (also the buttons 1 and 2 next to IN / OUT; not while typing in a field)")
+                    term("LIVE EDIT", "Button next to IN / OUT (both cameras on): cut between the cameras while recording with 1 and 2 – also before REC to choose the camera the take starts with. The camera in the cut has a green frame and ▶ CUT 1 / 2, also on the Blackmagic monitor. After STOP the cut is a new sequence in Edit (“Live edit · Clip 014 · …”), shown at once. Both recordings and Playback stay as they are. Two presses within 0.2 s count as one cut (the second one). Cannot be switched on or off while recording")
                     term("A · Venice ▾", "Menu above each picture: which camera of the project's camera list is on this input. Its name starts the file names (C → C007_…); the camera the other input uses is not offered")
                     term("Camera list", "Project settings: name + model of every camera (A Venice, B Venice, C Ronin 4D …). Add camera / ⊖ removes; renaming a camera renames the input using it")
                     term("Flip  Flop", "Buttons above each picture: Flip turns the picture upside down (camera mounted upside down), Flop mirrors it left ↔ right (shot through a mirror); both = turned by 180°. The screen, monitor, phones and the recorded file are turned; yellow FLIP / FLOP on the picture. Saved in the project, locked while recording")
@@ -68,12 +70,19 @@ struct HelpView: View {
                     key("⌥←  ⌥→", "Move the selected piece earlier / later (or drag it)")
                     key("⌫", "Remove the selected piece – the recording stays")
                     key("⌘Z", "Undo the last change")
-                    term("Edges", "Drag the left / right edge of a piece to move its IN / OUT")
+                    term("Edges", "Drag the left / right edge of a piece to move its IN / OUT. The left edge follows the mouse and the pieces after it close up when you let go; the picture shows the exact frame at the edge you drag (the new first / last frame)")
                     term("Delete clip", "Playback: right-click the clip in the clip list → Move to Trash… – both camera files, the slate and IN / OUT go to the Trash (they can be put back). The confirmation names the sequences that use the clip")
-                    term("Playhead", "Click or drag on the ruler above the pieces (or on the empty part of the timeline) – the playhead follows the mouse; grab the red handle or line to drag it, also over the pieces")
-                    term("Sequences", "Right side: several cut passages – New starts an empty one. Click shows it on the timeline, double-click renames, right-click: Rename / Duplicate / Delete (the last one is only cleared). Clips are added to the sequence shown; Undo works within it")
+                    term("Playhead", "Click or drag on the ruler above the pieces (or on the empty part of the timeline) – the playhead follows the mouse; drag it by its red handle on the ruler, also over the pieces. Its line over the pieces does not catch the mouse, so the edges of a piece can always be grabbed")
+                    term("Sequences", "Right side: several cut passages – New starts an empty one; a take cut with LIVE EDIT adds its own. Click shows it on the timeline, double-click renames, right-click: Rename / Duplicate / Delete (the last one is only cleared). Clips are added to the sequence shown; Undo works within it")
                     term("Export MOV…", "The sequence shown, file name <project>_<sequence>.mov; “Clip info in picture” burns in clip and camera")
                     term("EDIT.JSON", "The edit – all sequences – saved in the project folder")
+                }
+
+                section("Projects and license") {
+                    term("Edit…  Open", "Project list: Edit… changes name, director, DoP and notes and has Show in Finder and Remove from list… (asks first; the folder and its clips stay on the disk – open it again with Open folder as project…). Open or double-click opens the project")
+                    term("License…", "DualCamRecorder menu: the Mac ID to send to Benjoni and Import License… for the .dcrlicense file you get back (or drop the file on the window). A license is for one Mac and has an end date; 7 days before the end the app starts reminding you. Without a valid license only recording is off – projects, Playback, Edit and export work")
+                    term("Check for Updates…", "DualCamRecorder menu: is there a newer version on the website? The app also looks once a day (App settings → Updates) and shows what is new with Download – never while recording. Replace the app with the downloaded one; the license and the projects stay")
+                    term("New license", "A license for the next period replaces the installed one; a license that ends earlier than the installed one (e.g. last month's file) is refused and the installed one stays")
                 }
 
                 section("Live view on phones") {
@@ -102,6 +111,7 @@ struct HelpView: View {
 
                 section("Badges and symbols") {
                     sign(Badge(text: "● REC", color: .red), "Camera is recording (red frame around the picture)")
+                    sign(Badge(text: "▶ CUT 1", color: .liveCut), "Live edit: this camera is in the cut (green frame around the picture, also on the Blackmagic monitor)")
                     sign(Badge(text: "● REHEARSAL", color: .orange), "Rehearsal (⇧⌘R): only the app records, the cameras do not – the take is marked Rehearsal, the take number and camera clips stay")
                     sign(Badge(text: "Unassigned", color: .gray), "No input chosen for this camera – Project settings (the screen shows the BENJONI logo)")
                     sign(Badge(text: "No signal", color: .orange), "Input chosen, but no picture is coming in – the screen shows the BENJONI logo")
@@ -120,7 +130,7 @@ struct HelpView: View {
                     term("Project settings", "“Send the picture to a Blackmagic monitor” – on / off. The first device with a video output is used (UltraStudio Monitor 3G); UltraStudio Recorder 3G has no output")
                     sign(Label("Monitor A|C", systemImage: "display"), "Toolbar (only when the output is on): what goes to the monitor – camera A, camera C or both side by side; the menu also shows the output state")
                     sign(Label("Monitor", systemImage: "exclamationmark.triangle"), "Output problem – monitor not connected, or it cannot show the cameras' format")
-                    term("Record", "Live picture of the chosen camera(s)")
+                    term("Record", "Live picture of the chosen camera(s); with LIVE EDIT the camera in the cut has a green frame")
                     term("Playback", "The clip being played (paused: the last frame stays)")
                     term("Edit", "The cut – always one full picture, the camera choice is not used")
                     term("Picture", "Clean full frame in the cameras' format (e.g. 1080p25, 8-bit 4:2:2) – no buttons, waveform or text")

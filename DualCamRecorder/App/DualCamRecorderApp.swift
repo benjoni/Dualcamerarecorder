@@ -364,11 +364,20 @@ struct DualCamRecorderApp: App {
         .defaultSize(width: 1500, height: 950)
         .commands {
             CommandGroup(replacing: .help) { HelpMenuButton() }
-            CommandGroup(after: .appInfo) { LicenseMenuButton() }
+            CommandGroup(after: .appInfo) {
+                LicenseMenuButton()
+                UpdateMenuButton()
+            }
         }
 
         Window("License", id: "license") {
             LicenseView()
+                .preferredColorScheme(.dark)
+        }
+        .windowResizability(.contentSize)
+
+        Window("Software Update", id: "update") {
+            UpdateView()
                 .preferredColorScheme(.dark)
         }
         .windowResizability(.contentSize)
@@ -446,6 +455,8 @@ struct ContentView: View {
             if let tabKeyMonitor { NSEvent.removeMonitor(tabKeyMonitor) }
             tabKeyMonitor = nil
         }
+        // Daily update check; the Update window opens from here (after STOP when recording).
+        .modifier(UpdateWindowOpener(recorder: model.recorder))
         .onChange(of: tab) { _, newTab in
             applyActivity()
             if newTab == 1 { model.library.cueLatestOnShow = true }

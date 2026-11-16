@@ -1,0 +1,6 @@
+# What is new in the next release – one line each (lines starting with # are left out).
+Live edit: cut between camera A and B with 1 / 2 while recording – the cut becomes a sequence in Edit
+Edit: trimming the start of a piece works; the picture shows the exact frame at the edge
+Projects: Show in Finder and Remove from list are in Edit…
+License: a license that ends earlier than the installed one is refused
+The app tells you when a new version is available (DualCamRecorder → Check for Updates…)

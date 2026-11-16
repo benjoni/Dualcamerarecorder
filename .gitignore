@@ -11,3 +11,6 @@ build-release/
 dist/
 # Licences are per Mac and personal – never in the repository.
 *.dcrlicense
+
+# Release zips for the website (uploaded by hand, too big for git).
+website/download/

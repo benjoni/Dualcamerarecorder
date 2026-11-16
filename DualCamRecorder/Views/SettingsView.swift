@@ -28,6 +28,8 @@ struct SettingsView: View {
 
             LiveViewSettingsSection(model: model, server: model.liveView)
 
+            UpdateSettingsSection()
+
             Section("DeckLink") {
                 Text(controller.sdkStatus).font(.callout)
                 if controller.devices.isEmpty {
