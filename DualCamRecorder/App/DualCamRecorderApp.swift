@@ -438,6 +438,7 @@ struct ContentView: View {
         .task { await runDiskTestIfRequested() }
         .task { await runTriggerTestIfRequested() }
         .task { await runLiveEditTestIfRequested() }
+        .task { runLicenseImportTestIfRequested() }
         .task { await runPlaybackEndTestIfRequested() }
         .task { await runEditExportTestIfRequested() }
         #endif
@@ -906,6 +907,24 @@ extension ContentView {
         settings.recDetectionA = saved.1
         settings.recDetectionB = saved.2
         try? await Task.sleep(nanoseconds: 1_000_000_000)
+        try? log.joined(separator: "\n").write(to: out.appendingPathComponent("result.txt"), atomically: true, encoding: .utf8)
+        exit(0)
+    }
+
+    /// Debug only: `-licenseTestDir <folder> -licenseTestFiles <a.dcrlicense|b.dcrlicense|…>` imports the files one
+    /// after another into a licence installed in that folder (not the real one), writes result.txt and quits.
+    @MainActor
+    func runLicenseImportTestIfRequested() {
+        let args = UserDefaults.standard
+        guard let dir = args.string(forKey: "licenseTestDir"), let files = args.string(forKey: "licenseTestFiles") else { return }
+        let out = URL(fileURLWithPath: dir)
+        let license = License(file: out.appendingPathComponent("installed.dcrlicense"))
+        var log: [String] = []
+        for path in files.split(separator: "|") {
+            let problem = license.install(from: URL(fileURLWithPath: String(path)))
+            log.append("\(URL(fileURLWithPath: String(path)).deletingLastPathComponent().lastPathComponent): "
+                       + (problem ?? "installed") + " → \(license.state)")
+        }
         try? log.joined(separator: "\n").write(to: out.appendingPathComponent("result.txt"), atomically: true, encoding: .utf8)
         exit(0)
     }

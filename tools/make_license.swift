@@ -3,6 +3,9 @@
 // Usage (from the repository root):
 //   swift tools/make_license.swift --name "Jan Novak" --mac ABCD-EFGH-JKMN-PQRS --days 30
 //       → "DualCamRecorder License – Jan Novak.dcrlicense" on the Desktop (send it to the tester)
+//   swift tools/make_license.swift --extends "DualCamRecorder License – Jan Novak.dcrlicense" --days 30
+//       → the next period for the same Mac and name: the days are added to the end of that licence (or to now,
+//         when it has already expired), so buying before the end loses nothing
 //   swift tools/make_license.swift --show-public-key
 //
 // The tester's Mac ID is shown in the app (DualCamRecorder → License…). The licence is valid on that Mac only,
@@ -52,7 +55,7 @@ func signingKey() -> Curve25519.Signing.PrivateKey {
 
 // MARK: - Arguments
 
-var name = "", mac = "", days = 0, showPublicKey = false
+var name = "", mac = "", days = 0, showPublicKey = false, extends = ""
 var outFolder = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Desktop", isDirectory: true)
 var args = CommandLine.arguments.dropFirst().makeIterator()
 while let arg = args.next() {
@@ -60,6 +63,7 @@ while let arg = args.next() {
     case "--name": name = args.next() ?? ""
     case "--mac": mac = args.next() ?? ""
     case "--days": days = Int(args.next() ?? "") ?? 0
+    case "--extends": extends = args.next() ?? ""
     case "--out": outFolder = URL(fileURLWithPath: args.next() ?? ".", isDirectory: true)
     case "--show-public-key": showPublicKey = true
     default: fail("unknown argument \(arg)")
@@ -70,6 +74,34 @@ let key = signingKey()
 if showPublicKey {
     print(key.publicKey.rawRepresentation.base64EncodedString())
     exit(0)
+}
+
+// --extends: Mac and name from the earlier licence (checked with this key), the new period starts at its end.
+let iso = ISO8601DateFormatter()
+let now = Date()
+var periodStart = now
+if !extends.isEmpty {
+    guard let text = try? String(contentsOfFile: (extends as NSString).expandingTildeInPath, encoding: .utf8) else {
+        fail("cannot read \(extends)")
+    }
+    func base64urlDecode(_ part: Substring) -> Data? {
+        var s = part.replacingOccurrences(of: "-", with: "+").replacingOccurrences(of: "_", with: "/")
+        while s.count % 4 != 0 { s += "=" }
+        return Data(base64Encoded: s)
+    }
+    let parts = text.trimmingCharacters(in: .whitespacesAndNewlines).split(separator: ".")
+    guard parts.count == 3, parts[0] == "DCR1", let json = base64urlDecode(parts[1]), let signature = base64urlDecode(parts[2]),
+          key.publicKey.isValidSignature(signature, for: json),
+          let old = try? JSONSerialization.jsonObject(with: json) as? [String: Any],
+          let oldMachine = old["machine"] as? String, let oldName = old["name"] as? String,
+          let oldExpiresText = old["expires"] as? String, let oldExpires = iso.date(from: oldExpiresText) else {
+        fail("\(extends) is not a licence made with this key")
+    }
+    let given = mac.uppercased().filter { $0 != "-" && $0 != " " }
+    if !given.isEmpty && given != oldMachine { fail("--mac differs from the Mac of \(extends)") }
+    mac = oldMachine
+    if name.isEmpty { name = oldName }
+    periodStart = max(now, oldExpires)
 }
 
 // Mac ID as shown in the app: 16 characters of 0-9 A-Z without I L O U, dashes and case ignored.
@@ -84,9 +116,7 @@ guard (1...36_500).contains(days) else { fail("--days must be 1 … 36500") }
 
 // MARK: - Licence
 
-let iso = ISO8601DateFormatter()
-let now = Date()
-let expires = now.addingTimeInterval(TimeInterval(days) * 86_400)
+let expires = periodStart.addingTimeInterval(TimeInterval(days) * 86_400)
 let payload: [String: Any] = ["v": 1, "name": trimmedName, "machine": machine,
                               "issued": iso.string(from: now), "expires": iso.string(from: expires)]
 let json = try JSONSerialization.data(withJSONObject: payload, options: [.sortedKeys])
@@ -104,5 +134,6 @@ let shown = DateFormatter()
 shown.dateStyle = .medium
 shown.timeStyle = .short
 let shownID = stride(from: 0, to: 16, by: 4).map { String(Array(machine)[$0..<$0 + 4]) }.joined(separator: "-")
-print("Licence for \(trimmedName), Mac \(shownID), \(days) days – valid until \(shown.string(from: expires))")
+let extended = periodStart > now ? " (after the earlier licence ending \(shown.string(from: periodStart)))" : ""
+print("Licence for \(trimmedName), Mac \(shownID), \(days) days\(extended) – valid until \(shown.string(from: expires))")
 print(out.path)

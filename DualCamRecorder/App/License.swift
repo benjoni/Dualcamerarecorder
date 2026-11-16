@@ -38,11 +38,12 @@ final class License: ObservableObject {
     let file: URL
     private let lastSeenKey = "licenseLastSeen"
 
-    init() {
+    /// `file`: where the licence is installed (another place only for tests).
+    init(file: URL? = nil) {
         machineID = Self.machineID()
         let support = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first
             ?? URL(fileURLWithPath: NSHomeDirectory()).appendingPathComponent("Library/Application Support")
-        file = support.appendingPathComponent("DualCamRecorder/License.dcrlicense")
+        self.file = file ?? support.appendingPathComponent("DualCamRecorder/License.dcrlicense")
         refresh()
     }
 
@@ -92,6 +93,15 @@ final class License: ObservableObject {
             guard payload.machine == Self.normalized(machineID) else {
                 return "This license is for another Mac (\(Self.formatted(payload.machine)))."
             }
+            // An older licence file must not replace the one installed (e.g. last month's file opened by mistake).
+            if let installed = Self.installedExpiry(file: file, machine: payload.machine),
+               let new = ISO8601DateFormatter().date(from: payload.expires), new < installed {
+                let shown = DateFormatter()
+                shown.dateStyle = .medium
+                shown.timeStyle = .short
+                return "This license ends earlier (\(shown.string(from: new))) than the one installed "
+                    + "(\(shown.string(from: installed))) – the installed license stays."
+            }
             do {
                 try FileManager.default.createDirectory(at: file.deletingLastPathComponent(), withIntermediateDirectories: true)
                 try text.write(to: file, atomically: true, encoding: .utf8)
@@ -140,6 +150,13 @@ final class License: ObservableObject {
         guard let payload = try? JSONDecoder().decode(Payload.self, from: json) else { return .failure(.format) }
         guard payload.v == 1 else { return .failure(.version) }
         return .success(payload)
+    }
+
+    /// End of the installed licence when it is valid for this Mac (signature and machine checked).
+    private static func installedExpiry(file: URL, machine: String) -> Date? {
+        guard let text = try? String(contentsOf: file, encoding: .utf8),
+              case .success(let payload) = verify(text), payload.machine == machine else { return nil }
+        return ISO8601DateFormatter().date(from: payload.expires)
     }
 
     private static func check(file: URL, machine: String, lastSeenKey: String) -> State {
