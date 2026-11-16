@@ -162,6 +162,30 @@ figure.mock { margin: 0; border-radius: 10px; border: 1px solid var(--line); bac
 @media (max-width: 920px) { #try .wrap.split { grid-template-columns: 1fr; } }
 #try figure.mock { background: var(--bg); }
 
+/* buy */
+#buy .plans { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+@media (max-width: 820px) { #buy .plans { grid-template-columns: 1fr; } }
+.plan { position: relative; display: grid; gap: 10px; align-content: start; padding: 28px; border: 2px solid var(--line); border-radius: 10px;
+  background: var(--panel); cursor: pointer; }
+.plan:has(input:checked) { border-color: var(--tally); }
+.plan input { position: absolute; opacity: 0; }
+.plan .price { font: 900 64px/1 var(--display); }
+.plan .price small { font: 600 16px/1 var(--body); color: var(--muted); margin-left: 6px; }
+.plan .was { text-decoration: line-through; text-decoration-color: var(--tally); text-decoration-thickness: 4px; color: var(--muted); font-size: .6em; margin-right: 6px; }
+.plan .pick { font: 700 13px/1 var(--mono); letter-spacing: .12em; color: var(--muted); text-transform: uppercase; }
+.plan:has(input:checked) .pick { color: var(--tally); }
+.deal { display: block; padding: 12px 14px; border-radius: 8px;
+  background: color-mix(in srgb, var(--amber) 16%, transparent); border: 1px solid color-mix(in srgb, var(--amber) 50%, transparent); font-size: 15px; }
+.deal code { font: 700 16px/1 var(--mono); color: var(--amber); letter-spacing: .06em; }
+.buyform { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin-top: 24px; }
+@media (max-width: 820px) { .buyform { grid-template-columns: 1fr; } }
+.buyform label { display: grid; gap: 6px; font-weight: 700; font-size: 15px; }
+.buyform input[type=text] { font: 500 18px/1.2 var(--body); padding: 13px 14px; border-radius: 8px; border: 1px solid var(--line); background: #202023; color: var(--ink); }
+.buyform input.macfield { font-family: var(--mono); letter-spacing: .06em; text-transform: uppercase; }
+.buyform .hint { font-weight: 400; font-size: 13px; color: var(--muted); }
+.buyform .go { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 14px 22px; align-items: center; }
+.buyform button.btn { cursor: pointer; font-family: var(--body); }
+.buyerror { margin-bottom: 16px; padding: 12px 14px; border-radius: 8px; border: 1px solid var(--tally); color: #ffb3ad; }
 
 /* phone slate */
 .clapper { background: #000; border-block: 3px solid var(--ink); position: relative; }
@@ -221,8 +245,9 @@ footer b { color: var(--ink); font-family: var(--display); font-size: 20px; lett
       <a href="#sound">Sound</a>
       <a href="#paperwork">Reports</a>
       <a href="#requirements">Requirements</a>
+      <a href="#buy">Pricing</a>
     </nav>
-    <a class="btn small" href="#try"><span class="dot"></span>Try it</a>
+    <a class="btn small" href="#buy"><span class="dot"></span>Buy</a>
   </div>
 </header>
 
@@ -241,13 +266,13 @@ footer b { color: var(--ink); font-family: var(--display); font-size: 20px; lett
           <p class="lede">Record two SDI cameras into ProRes or H.265 on one Mac. Play the take back in sync, slate it, cut it and hand it over before the next setup.</p>
           <div class="cta">
             <a class="btn live" href="#features"><span class="dot" style="background:#fff"></span>See how it works</a>
-            <a class="btn" href="#try">Get a test licence</a>
+            <a class="btn" href="#buy">Pricing</a>
             <span class="note">For macOS, Apple Silicon and Intel.</span>
           </div>
         </div>
       </div>
       <div class="monitor">
-        <video src="media/promo.mp4?v=3" poster="media/poster.jpg?v=3" autoplay muted loop playsinline controls preload="metadata" aria-label="DualCamRecorder tutorial video – how to use the app"></video>
+        <video src="media/promo.mp4?v=4" poster="media/poster.jpg?v=4" autoplay muted loop playsinline controls preload="metadata" aria-label="DualCamRecorder tutorial video – how to use the app"></video>
       </div>
     </div>
     <div class="wrap specs">
@@ -520,6 +545,50 @@ footer b { color: var(--ink); font-family: var(--display); font-size: 20px; lett
   </section>
 
 
+  <section id="buy">
+    <div class="wrap">
+      <div class="section-head">
+        <span class="kicker">Pricing</span>
+        <h2>Buy a licence</h2>
+        <p>One licence records on one Mac. Pay monthly or yearly by card; the licence comes by e-mail right after the payment and again after every renewal. Cancel any time.</p>
+      </div>
+      <p class="buyerror" id="buyerror" hidden></p>
+      <form class="buyform-wrap" action="buy/checkout.php" method="post">
+        <div class="plans">
+          <label class="plan">
+            <input type="radio" name="plan" value="monthly">
+            <span class="pick">Monthly</span>
+            <span class="price">200 €<small>/ month</small></span>
+            <span class="muted">Renews every month. Good for a single shoot.</span>
+          </label>
+          <label class="plan">
+            <input type="radio" name="plan" value="yearly" checked>
+            <span class="pick">Yearly</span>
+            <span class="price" data-until="2026-11-30T23:59:59+01:00"><span class="was">2000 €</span> 1000 €<small>/ first year</small></span>
+            <span class="price" data-from="2026-11-30T23:59:59+01:00" hidden>2000 €<small>/ year</small></span>
+            <span class="muted">Renews every year – two months for free compared to monthly.</span>
+            <span class="deal" data-until="2026-11-30T23:59:59+01:00">Black Friday: <b>1000 € off the first year</b> until 30 November – already in the price, no code needed. Then 2000 € a year.</span>
+          </label>
+        </div>
+        <div class="buyform">
+          <label>Mac ID
+            <input class="macfield" type="text" name="mac" required placeholder="ABCD-EFGH-JKMN-PQRS" autocomplete="off" spellcheck="false"
+                   pattern="[0-9A-Za-z\- ]{16,23}">
+            <span class="hint">Install the app, open DualCamRecorder → License… and press Copy.</span>
+          </label>
+          <label>Licensed to
+            <input type="text" name="name" required maxlength="80" placeholder="Name or company">
+            <span class="hint">Shown in the app's License window.</span>
+          </label>
+          <div class="go">
+            <button class="btn live" type="submit">Continue to payment</button>
+            <span class="muted" style="font-size:14px">Prices without VAT – VAT is added at checkout where it applies. Secure payment by Stripe.</span>
+          </div>
+        </div>
+      </form>
+    </div>
+  </section>
+
   <section id="try">
     <div class="wrap split">
       <div style="display:grid;gap:22px">
@@ -556,7 +625,7 @@ footer b { color: var(--ink); font-family: var(--display); font-size: 20px; lett
           <div><dt>Monitor</dt><dd>Optional: a Blackmagic device with video output, such as UltraStudio Monitor 3G</dd></div>
           <div><dt>Sound</dt><dd>Optional: a USB audio interface, such as Focusrite Scarlett, for the mixer’s sound</dd></div>
           <div><dt>Phones</dt><dd>Any phone or tablet with a browser, on the same Wi-Fi</dd></div>
-          <div><dt>Licence</dt><dd>One per Mac, from Benjoni</dd></div>
+          <div><dt>Licence</dt><dd>One per Mac – monthly or yearly subscription</dd></div>
         </dl>
       </div>
       <div style="display:grid;gap:28px;align-content:start">
@@ -569,7 +638,8 @@ footer b { color: var(--ink); font-family: var(--display); font-size: 20px; lett
           <details><summary>Does the crew need an app on their phones?</summary><p>No. They scan the QR code and the live view opens in the browser, on any phone or tablet on the same Wi-Fi.</p></details>
           <details><summary>Can we record the sound recordist’s mix?</summary><p>Yes. Plug a USB audio interface into the Mac and pick it in Project settings → Audio interface. The mix goes into the files of both cameras, with the cameras’ own sound kept as a second track if you want it.</p></details>
           <details><summary>Can the whole crew change the slate from their phones?</summary><p>No, only phones with the slate code. The crew code is watch only, and the Mac refuses slate changes from it.</p></details>
-          <details><summary>Does the licence move with me to another Mac?</summary><p>No. A licence is made for the ID of one Mac. For another Mac, send its ID and you get a new licence.</p></details>
+          <details><summary>Does the licence move with me to another Mac?</summary><p>No. A licence is made for the ID of one Mac. For another Mac, write to Benjoni with its ID and you get a new licence.</p></details>
+          <details><summary>How does the subscription work?</summary><p>You pay by card through Stripe. After every payment – the first one and each renewal – a new licence file comes by e-mail; import it in DualCamRecorder → License…. Cancel any time: the licence runs until the end of the period you paid for.</p></details>
           <details><summary>Can the camera start the recording?</summary><p>Yes. With Record with the camera turned on, the REC flag in the camera’s SDI signal starts and stops the take, and the camera’s timecode is saved with every clip.</p></details>
           <details><summary>What happens when the disk fills up or is pulled out?</summary><p>You see the remaining recording time all the time. If the disk disappears, the take stops and everything written so far is saved and playable.</p></details>
         </div>
@@ -584,6 +654,13 @@ footer b { color: var(--ink); font-family: var(--display); font-size: 20px; lett
     <span>© 2026 Benjoni s.r.o. · DualCamRecorder</span>
   </div>
 </footer>
+<script>
+  // Error from buy/checkout.php (?buy_error=…) and the Black Friday note only until its end.
+  const problem = new URLSearchParams(location.search).get('buy_error');
+  if (problem) { const e = document.getElementById('buyerror'); e.textContent = problem; e.hidden = false; }
+  document.querySelectorAll('[data-until]').forEach(el => { if (Date.now() > Date.parse(el.dataset.until)) el.remove(); });
+  document.querySelectorAll('[data-from]').forEach(el => { if (Date.now() > Date.parse(el.dataset.from)) el.hidden = false; });
+</script>
 
 </body>
 </html>

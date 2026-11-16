@@ -14,3 +14,8 @@ dist/
 
 # Release zips for the website (uploaded by hand, too big for git).
 website/download/
+
+# Shop: secret keys and issued licences – only on the server.
+website/buy/config.php
+website/buy/data/*
+!website/buy/data/.htaccess

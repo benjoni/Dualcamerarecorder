@@ -1,0 +1,16 @@
+/* Success page of the shop – same look as the website. */
+:root { --bg: #0c0c0d; --panel: #17171a; --line: #2a2a2e; --ink: #f2f0ea; --muted: #a3a09a; --tally: #e5342a; color-scheme: dark; }
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 17px/1.6 "Helvetica Neue", Arial, sans-serif; }
+a { color: inherit; }
+.box { width: min(680px, 100% - 32px); margin: 64px auto; display: grid; gap: 20px; }
+.brand { display: flex; align-items: center; gap: 10px; text-decoration: none; font-weight: 800; font-size: 22px; }
+.brand img { width: 32px; height: 32px; border-radius: 8px; }
+h1 { font-size: clamp(34px, 6vw, 52px); line-height: 1; margin: 0; text-transform: uppercase; }
+p { margin: 0; }
+.muted { color: var(--muted); }
+.mono { font-family: ui-monospace, Menlo, monospace; letter-spacing: .04em; }
+.kicker { font: 700 13px/1 ui-monospace, Menlo, monospace; letter-spacing: .16em; color: var(--tally); text-transform: uppercase; }
+.btn { justify-self: start; display: inline-flex; padding: 13px 22px; border-radius: 8px; font-weight: 700; text-decoration: none;
+  border: 2px solid var(--tally); background: var(--tally); color: #fff; }
+.steps { margin: 0; padding-left: 22px; display: grid; gap: 8px; }

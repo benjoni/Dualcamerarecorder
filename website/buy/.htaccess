@@ -1,0 +1,7 @@
+# config.php holds the secret keys; PHP runs it, but never send it as text.
+<Files "config.php">
+  Require all denied
+</Files>
+<Files "lib.php">
+  Require all denied
+</Files>
