@@ -182,6 +182,14 @@ final class EditPlayer: ObservableObject {
     /// Pieces as they are in the loaded movie (start / length).
     @Published private(set) var pieces: [EditComposition.Piece] = []
     private var timeObserver: Any?
+    /// While a piece's edge is trimmed: the source frame at that edge (exact frame from the clip's file – the
+    /// movie being rebuilt cannot show it in time). Shown over the picture until the rebuilt movie is there.
+    @Published private(set) var still: CGImage?
+    private var stillGenerator: (url: URL, generator: AVAssetImageGenerator)?
+    private var stillRequest = 0
+    private var holdingStill = false
+    /// A rebuilt movie is being made (the frame over the picture waits for it).
+    private var building = false
     private var buildGeneration = 0
     /// Frame tap of the cut for the monitor output (read on the monitor's queue).
     private nonisolated let monitorTap = OSAllocatedUnfairLock<(output: AVPlayerItemVideoOutput?, frameDuration: CMTime)>(
@@ -203,6 +211,8 @@ final class EditPlayer: ObservableObject {
         buildGeneration += 1
         let generation = buildGeneration
         guard let folder, !segments.isEmpty else {
+            building = false
+            still = nil
             player.replaceCurrentItem(with: nil)
             monitorTap.withLock { $0.output = nil }
             pieces = []
@@ -213,8 +223,10 @@ final class EditPlayer: ObservableObject {
         }
         let position = currentTime
         let wasPlaying = isPlaying
+        building = true
         let built = await EditComposition.build(segments: segments, folder: folder)
         guard generation == buildGeneration else { return }   // a newer change is being loaded
+        building = false
         guard let built else {
             player.replaceCurrentItem(with: nil)
             monitorTap.withLock { $0.output = nil }
@@ -230,7 +242,7 @@ final class EditPlayer: ObservableObject {
         pieces = built.pieces
         fps = built.fps
         duration = built.composition.duration.seconds
-        seek(to: min(position, max(0, duration - 0.04)))
+        seek(to: min(position, max(0, duration - 0.04))) { [weak self] in self?.dropStillIfReleased() }
         if wasPlaying { player.play() }
     }
 
@@ -249,10 +261,50 @@ final class EditPlayer: ObservableObject {
         isPlaying = false
     }
 
-    func seek(to seconds: Double) {
+    func seek(to seconds: Double, then done: (@MainActor () -> Void)? = nil) {
         let t = CMTime(seconds: max(0, seconds), preferredTimescale: 60000)
         currentTime = t.seconds
-        player.seek(to: t, toleranceBefore: .zero, toleranceAfter: .zero)
+        player.seek(to: t, toleranceBefore: .zero, toleranceAfter: .zero) { _ in
+            guard let done else { return }
+            Task { @MainActor in done() }
+        }
+    }
+
+    // MARK: - Trim frame
+
+    /// Shows the frame at `seconds` of a clip's file over the picture (while an edge is dragged).
+    func showStill(url: URL, at seconds: Double) {
+        holdingStill = true
+        stillRequest += 1
+        let request = stillRequest
+        if stillGenerator?.url != url {
+            let generator = AVAssetImageGenerator(asset: AVURLAsset(url: url))
+            generator.appliesPreferredTrackTransform = true
+            generator.requestedTimeToleranceBefore = .zero
+            generator.requestedTimeToleranceAfter = .zero
+            generator.maximumSize = CGSize(width: 1920, height: 1080)
+            stillGenerator = (url, generator)
+        }
+        guard let generator = stillGenerator?.generator else { return }
+        generator.cancelAllCGImageGeneration()
+        generator.generateCGImageAsynchronously(for: CMTime(seconds: max(0, seconds), preferredTimescale: 60000)) { image, _, _ in
+            guard let image else { return }
+            Task { @MainActor [weak self] in
+                guard let self, request == self.stillRequest, self.holdingStill || self.still != nil else { return }
+                self.still = image
+            }
+        }
+    }
+
+    /// The edge was let go: the frame stays until the player shows the rebuilt movie at `seconds`.
+    func releaseStill(showing seconds: Double) {
+        holdingStill = false
+        stillRequest += 1   // a frame still being made is not shown any more
+        seek(to: seconds) { [weak self] in self?.dropStillIfReleased() }
+    }
+
+    private func dropStillIfReleased() {
+        if !holdingStill, !building, still != nil { still = nil }
     }
 
     /// While the playhead is dragged with the mouse: a fast, approximate seek (the exact frame follows with

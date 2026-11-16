@@ -113,6 +113,13 @@ struct EditView: View {
 
             PlayerView(player: edit.player)
                 .aspectRatio(16.0 / 9.0, contentMode: .fit)
+                // Trimming: the exact frame at the dragged edge, straight from the clip's file.
+                .overlay {
+                    if let still = edit.still {
+                        Image(decorative: still, scale: 1).resizable().aspectRatio(contentMode: .fit)
+                            .frame(maxWidth: .infinity, maxHeight: .infinity).background(Color.black)
+                    }
+                }
                 .overlay { if burnIn && !timeline.segments.isEmpty { burnInPreview } }
                 .clipShape(RoundedRectangle(cornerRadius: 6))
                 .overlay {
@@ -391,6 +398,9 @@ struct TimelineStrip: View {
     @State private var dragging: TimelineSegment.ID?
     @State private var dragOffset: CGFloat = 0
     @State private var trimStart: (inPoint: Double, outPoint: Double)?
+    /// IN edge being dragged: the piece and its IN when the drag began. While dragging, the piece's left edge
+    /// follows the mouse and the pieces after it stay where they are; they close the gap when the mouse is let go.
+    @State private var leadTrim: (id: TimelineSegment.ID, startIn: Double)?
     /// The playhead is being dragged with the mouse.
     @State private var scrubbing = false
 
@@ -410,14 +420,16 @@ struct TimelineStrip: View {
                         .gesture(scrubGesture(pps: pps, deselect: true))
                     ruler(total: total, pps: pps)
                     let starts = timeline.starts
+                    let held = leadTrimHold
                     ForEach(Array(timeline.segments.enumerated()), id: \.element.id) { index, segment in
                         block(segment, pps: pps)
-                            .offset(x: CGFloat(starts[index]) * pps + (dragging == segment.id ? dragOffset : 0),
+                            .offset(x: CGFloat(starts[index] + (index >= held.index ? held.shift : 0)) * pps
+                                        + (dragging == segment.id ? dragOffset : 0),
                                     y: Self.rulerHeight + 6)
                             .zIndex(dragging == segment.id ? 1 : 0)
                     }
                     playhead(height: geo.size.height, pps: pps)
-                        .offset(x: CGFloat(edit.currentTime) * pps - 7)
+                        .offset(x: CGFloat(edit.currentTime + held.shift) * pps - 7)
                         .zIndex(2)
                 }
                 .frame(width: max(geo.size.width, CGFloat(total) * pps + 24), height: geo.size.height, alignment: .topLeading)
@@ -425,6 +437,13 @@ struct TimelineStrip: View {
             }
         }
         .clipShape(RoundedRectangle(cornerRadius: 8))
+    }
+
+    /// While an IN edge is dragged: index of that piece and how far (s) it and the pieces after it are drawn
+    /// right of their place, so nothing but the dragged edge moves. (.max, 0) when no IN edge is dragged.
+    private var leadTrimHold: (index: Int, shift: Double) {
+        guard let leadTrim, let i = timeline.segments.firstIndex(where: { $0.id == leadTrim.id }) else { return (.max, 0) }
+        return (i, timeline.segments[i].inPoint - leadTrim.startIn)
     }
 
     /// Click or drag (anywhere along the strip) puts the playhead under the mouse.
@@ -473,7 +492,7 @@ struct TimelineStrip: View {
         .help("Click or drag to move the playhead")
     }
 
-    /// Red playhead with a handle on the ruler – drag it to any place, also over the pieces.
+    /// Red playhead with a handle on the ruler – drag the handle to any place, also over the pieces.
     private func playhead(height: CGFloat, pps: CGFloat) -> some View {
         ZStack(alignment: .top) {
             Rectangle()
@@ -491,7 +510,9 @@ struct TimelineStrip: View {
             .frame(width: 14, height: 17)
         }
         .frame(width: 14, height: height)
-        .contentShape(Rectangle())
+        // Only the handle on the ruler catches the mouse: the line over the pieces must not cover their trim
+        // handles (a click on a piece puts the playhead right on its IN edge).
+        .contentShape(Path(CGRect(x: 0, y: 0, width: 14, height: Self.rulerHeight)))
         .gesture(scrubGesture(pps: pps))
         .onHover { inside in
             if inside { NSCursor.resizeLeftRight.push() } else { NSCursor.pop() }
@@ -566,6 +587,24 @@ struct TimelineStrip: View {
         edit.seekToStart(of: segment.id, in: timeline)
     }
 
+    /// The picture shows the frame at the edge being dragged: the new first frame (IN) or last frame (OUT) –
+    /// from the clip's file while dragging, then from the rebuilt movie with the playhead on that frame.
+    private func showTrimmedFrame(_ id: TimelineSegment.ID, leading: Bool, finished: Bool = false) {
+        guard let i = timeline.segments.firstIndex(where: { $0.id == id }) else { return }
+        let segment = timeline.segments[i]
+        let start = timeline.starts[i]
+        let frame = 1 / max(1, edit.fps)
+        let position = leading ? start : max(start, start + segment.duration - frame)
+        if finished {
+            edit.releaseStill(showing: position)
+            return
+        }
+        if let url = timeline.url(for: segment) {
+            edit.showStill(url: url, at: leading ? segment.inPoint : max(segment.inPoint, segment.outPoint - frame))
+        }
+        edit.seek(to: position)
+    }
+
     private func trimHandle(_ segment: TimelineSegment, pps: CGFloat, leading: Bool) -> some View {
         Rectangle()
             .fill(Color.white.opacity(selection == segment.id ? 0.55 : 0.25))
@@ -581,6 +620,7 @@ struct TimelineStrip: View {
                         if trimStart == nil {
                             timeline.beginChange()
                             trimStart = (segment.inPoint, segment.outPoint)
+                            if leading { leadTrim = (segment.id, segment.inPoint) }
                             selection = segment.id
                             edit.pause()
                         }
@@ -591,10 +631,13 @@ struct TimelineStrip: View {
                         } else {
                             timeline.trim(segment.id, outPoint: start.outPoint + delta)
                         }
+                        showTrimmedFrame(segment.id, leading: leading)
                     }
                     .onEnded { _ in
                         trimStart = nil
+                        leadTrim = nil
                         timeline.commit()
+                        showTrimmedFrame(segment.id, leading: leading, finished: true)
                     }
             )
             .help(leading ? "Drag to move IN" : "Drag to move OUT")
