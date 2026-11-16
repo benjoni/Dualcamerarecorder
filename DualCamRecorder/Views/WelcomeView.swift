@@ -45,7 +45,9 @@ struct WelcomeView: View {
                     model.open(entry)
                 }
             case .edit(let entry):
-                ProjectEditSheet(title: "Edit project", entry: entry, location: entry.folder.deletingLastPathComponent()) { name, director, dop, notes, _ in
+                ProjectEditSheet(title: "Edit project", entry: entry, location: entry.folder.deletingLastPathComponent(),
+                                 onFinder: { projects.showInFinder(entry) },
+                                 onRemove: { projects.removeFromList(entry) }) { name, director, dop, notes, _ in
                     let updated = try projects.update(entry, name: name, director: director, dop: dop, notes: notes)
                     model.applyEdited(updated)
                 }
@@ -139,9 +141,7 @@ struct WelcomeView: View {
                             ProjectRow(entry: entry,
                                        clipCount: entry.clips,
                                        onOpen: { model.open(entry) },
-                                       onEdit: { editing = .edit(entry) },
-                                       onFinder: { projects.showInFinder(entry) },
-                                       onRemove: { projects.removeFromList(entry) })
+                                       onEdit: { editing = .edit(entry) })
                         }
                     }
                     .padding(.horizontal, 24)
@@ -189,8 +189,6 @@ struct ProjectRow: View {
     let clipCount: Int
     let onOpen: () -> Void
     let onEdit: () -> Void
-    let onFinder: () -> Void
-    let onRemove: () -> Void
 
     var body: some View {
         HStack(spacing: 16) {
@@ -221,15 +219,7 @@ struct ProjectRow: View {
             Spacer()
             HStack(spacing: 8) {
                 Button("Edit…", action: onEdit)
-                Button(action: onFinder) { Image(systemName: "magnifyingglass") }
-                    .help("Show in Finder")
-                Menu {
-                    Button("Remove from list", role: .destructive, action: onRemove)
-                } label: {
-                    Image(systemName: "ellipsis.circle")
-                }
-                .menuStyle(.borderlessButton)
-                .fixedSize()
+                    .help("Name, director, DoP, notes · Show in Finder · Remove from list")
                 Button("Open", action: onOpen)
                     .buttonStyle(.borderedProminent)
             }
@@ -248,8 +238,12 @@ struct ProjectEditSheet: View {
     let entry: ProjectEntry?
     @State var location: URL
     let onSave: (String, String, String, String, URL) throws -> Void
+    /// Existing project only: show its folder / take it off the project list.
+    var onFinder: (() -> Void)? = nil
+    var onRemove: (() -> Void)? = nil
 
     @Environment(\.dismiss) private var dismiss
+    @State private var confirmRemove = false
     @State private var name = ""
     @State private var director = ""
     @State private var dop = ""
@@ -257,10 +251,13 @@ struct ProjectEditSheet: View {
     @State private var error: String?
 
     init(title: String, entry: ProjectEntry?, location: URL,
+         onFinder: (() -> Void)? = nil, onRemove: (() -> Void)? = nil,
          onSave: @escaping (String, String, String, String, URL) throws -> Void) {
         self.title = title
         self.entry = entry
         self._location = State(initialValue: location)
+        self.onFinder = onFinder
+        self.onRemove = onRemove
         self.onSave = onSave
         _name = State(initialValue: entry?.project.name ?? "")
         _director = State(initialValue: entry?.project.director ?? "")
@@ -300,6 +297,14 @@ struct ProjectEditSheet: View {
                 Text(error).foregroundStyle(.red)
             }
             HStack {
+                if let onFinder {
+                    Button("Show in Finder", action: onFinder)
+                        .help("Show the project folder in Finder")
+                }
+                if onRemove != nil {
+                    Button("Remove from list…", role: .destructive) { confirmRemove = true }
+                        .help("Take the project off this list – the folder and its clips stay on the disk")
+                }
                 Spacer()
                 Button("Cancel") { dismiss() }
                     .keyboardShortcut(.cancelAction)
@@ -312,6 +317,14 @@ struct ProjectEditSheet: View {
         }
         .padding(24)
         .frame(width: 620)
+        .confirmationDialog("Remove “\(entry?.project.name ?? "")” from the list?", isPresented: $confirmRemove) {
+            Button("Remove from list", role: .destructive) {
+                onRemove?()
+                dismiss()
+            }
+        } message: {
+            Text("The project folder and its clips stay on the disk – open it again with “Open folder as project…”.")
+        }
     }
 
     private func save() {
