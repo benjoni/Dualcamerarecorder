@@ -152,6 +152,43 @@ final class EditTimeline: ObservableObject {
         select(copy.id)
     }
 
+    /// New sequence from outside (a take cut live), selected; only into the project that is loaded.
+    func addSequence(name: String, segments new: [TimelineSegment], folder target: URL) {
+        guard let folder, folder.standardizedFileURL.path == target.standardizedFileURL.path, !new.isEmpty else { return }
+        syncCurrent()
+        let sequence = EditSequence(name: nextName(name), segments: new)
+        sequences.append(sequence)
+        currentID = sequence.id
+        segments = new
+        history = []
+        canUndo = false
+        save()
+    }
+
+    /// Pieces of a take cut live: from each cut to the next one, on the camera chosen. A piece shorter than
+    /// `minimumLength` goes to the camera cut to next (two quick presses = the second one counts).
+    static func liveEditSegments(_ take: LiveEditTake, length: Double) -> [TimelineSegment] {
+        var cuts: [LiveEditCut] = []
+        for cut in take.cuts.sorted(by: { $0.time < $1.time }) where cut.time < length {
+            if let last = cuts.last, cut.time - last.time < minimumLength {
+                cuts[cuts.count - 1].camera = cut.camera
+            } else {
+                cuts.append(cut)
+            }
+            // The same camera twice in a row is one piece.
+            if cuts.count > 1, cuts[cuts.count - 1].camera == cuts[cuts.count - 2].camera { cuts.removeLast() }
+        }
+        guard !cuts.isEmpty else { return [] }
+        cuts[0].time = 0
+        // The last piece too short: the one before runs to the end.
+        if cuts.count > 1, length - cuts[cuts.count - 1].time < minimumLength { cuts.removeLast() }
+        return cuts.enumerated().map { i, cut in
+            TimelineSegment(take: take.take, camera: cut.camera, fileA: take.fileA, fileB: take.fileB,
+                            inPoint: cut.time, outPoint: i + 1 < cuts.count ? cuts[i + 1].time : length,
+                            clipDuration: length, label: take.label)
+        }
+    }
+
     func rename(_ id: EditSequence.ID, to name: String) {
         let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty, let i = sequences.firstIndex(where: { $0.id == id }), sequences[i].name != trimmed else { return }

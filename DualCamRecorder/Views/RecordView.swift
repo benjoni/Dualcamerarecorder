@@ -30,14 +30,14 @@ struct RecordView: View {
             if settings.isCameraOn(.a) {
                 VStack(spacing: 4) {
                     CameraScreen(channel: controller.channelA, showWaveform: settings.showWaveform, mask: settings.maskA,
-                                 rehearsal: controller.isRehearsal)
+                                 rehearsal: controller.isRehearsal, liveCut: controller.liveCut == .a ? "1" : nil)
                     CameraInfoBar(settings: settings, role: .a, editable: false)
                 }
             }
             if settings.isCameraOn(.b) {
                 VStack(spacing: 4) {
                     CameraScreen(channel: controller.channelB, showWaveform: settings.showWaveform, mask: settings.maskB,
-                                 rehearsal: controller.isRehearsal)
+                                 rehearsal: controller.isRehearsal, liveCut: controller.liveCut == .b ? "2" : nil)
                     CameraInfoBar(settings: settings, role: .b, editable: false)
                 }
             }
@@ -152,6 +152,8 @@ struct RecordView: View {
                     .buttonStyle(.borderless)
                     .help("Remove the last IN / OUT range")
                     .disabled(!recording || controller.marks.isEmpty)
+
+                LiveEditControls(controller: controller, settings: settings, compact: compact, height: buttonHeight)
         }
         return Group {
             if compact {
@@ -340,7 +342,8 @@ struct CameraPanel: View {
             .frame(maxWidth: pictureWidth ?? .infinity)
 
             CameraScreen(channel: channel, showWaveform: showWaveform, mask: settings.mask(channel.role),
-                         rehearsal: controller.isRehearsal)
+                         rehearsal: controller.isRehearsal,
+                         liveCut: controller.liveCut == channel.role ? (channel.role == .a ? "1" : "2") : nil)
                 .overlay(alignment: .bottomLeading) {
                     let o = settings.orientation(channel.role)
                     if o.isTurned {
@@ -486,6 +489,8 @@ struct CameraScreen: View {
     var mask = FrameMask()
     /// The take is a rehearsal: orange frame and badge, no "camera is not recording" warning.
     var rehearsal = false
+    /// Live edit: this camera is in the cut – green frame and a "CUT 1" badge (key of the camera).
+    var liveCut: String? = nil
 
     var body: some View {
         ZStack(alignment: .topLeading) {
@@ -516,9 +521,19 @@ struct CameraScreen: View {
                         .opacity(channel.isRecording ? 1 : 0)
                         .animation(.easeInOut(duration: 0.15), value: channel.isRecording)
                 )
+                // Live edit: green frame inside the red one around the camera in the cut.
+                .overlay(
+                    RoundedRectangle(cornerRadius: channel.isRecording ? 3 : 6)
+                        .strokeBorder(Color.liveCut, lineWidth: 5)
+                        .padding(channel.isRecording ? 4 : 0)
+                        .opacity(liveCut != nil ? 1 : 0)
+                )
             HStack(spacing: 6) {
                 if channel.isRecording {
                     Badge(text: rehearsal ? "● REHEARSAL" : "● REC", color: rehearsal ? .orange : .red)
+                }
+                if let liveCut {
+                    Badge(text: "▶ CUT \(liveCut)", color: .liveCut)
                 }
                 if !channel.hasSource {
                     Badge(text: "Unassigned", color: .gray)
@@ -794,5 +809,55 @@ struct InterfaceChannelMeters: View {
             .font(.caption)
             .foregroundStyle(.red)
         }
+    }
+}
+
+extension Color {
+    /// Live edit: the camera in the cut (Record pictures, buttons 1 / 2, Blackmagic monitor).
+    static let liveCut = Color(red: 0.1, green: 0.85, blue: 0.25)
+}
+
+/// LIVE EDIT on / off and the cut buttons 1 (camera A) and 2 (camera B), also on the keys 1 / 2.
+private struct LiveEditControls: View {
+    @ObservedObject var controller: RecordingController
+    @ObservedObject var settings: AppSettings
+    let compact: Bool
+    let height: CGFloat
+
+    var body: some View {
+        HStack(spacing: 6) {
+            Toggle(isOn: Binding(get: { controller.liveEdit }, set: { controller.setLiveEdit($0) })) {
+                Label("LIVE EDIT", systemImage: "scissors")
+                    .font((compact ? Font.callout : .body).weight(.bold))
+                    .frame(height: height - 12)
+            }
+            .toggleStyle(.button)
+            .tint(.liveCut)
+            .disabled(!controller.liveEditAvailable)
+            .allowsHitTesting(!controller.isRecording)   // stays green while recording, cannot be switched
+            .help(controller.liveEditAvailable
+                  ? "Live edit: cut between the cameras with 1 and 2 while recording – the cut is saved as a sequence in Edit. Recordings and Playback stay as they are."
+                  : "Live edit needs both cameras on.")
+            if controller.liveCut != nil {
+                ForEach([CameraRole.a, .b], id: \.self) { role in
+                    let key = role == .a ? "1" : "2"
+                    let on = controller.liveCut == role
+                    Button { controller.cut(to: role) } label: {
+                        VStack(spacing: 0) {
+                            Text(key).font((compact ? Font.title3 : .title2).weight(.heavy))
+                            Text(settings.cameraNames.name(role)).font(.caption2.weight(.semibold)).lineLimit(1)
+                        }
+                        .frame(width: compact ? 46 : 56, height: height)
+                        .foregroundStyle(on ? Color.black : Color.liveCut)
+                        .background(on ? Color.liveCut : Color(white: 0.22), in: RoundedRectangle(cornerRadius: 8))
+                        .overlay(RoundedRectangle(cornerRadius: 8).strokeBorder(Color.liveCut, lineWidth: 2))
+                        .contentShape(RoundedRectangle(cornerRadius: 8))
+                    }
+                    .buttonStyle(.plain)
+                    .help("Cut to camera \(settings.cameraNames.name(role)) (\(key))")
+                }
+            }
+        }
+        .padding(.leading, 8)
     }
 }

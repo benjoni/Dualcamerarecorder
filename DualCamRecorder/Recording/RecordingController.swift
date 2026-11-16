@@ -58,6 +58,13 @@ final class RecordingController: NSObject, ObservableObject, DLDeviceBrowserDele
     @Published private(set) var diskAlert: DiskAlert?
     /// The disk cannot keep up: shown while recording and after STOP until the next REC.
     @Published private(set) var writeWarning: String?
+    /// Live edit: the director cuts between the cameras with 1 / 2 while recording; the cut is saved as a
+    /// sequence of the take in Edit (the recordings and Playback are not changed).
+    @Published private(set) var liveEdit = false
+    /// Camera chosen with 1 / 2 (kept when live edit is switched off and on again).
+    @Published private(set) var liveCamera: CameraRole = .a
+    /// Camera in the live cut right now – nil when live edit is off or only one camera is on.
+    @Published private(set) var liveCut: CameraRole?
 
     let sdkStatus: String
 
@@ -74,6 +81,8 @@ final class RecordingController: NSObject, ObservableObject, DLDeviceBrowserDele
     private var diskLost = false
     private var droppedAtLastTick: [CameraRole: Int] = [:]
     private var unmountObservers: [NSObjectProtocol] = []
+    /// Cuts of the running take (seconds from the common start instant); the first one is at 0.
+    private var liveCuts: [LiveEditCut] = []
 
     init(settings: AppSettings) {
         self.settings = settings
@@ -121,6 +130,14 @@ final class RecordingController: NSObject, ObservableObject, DLDeviceBrowserDele
                 self?.volumeWentAway(url)
             })
         }
+
+        // Live edit needs both cameras.
+        $liveEdit.combineLatest($liveCamera, settings.$cameraCount, settings.$cameraAOn.combineLatest(settings.$cameraBOn))
+            .sink { [weak self] on, camera, count, cams in
+                let cut: CameraRole? = on && count >= 2 && cams.0 && cams.1 ? camera : nil
+                if self?.liveCut != cut { self?.liveCut = cut }
+            }
+            .store(in: &cancellables)
 
         timer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { [weak self] _ in self?.tick() }
         refreshNextTake()
@@ -350,12 +367,34 @@ final class RecordingController: NSObject, ObservableObject, DLDeviceBrowserDele
         writeWarning = nil
         droppedAtLastTick = [:]
         marks = TakeMarks()
+        // Live edit: both cameras record – the take starts with the camera chosen now.
+        liveCuts = liveCut != nil && armed.count == 2 ? [LiveEditCut(time: 0, camera: liveCamera)] : []
         recordingSlate = slate
         state = .recording(take: take, started: Date())
         elapsed = 0
         lastTakeMessage = rehearsal ? "Rehearsal – only the app records" : nil
         if settings.audioInterfaceMode != .off && interfaceChannels == 0 {
             errorMessage = "Audio interface is not connected – this take has only the cameras' SDI sound."
+        }
+    }
+
+    // MARK: - Live edit
+
+    /// Both cameras are on (live edit cuts between them).
+    var liveEditAvailable: Bool { settings.twoCameras && settings.isCameraOn(.a) && settings.isCameraOn(.b) }
+
+    /// On / off – not while recording (a take is cut either all the way or not at all).
+    func setLiveEdit(_ on: Bool) {
+        guard state == .idle, on != liveEdit else { return }
+        liveEdit = on
+    }
+
+    /// Cut to a camera (1 = A, 2 = B). Before REC it chooses the camera the take starts with.
+    func cut(to role: CameraRole) {
+        guard liveCut != nil, role != liveCamera else { return }
+        liveCamera = role
+        if case .recording = state, !liveCuts.isEmpty {
+            liveCuts.append(LiveEditCut(time: max(0, recordPosition), camera: role))
         }
     }
 
@@ -491,6 +530,19 @@ final class RecordingController: NSObject, ObservableObject, DLDeviceBrowserDele
                 errorMessage = "Could not save IN/OUT: \(error.localizedDescription)"
             }
         }
+        // Live edit: the cut goes to Edit as a sequence (both cameras must have recorded).
+        if liveCuts.count > 0, !diskLost, let folder = saveFolder, let take = activeTake,
+           let fileA = pendingResults.first(where: { $0.role == .a && $0.framesWritten > 0 })?.url,
+           let fileB = pendingResults.first(where: { $0.role == .b && $0.framesWritten > 0 })?.url {
+            let firsts = pendingResults.compactMap(\.firstFrameHostNanos)
+            let shift = firsts.min().map { Double(Int64($0) - Int64(recordStartHost)) / 1_000_000_000 } ?? 0
+            let label = [TakeNaming.displayName(take: take), recordingSlate?.shortLabel].compactMap { $0 }.joined(separator: " · ")
+            let recorded = LiveEditTake(folder: folder, take: take, fileA: fileA.lastPathComponent, fileB: fileB.lastPathComponent,
+                                        label: label,
+                                        cuts: liveCuts.map { LiveEditCut(time: max(0, $0.time - shift), camera: $0.camera) })
+            NotificationCenter.default.post(name: .liveEditRecorded, object: recorded)
+        }
+        liveCuts = []
         // Save the slate (note / "good" may have been edited during the take) and advance the take number.
         if var slate = recordingSlate, let folder = saveFolder, let take = activeTake,
            recorded(.a) || recorded(.b) {
@@ -721,4 +773,23 @@ final class RecordingController: NSObject, ObservableObject, DLDeviceBrowserDele
 
 extension Notification.Name {
     static let takeFinished = Notification.Name("DualCamRecorder.takeFinished")
+    /// A take cut live (object: LiveEditTake).
+    static let liveEditRecorded = Notification.Name("DualCamRecorder.liveEditRecorded")
+}
+
+/// One cut of the live edit: from `time` (seconds into the take) the cut shows `camera`.
+struct LiveEditCut: Equatable {
+    var time: Double
+    var camera: CameraRole
+}
+
+/// A take cut live – becomes a sequence in Edit.
+struct LiveEditTake {
+    var folder: URL
+    var take: Int
+    var fileA: String
+    var fileB: String
+    /// "Clip 014 · S23 SH21 T4"
+    var label: String
+    var cuts: [LiveEditCut]
 }

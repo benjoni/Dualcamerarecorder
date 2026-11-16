@@ -7,6 +7,7 @@ import SwiftUI
 import AppKit
 import Combine
 import CoreMedia
+import AVFoundation
 
 /// Long-lived objects live here so capture keeps running while switching tabs.
 final class AppModel: ObservableObject {
@@ -122,6 +123,9 @@ final class AppModel: ObservableObject {
         // Info bar (operator, focus puller …) of each input on the Blackmagic monitor, with the camera's name.
         settings.$infoA.combineLatest(settings.$cameraNameA).removeDuplicates { $0 == $1 }
             .sink { [weak monitor = self.monitor] text, name in monitor?.setInfo(text, name: name, for: .a) }.store(in: &cancellables)
+        // Live edit: the camera in the cut gets a coloured frame on the monitor.
+        recorder.$liveCut.removeDuplicates()
+            .sink { [weak monitor = self.monitor] cut in monitor?.setLiveCut(cut) }.store(in: &cancellables)
         settings.$infoB.combineLatest(settings.$cameraNameB).removeDuplicates { $0 == $1 }
             .sink { [weak monitor = self.monitor] text, name in monitor?.setInfo(text, name: name, for: .b) }.store(in: &cancellables)
         // (The output is the first device found with one – the UltraStudio Monitor.)
@@ -143,6 +147,22 @@ final class AppModel: ObservableObject {
             .sink { [weak self] _ in
                 self?.backup.sync()
                 DispatchQueue.main.asyncAfter(deadline: .now() + 3) { self?.backup.sync() }
+            }
+            .store(in: &cancellables)
+        // A take cut live → a new sequence in Edit (the shorter of the two files sets the length).
+        NotificationCenter.default.publisher(for: .liveEditRecorded)
+            .compactMap { $0.object as? LiveEditTake }
+            .sink { [weak self] take in
+                Task { @MainActor in
+                    var lengths: [Double] = []
+                    for file in [take.fileA, take.fileB] {
+                        let url = take.folder.appendingPathComponent(file)
+                        if let d = try? await AVURLAsset(url: url).load(.duration).seconds, d > 0 { lengths.append(d) }
+                    }
+                    guard let self, lengths.count == 2 else { return }
+                    let segments = EditTimeline.liveEditSegments(take, length: lengths.min()!)
+                    self.timeline.addSequence(name: "Live edit · \(take.label)", segments: segments, folder: take.folder)
+                }
             }
             .store(in: &cancellables)
         settings.$backupEnabled.combineLatest(settings.$backupRootPath)
@@ -417,6 +437,7 @@ struct ContentView: View {
         .task { await runSnapshotsIfRequested() }
         .task { await runDiskTestIfRequested() }
         .task { await runTriggerTestIfRequested() }
+        .task { await runLiveEditTestIfRequested() }
         .task { await runPlaybackEndTestIfRequested() }
         .task { await runEditExportTestIfRequested() }
         #endif
@@ -598,6 +619,9 @@ struct ContentView: View {
                   !(NSApp.keyWindow?.firstResponder is NSText),
                   NSApp.keyWindow?.attachedSheet == nil else { return event }
             switch event.charactersIgnoringModifiers?.lowercased() {
+            // Live edit: 1 / 2 cut to camera A / B (Record tab).
+            case "1" where tab == 0 && model.recorder.liveCut != nil: model.recorder.cut(to: .a); return nil
+            case "2" where tab == 0 && model.recorder.liveCut != nil: model.recorder.cut(to: .b); return nil
             case "r": tab = 0; return nil
             case "p": tab = 1; return nil
             case "e": tab = 2; return nil
@@ -882,6 +906,60 @@ extension ContentView {
         settings.recDetectionA = saved.1
         settings.recDetectionB = saved.2
         try? await Task.sleep(nanoseconds: 1_000_000_000)
+        try? log.joined(separator: "\n").write(to: out.appendingPathComponent("result.txt"), atomically: true, encoding: .utf8)
+        exit(0)
+    }
+
+    /// Debug only: `-liveEditTestProject <name> -liveEditTestDir <folder>` opens the project, switches live edit on,
+    /// records a take cut with the keys 2 / 1 (sent as key presses), saves pictures and the Edit sequences; quits.
+    @MainActor
+    func runLiveEditTestIfRequested() async {
+        let args = UserDefaults.standard
+        guard let dir = args.string(forKey: "liveEditTestDir"), let name = args.string(forKey: "liveEditTestProject") else { return }
+        let out = URL(fileURLWithPath: dir)
+        try? await Task.sleep(nanoseconds: 2_000_000_000)
+        guard let entry = projects.projects.first(where: { $0.project.name == name }) else { exit(2) }
+        model.open(entry)
+        settings.cameraTrigger = .off
+        let recorder = model.recorder
+        var log: [String] = []
+        func press(_ key: String) {
+            guard let window = NSApp.keyWindow ?? NSApp.windows.first(where: \.isVisible),
+                  let event = NSEvent.keyEvent(with: .keyDown, location: .zero, modifierFlags: [], timestamp: ProcessInfo.processInfo.systemUptime,
+                                               windowNumber: window.windowNumber, context: nil, characters: key,
+                                               charactersIgnoringModifiers: key, isARepeat: false, keyCode: key == "1" ? 18 : 19)
+            else { log.append("no window for key \(key)"); return }
+            NSApp.postEvent(event, atStart: false)
+        }
+        func sleep(_ s: Double) async { try? await Task.sleep(nanoseconds: UInt64(s * 1_000_000_000)) }
+        try? await Task.sleep(nanoseconds: 2_000_000_000)
+        press("2"); await sleep(0.3)
+        log.append("key 2 before live edit: liveCut=\(String(describing: recorder.liveCut)) camera=\(recorder.liveCamera)")
+        recorder.setLiveEdit(true)
+        await sleep(0.3)
+        log.append("live edit on: liveCut=\(String(describing: recorder.liveCut))")
+        press("1"); await sleep(0.5)
+        log.append("after key 1: liveCut=\(String(describing: recorder.liveCut))")
+        saveWindowPicture(to: out.appendingPathComponent("live_idle.png"))
+        recorder.startRecording()
+        log.append("recording: \(recorder.isRecording) error: \(recorder.errorMessage ?? "")")
+        await sleep(1.5); press("2"); await sleep(0.5)
+        log.append("after key 2: liveCut=\(String(describing: recorder.liveCut))")
+        saveWindowPicture(to: out.appendingPathComponent("live_recording_cut2.png"))
+        await sleep(1.0); press("1"); await sleep(0.05); press("2")   // quick 1-2: the 2 counts
+        await sleep(1.5); press("1")
+        await sleep(1.5)
+        recorder.stopRecording()
+        for _ in 0..<100 where recorder.isRecording { await sleep(0.1) }
+        await sleep(2.0)
+        log.append("last take: \(recorder.lastTakeMessage ?? "") error: \(recorder.errorMessage ?? "")")
+        for sequence in model.timeline.sequences {
+            log.append("sequence \(sequence.name) (current: \(sequence.id == model.timeline.currentID))")
+            for seg in sequence.segments {
+                log.append(String(format: "  %@ %.2f-%.2f of %.2f  %@", seg.camera.rawValue, seg.inPoint, seg.outPoint, seg.clipDuration, seg.file ?? "-"))
+            }
+        }
+        recorder.setLiveEdit(false)
         try? log.joined(separator: "\n").write(to: out.appendingPathComponent("result.txt"), atomically: true, encoding: .utf8)
         exit(0)
     }

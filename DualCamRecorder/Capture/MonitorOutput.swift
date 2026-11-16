@@ -56,6 +56,8 @@ final class MonitorOutput: ObservableObject {
     private var program = false
     /// Info bar of each camera (operator, focus puller …) with the camera's name – on the live pictures only.
     private var infos: [CameraRole: (text: String, name: String)] = [:]
+    /// Live edit: the camera in the cut gets a green frame on the live pictures (nil = live edit off).
+    private var liveCut: CameraRole?
     /// Last laid-out text of each bar (made again only when the text or the bar's size changes).
     private var infoLines: [CameraRole: (key: String, line: CTLine, ascent: CGFloat, descent: CGFloat)] = [:]
 
@@ -91,6 +93,15 @@ final class MonitorOutput: ObservableObject {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         queue.async { [self] in
             infos[role] = trimmed.isEmpty ? nil : (trimmed, name)
+            renderLatest()
+        }
+    }
+
+    /// Camera in the live cut (nil = live edit off).
+    func setLiveCut(_ role: CameraRole?) {
+        queue.async { [self] in
+            guard liveCut != role else { return }
+            liveCut = role
             renderLatest()
         }
     }
@@ -164,6 +175,10 @@ final class MonitorOutput: ObservableObject {
                 let barH = CGFloat(height) * 0.05
                 let below = CGFloat((height - halfH) / 2)   // black under the pictures (bottom-up coordinates)
                 for (index, role) in [CameraRole.a, .b].enumerated() where (index == 0 ? a : b) != nil {
+                    if liveCut == role {
+                        drawCutFrame(in: canvas, rect: CGRect(x: CGFloat(index * halfW), y: CGFloat((height - halfH) / 2),
+                                                              width: CGFloat(halfW), height: CGFloat(halfH)))
+                    }
                     guard let info = infos[role] else { continue }
                     drawInfo(info, role: role, in: canvas, background: 0.0,
                              rect: CGRect(x: CGFloat(index * halfW), y: below - barH - barH * 0.25, width: CGFloat(halfW), height: barH))
@@ -173,12 +188,17 @@ final class MonitorOutput: ObservableObject {
         } else {
             guard let picture = a ?? b else { return }
             let role: CameraRole = a != nil ? .a : .b
-            if live, let info = infos[role] {
-                // One camera: the bar over the bottom of its picture, on a dark band.
+            if live, infos[role] != nil || liveCut == role {
+                // One camera: the bar over the bottom of its picture, on a dark band; the cut frame around it.
                 guard let canvas = buffer(width: width, height: height, format: kCVPixelFormatType_32BGRA),
                       copy(picture, to: canvas) else { return }
-                drawInfo(info, role: role, in: canvas, background: 0.6,
-                         rect: CGRect(x: 0, y: 0, width: CGFloat(width), height: CGFloat(height) * 0.06))
+                if let info = infos[role] {
+                    drawInfo(info, role: role, in: canvas, background: 0.6,
+                             rect: CGRect(x: 0, y: 0, width: CGFloat(width), height: CGFloat(height) * 0.06))
+                }
+                if liveCut == role {
+                    drawCutFrame(in: canvas, rect: CGRect(x: 0, y: 0, width: CGFloat(width), height: CGFloat(height)))
+                }
                 guard copy(canvas, to: out) else { return }
             } else {
                 guard copy(picture, to: out) else { return }
@@ -225,6 +245,22 @@ final class MonitorOutput: ObservableObject {
         guard let laid = infoLines[role] else { return }
         ctx.textPosition = CGPoint(x: rect.minX + pad, y: rect.midY - (laid.ascent - laid.descent) / 2)
         CTLineDraw(laid.line, ctx)
+    }
+
+    /// Green frame (live edit: this camera is in the cut) along the inside of `rect` of the BGRA picture.
+    private func drawCutFrame(in picture: CVPixelBuffer, rect: CGRect) {
+        CVPixelBufferLockBaseAddress(picture, [])
+        defer { CVPixelBufferUnlockBaseAddress(picture, []) }
+        guard let base = CVPixelBufferGetBaseAddress(picture),
+              let space = CGColorSpace(name: CGColorSpace.itur_709) ?? CGColorSpace(name: CGColorSpace.sRGB),
+              let ctx = CGContext(data: base, width: CVPixelBufferGetWidth(picture), height: CVPixelBufferGetHeight(picture),
+                                  bitsPerComponent: 8, bytesPerRow: CVPixelBufferGetBytesPerRow(picture), space: space,
+                                  bitmapInfo: CGImageAlphaInfo.premultipliedFirst.rawValue | CGBitmapInfo.byteOrder32Little.rawValue)
+        else { return }
+        let line = max(6, (rect.height * 0.012).rounded())
+        ctx.setStrokeColor(CGColor(red: 0.1, green: 0.85, blue: 0.25, alpha: 1))
+        ctx.setLineWidth(line)
+        ctx.stroke(rect.insetBy(dx: line / 2, dy: line / 2))
     }
 
     /// Output mode follows the shown picture's format; started again only when it changes.
