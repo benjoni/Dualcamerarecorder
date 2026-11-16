@@ -19,3 +19,8 @@ website/download/
 website/buy/config.php
 website/buy/data/*
 !website/buy/data/.htaccess
+
+# Visit statistics: password and daily counts – only on the server.
+website/stats/password.php
+website/stats/data/*
+!website/stats/data/.htaccess

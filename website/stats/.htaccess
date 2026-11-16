@@ -1,0 +1,4 @@
+# password.php holds the password hash; lib.php is only included.
+<FilesMatch "^(password|lib)\.php$">
+  Require all denied
+</FilesMatch>

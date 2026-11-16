@@ -57,6 +57,7 @@ try {
     $sent = $email !== '' && mail_licence($email, $name, $licence, $expires,
                                           $plan === 'yearly' ? 'yearly' : ($plan === 'monthly' ? 'monthly' : $plan));
     touch($done);
+    count_event('purchase');
     log_line("licence $invoiceID $subscriptionID " . formatted_mac($mac) . " \"$name\" until " . gmdate('Y-m-d', $expires)
              . ($sent ? " mailed to $email" : ' NOT MAILED'));
     echo 'ok';

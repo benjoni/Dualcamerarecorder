@@ -655,6 +655,17 @@ footer b { color: var(--ink); font-family: var(--display); font-size: 20px; lett
   </div>
 </footer>
 <script>
+  // Visit counter (stats/hit.php): no cookies, nothing stored in the browser.
+  (() => {
+    const hit = q => { try { navigator.sendBeacon('stats/hit.php?' + q); } catch (e) {} };
+    hit('p=' + encodeURIComponent(location.pathname) + '&r=' + encodeURIComponent(document.referrer));
+    document.querySelectorAll('a[href="#buy"]').forEach(a => a.addEventListener('click', () => hit('e=buy')));
+    const form = document.querySelector('form[action="buy/checkout.php"]');
+    if (form) form.addEventListener('submit', () => hit('e=plan_' + (new FormData(form).get('plan') || 'yearly')));
+    const video = document.querySelector('.monitor video');
+    let heard = false;
+    if (video) video.addEventListener('volumechange', () => { if (!heard && !video.muted) { heard = true; hit('e=video'); } });
+  })();
   // Error from buy/checkout.php (?buy_error=…) and the Black Friday note only until its end.
   const problem = new URLSearchParams(location.search).get('buy_error');
   if (problem) { const e = document.getElementById('buyerror'); e.textContent = problem; e.hidden = false; }

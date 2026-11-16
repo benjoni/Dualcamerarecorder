@@ -49,4 +49,5 @@ try {
 }
 
 log_line("checkout {$session['id']} $plan " . formatted_mac($mac) . " \"$name\"");
+count_event('checkout');
 header('Location: ' . $session['url'], true, 303);

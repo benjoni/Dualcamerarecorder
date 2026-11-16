@@ -17,6 +17,12 @@ if (!is_file($configFile)) {
 }
 require $configFile;
 
+// Visit statistics (stats/), when they are on the server: checkouts and purchases are counted there.
+if (is_file(dirname(__DIR__) . '/stats/lib.php')) { require_once dirname(__DIR__) . '/stats/lib.php'; }
+function count_event(string $name): void {
+    if (function_exists('stats_event')) { try { stats_event($name); } catch (Throwable $e) {} }
+}
+
 /** Folder for issued licences and the record of handled payments – not reachable from the web (.htaccess). */
 function data_dir(string $sub = ''): string {
     $base = defined('DATA_DIR') ? DATA_DIR : __DIR__ . '/data';

@@ -51,7 +51,7 @@ $waiting = $paid && $licence === null;
      <b><?= h(gmdate('j F Y', (int)$licence['expires'])) ?></b>. It was also sent to your e-mail.</p>
   <a class="btn live" href="licence.php?session_id=<?= h(rawurlencode($sessionID)) ?>">Download the licence</a>
   <ol class="steps">
-    <li>Install DualCamRecorder – <a href="<?= h(download_url()) ?>">download the app</a> (macOS 14 or later).</li>
+    <li>Install DualCamRecorder – <a href="<?= h(download_url()) ?>" onclick="navigator.sendBeacon('../stats/hit.php?e=download')">download the app</a> (macOS 14 or later).</li>
     <li>Open <b>DualCamRecorder → License…</b> and drop the licence file on the window, or press <b>Import License…</b>.</li>
     <li>Recording is on. When the subscription renews, the new licence comes by e-mail – import it the same way.</li>
   </ol>
