@@ -77,10 +77,6 @@ header.nav { position: sticky; top: 0; z-index: 10; background: color-mix(in srg
 .cta .note { font-size: 14px; color: var(--muted); }
 .monitor { position: relative; border-radius: 10px; overflow: hidden; border: 3px solid var(--tally); background: #000; box-shadow: 0 30px 80px -30px rgba(229, 52, 42, .45); }
 .monitor video { width: 100%; aspect-ratio: 16 / 9; object-fit: cover; }
-.monitor .tag { position: absolute; top: 12px; left: 12px; display: flex; gap: 8px; }
-.pill { font: 700 12px/1 var(--mono); letter-spacing: .06em; padding: 6px 9px; border-radius: 4px; background: var(--tally); color: #fff; }
-.pill.dark { background: rgba(0, 0, 0, .65); }
-.monitor .tc { position: absolute; right: 12px; bottom: 12px; font: 700 16px/1 var(--mono); padding: 6px 8px; background: rgba(0, 0, 0, .6); border-radius: 4px; }
 .specs { margin-top: 44px; border-block: 1px solid var(--line); }
 .specs ul { list-style: none; margin: 0; padding: 16px 0; display: flex; flex-wrap: wrap; gap: 10px 34px; font: 500 14px/1.4 var(--mono); color: var(--muted); }
 .specs li::before { content: "▸ "; color: var(--tally); }
@@ -251,9 +247,7 @@ footer b { color: var(--ink); font-family: var(--display); font-size: 20px; lett
         </div>
       </div>
       <div class="monitor">
-        <video src="media/promo.mp4" poster="media/poster.jpg" autoplay muted loop playsinline aria-label="DualCamRecorder promo video"></video>
-        <div class="tag"><span class="pill">● REC</span><span class="pill dark">CAM A + B</span></div>
-        <div class="tc mono" id="tc">08:23:10:00</div>
+        <video src="media/promo.mp4?v=2" poster="media/poster.jpg?v=2" autoplay muted loop playsinline controls preload="metadata" aria-label="DualCamRecorder tutorial video – how to use the app"></video>
       </div>
     </div>
     <div class="wrap specs">
@@ -591,20 +585,5 @@ footer b { color: var(--ink); font-family: var(--display); font-size: 20px; lett
   </div>
 </footer>
 
-<script>
-// Running timecode on the hero monitor, 25 fps. Still when the viewer prefers reduced motion.
-(function () {
-  var el = document.getElementById('tc');
-  if (!el || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-  var start = performance.now(), base = ((8 * 60 + 23) * 60 + 10) * 25;
-  function pad(n) { return (n < 10 ? '0' : '') + n; }
-  function tick(now) {
-    var f = base + Math.floor((now - start) / 40);
-    el.textContent = pad(Math.floor(f / 90000) % 24) + ':' + pad(Math.floor(f / 1500) % 60) + ':' + pad(Math.floor(f / 25) % 60) + ':' + pad(f % 25);
-    requestAnimationFrame(tick);
-  }
-  requestAnimationFrame(tick);
-})();
-</script>
 </body>
 </html>
