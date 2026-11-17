@@ -37,7 +37,10 @@ Rozhranie aplikácie je **v angličtine** (Record / Playback / Slate …); tento
 - Licencia je podpísaná (Ed25519), appka má len verejný kľúč – súbor sa nedá upraviť ani preniesť na iný Mac.
   Pri vrátení dátumu v Macu dozadu o viac ako deň sa nahrávanie vypne, kým sa dátum neopraví.
 - 7 dní pred koncom sa okno License otvorí pri štarte a riadok na úvodnej stránke je oranžový.
-- Licenciu vyrobíš z ID, ktoré ti tester pošle (počet dní podľa seba):
+- **14-dňová skúška z webu** (`website/buy/trial.php`, formulár v sekcii „Try it“): zákazník zadá ID Macu, meno
+  a e-mail, licencia „Meno (trial)“ na 14 dní mu príde e-mailom. Jedna skúška na Mac aj na e-mail, najviac 3 za
+  deň z jednej IP, skryté pole proti botom. Záznam v `buy/data/trials.csv` a `shop.log`, v štatistikách „Trials sent“.
+- Dlhšiu skúšku vyrobíš ručne z ID, ktoré ti tester pošle (počet dní podľa seba):
   `swift tools/make_license.swift --name "Meno" --mac ABCD-EFGH-JKMN-PQRS --days 30` → súbor na ploche.
 - Podpisový kľúč: `~/Library/Application Support/DualCamRecorder License Key/private.key` – **nie je v gite,
   zálohuj ho**; bez neho sa pre vydanú appku nové licencie vyrobiť nedajú.

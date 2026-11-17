@@ -1,5 +1,5 @@
 <?php
-// Shared code of the shop: configuration, Stripe API, webhook signature, licence files, e-mail.
+// Shared code of the shop: configuration, Stripe API, webhook signature, licence files, e-mail (also trials).
 // No libraries – plain PHP 8 with curl and sodium (standard on the hosting).
 
 declare(strict_types=1);
@@ -130,10 +130,8 @@ function latest_licence(string $subscription): ?array {
 
 // MARK: - E-mail
 
-/** Sends the licence as an attachment (and a copy to the shop owner). */
+/** Sends the licence of a subscription as an attachment (and a copy to the shop owner). */
 function mail_licence(string $to, string $name, string $licence, int $expires, string $plan): bool {
-    $boundary = 'dcr-' . bin2hex(random_bytes(8));
-    $file = licence_file_name($name);
     $until = gmdate('j F Y', $expires);
     $site = SITE_URL;
     $download = download_url();
@@ -152,6 +150,36 @@ $manage
 Benjoni s.r.o.
 $site
 TXT;
+    return mail_with_licence($to, 'Your DualCamRecorder licence', $text, licence_file_name($name), $licence);
+}
+
+/** Sends a trial licence (14 days, one Mac). */
+function mail_trial_licence(string $to, string $name, string $licence, int $expires): bool {
+    $until = gmdate('j F Y', $expires);
+    $site = SITE_URL;
+    $download = download_url();
+    $text = <<<TXT
+Hello $name,
+
+here is your free DualCamRecorder trial licence. It is made for one Mac and is valid until $until.
+1. Install DualCamRecorder: $download
+2. Open DualCamRecorder → License… and drop the attached file on the window, or press Import License….
+
+Recording is on for the trial. After it the app still opens, plays, edits and exports – only recording stops.
+To keep recording, buy a licence: $site/#buy
+
+Questions or feedback – just reply to this e-mail.
+
+Benjoni s.r.o.
+$site
+TXT;
+    return mail_with_licence($to, 'Your DualCamRecorder trial licence', $text, licence_file_name($name), $licence,
+                             defined('SUPPORT_EMAIL') ? SUPPORT_EMAIL : '');
+}
+
+/** E-mail with one licence file attached (and a copy to the shop owner, when set). */
+function mail_with_licence(string $to, string $subject, string $text, string $file, string $licence, string $replyTo = ''): bool {
+    $boundary = 'dcr-' . bin2hex(random_bytes(8));
     $body = "--$boundary\r\n"
         . "Content-Type: text/plain; charset=utf-8\r\nContent-Transfer-Encoding: 8bit\r\n\r\n"
         . str_replace("\n", "\r\n", $text) . "\r\n"
@@ -161,9 +189,10 @@ TXT;
         . "Content-Disposition: attachment; filename=\"=?UTF-8?B?" . base64_encode($file) . "?=\"\r\n\r\n"
         . chunk_split(base64_encode($licence)) . "--$boundary--\r\n";
     $headers = "From: " . MAIL_FROM . "\r\n"
+        . ($replyTo !== '' ? "Reply-To: $replyTo\r\n" : '')
         . (defined('MAIL_COPY_TO') && MAIL_COPY_TO !== '' ? "Bcc: " . MAIL_COPY_TO . "\r\n" : '')
         . "MIME-Version: 1.0\r\nContent-Type: multipart/mixed; boundary=\"$boundary\"\r\n";
-    $subject = '=?UTF-8?B?' . base64_encode('Your DualCamRecorder licence') . '?=';
+    $subject = '=?UTF-8?B?' . base64_encode($subject) . '?=';
     if (defined('MAIL_TEST_FILE')) {   // local tests: write the e-mail into a file instead of sending it
         file_put_contents(MAIL_TEST_FILE, "To: $to\r\nSubject: $subject\r\n$headers\r\n$body");
         return true;

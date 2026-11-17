@@ -858,7 +858,8 @@ extension ContentView {
             MonitorMenu(settings: menuSettings, monitor: monitor).fixedSize()
             VStack(alignment: .leading, spacing: 8) { MonitorMenu.Choices(settings: menuSettings, monitor: monitor) }
                 .padding(14).background(RoundedRectangle(cornerRadius: 8).fill(Color(nsColor: .windowBackgroundColor)))
-        }.padding(20).frame(width: 520, alignment: .leading).background(Color.black).preferredColorScheme(.dark))
+        }.padding(20).frame(width: 520, alignment: .leading).background(Color(red: 0.11, green: 0.10, blue: 0.14)).preferredColorScheme(.dark))
+        menu.appearance = NSAppearance(named: .darkAqua)
         menu.frame = NSRect(x: 0, y: 0, width: 520, height: 300)
         menu.frame.size = menu.fittingSize
         menu.layoutSubtreeIfNeeded()

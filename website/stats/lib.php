@@ -15,7 +15,8 @@ const STATS_EVENTS = [
     'checkout' => 'Payment page opened',
     'purchase' => 'Paid (licence sent)',
     'video' => 'Video played with sound',
-    'download' => 'App downloads (success page)',
+    'download' => 'App downloads (success / trial page)',
+    'trial' => 'Trial licences sent',
 ];
 
 function stats_dir(): string {

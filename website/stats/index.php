@@ -90,6 +90,7 @@ button { font: inherit; font-weight: 700; padding: 10px 14px; border-radius: 8px
     <div class="tile"><b><?= $eventSum('buy') ?></b><span>Buy / Pricing clicks</span></div>
     <div class="tile"><b><?= $eventSum('checkout') ?></b><span>Payment page opened</span></div>
     <div class="tile"><b><?= $eventSum('purchase') ?></b><span>Paid</span></div>
+    <div class="tile"><b><?= $eventSum('trial') ?></b><span>Trials sent</span></div>
   </div>
   <div class="box">
     <h2>By day</h2>
