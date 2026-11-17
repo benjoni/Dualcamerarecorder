@@ -1,13 +1,10 @@
 {
   "version": "1.0",
-  "build": 8,
-  "url": "https://dualrecorder.benjoni.com/download/DualCamRecorder-1.0-8.zip",
+  "build": 9,
+  "url": "https://dualrecorder.benjoni.com/download/DualCamRecorder-1.0-9.zip",
   "notes": [
-    "Live edit: cut between camera A and B with 1 / 2 while recording – the cut becomes a sequence in Edit",
-    "Edit: trimming the start of a piece works; the picture shows the exact frame at the edge",
-    "Projects: Show in Finder and Remove from list are in Edit…",
-    "License: a license that ends earlier than the installed one is refused",
-    "The app tells you when a new version is available (DualCamRecorder → Check for Updates…)"
+    "DualCamRecorder now also runs on macOS 13 Ventura",
+    "Blackmagic monitor turned to portrait: cameras A and B stacked one above the other"
   ],
-  "date": "2026-11-16"
+  "date": "2026-11-17"
 }
