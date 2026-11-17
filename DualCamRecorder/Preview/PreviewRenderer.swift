@@ -124,16 +124,14 @@ final class PreviewRenderer {
             }
             guard display else { return }
             DispatchQueue.main.async {
-                let renderer = self.displayLayer.sampleBufferRenderer
-                if renderer.status == .failed { renderer.flush() }
-                renderer.enqueue(sample)
+                self.displayLayer.show(sample)
             }
         }
     }
 
     func clear() {
         DispatchQueue.main.async {
-            self.displayLayer.sampleBufferRenderer.flush(removingDisplayedImage: true, completionHandler: nil)
+            self.displayLayer.clearPicture()
         }
     }
 

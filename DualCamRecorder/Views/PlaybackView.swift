@@ -61,22 +61,22 @@ struct PlaybackView: View {
             }
         }
         .onDisappear { selectLatestPending = false }
-        .onChange(of: settings.playbackFolderURL) { _, url in
+        .onValueChange(of: settings.playbackFolderURL) { _, url in
             selectLatestPending = true
             library.setFolder(url)
         }
-        .onChange(of: library.takes) { _, _ in
+        .onValueChange(of: library.takes) { _, _ in
             if selectLatestPending {
                 selectLatest()
                 selectLatestPending = false
             }
         }
-        .onChange(of: selection) { _, id in
+        .onValueChange(of: selection) { _, id in
             // Do not reload (and lose the position) when the same clip is re-selected.
             guard id != player.take?.id else { return }
             player.load(library.takes.first { $0.id == id })
         }
-        .onChange(of: player.currentTime) { _, t in
+        .onValueChange(of: player.currentTime) { _, t in
             if !isScrubbing { scrubValue = t }
         }
         .onReceive(NotificationCenter.default.publisher(for: .takeFinished)) { _ in library.refresh() }
@@ -412,7 +412,7 @@ struct PlaybackView: View {
                     player.isScrubbing = editing
                     if !editing { player.seek(seconds: scrubValue) }
                 })
-                .onChange(of: scrubValue) { _, v in
+                .onValueChange(of: scrubValue) { _, v in
                     if isScrubbing { player.seek(seconds: v) }
                 }
                 Text(player.timecode(player.duration))
@@ -665,7 +665,7 @@ struct PlaybackView: View {
             }
         }
         // A clip that was renamed or deleted can take the chosen value away – the menu then goes back to all.
-        .onChange(of: library.takes) { _, takes in
+        .onValueChange(of: library.takes) { _, takes in
             if let e = slateFilter.episode, !slateFilter.episodes(in: takes).contains(where: { $0.key == e }) { slateFilter.episode = nil }
             slateFilter.dropMissing(in: takes)
         }

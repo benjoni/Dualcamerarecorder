@@ -75,7 +75,7 @@ struct EditSequenceList: View {
                         .focused($nameFocused)
                         .onSubmit { finishRename(sequence.id) }
                         .onExitCommand { renaming = nil }
-                        .onChange(of: nameFocused) { _, focused in if !focused { finishRename(sequence.id) } }
+                        .onValueChange(of: nameFocused) { _, focused in if !focused { finishRename(sequence.id) } }
                 } else {
                     Text(sequence.name).font(.body.weight(.semibold)).lineLimit(1)
                 }

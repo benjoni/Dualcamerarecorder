@@ -41,7 +41,7 @@ struct ProjectSettings: Codable, Equatable {
     var deviceA = ""
     var deviceB = ""
     /// Monitor on a DeckLink output (the first device with an output, e.g. UltraStudio Monitor 3G)
-    /// and what it shows (MonitorSource: a / b / both).
+    /// and what it shows (MonitorSource: a / b / both / stackedRight / stackedLeft).
     var monitorEnabled = false
     var monitorSource = MonitorSource.a.rawValue
     /// Flip / flop of each input's picture (also in the recorded files).

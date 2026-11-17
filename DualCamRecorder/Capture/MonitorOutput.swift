@@ -3,7 +3,7 @@
 //  DualCamRecorder
 //
 //  Picture for a Blackmagic monitor on a DeckLink output (UltraStudio Monitor 3G, HD Mini …):
-//  camera A, camera B or both side by side – live on the Record tab, the clip being played on Playback,
+//  camera A, camera B, both side by side or both stacked for a monitor turned to portrait – live on the Record tab, the clip being played on Playback,
 //  the cut (one full picture) on Edit.
 //  The output runs in the format of the cameras (1080p25 …); frames go out as they come (no scheduling).
 //
@@ -15,10 +15,17 @@ import CoreVideo
 import QuartzCore
 import VideoToolbox
 import CoreText
+#if DEBUG
+import AppKit
+#endif
 
 enum MonitorSource: String, CaseIterable, Identifiable {
-    case a, b, both
+    /// `stackedRight` / `stackedLeft`: both cameras one above the other for a monitor turned 90° to the right
+    /// (clockwise) / to the left – the picture goes out turned, so it stands upright on the portrait screen.
+    case a, b, both, stackedRight, stackedLeft
     var id: String { rawValue }
+    var showsBoth: Bool { self == .both || isStacked }
+    var isStacked: Bool { self == .stackedRight || self == .stackedLeft }
 }
 
 /// Frames of the clip being played (Playback tab) or of the cut (Edit tab).
@@ -137,7 +144,7 @@ final class MonitorOutput: ObservableObject {
             switch source {
             case .a: clock = .a
             case .b: clock = .b
-            case .both:
+            case .both, .stackedRight, .stackedLeft:
                 let aFresh = lastArrival[.a].map { now &- $0 < 200_000_000 } ?? false
                 clock = aFresh ? .a : .b
             }
@@ -166,9 +173,19 @@ final class MonitorOutput: ObservableObject {
         busy = true
         defer { busy = false }
         if !ensureRunning(width: width, height: height, frameDuration: frameDuration, interlaced: interlaced, device: device) { return }
-        guard let out = buffer(width: width, height: height, format: kCVPixelFormatType_422YpCbCr8) else { return }
-        if source == .both && !program {
-            guard let canvas = sideBySide(a: a, b: b, width: width, height: height) else { return }
+        guard let out = compose(a: a, b: b, width: width, height: height, live: live) else { return }
+        _ = device.display(out)
+    }
+
+    /// The picture for the output (2vuy, in the output's format), nil when it could not be made.
+    private func compose(a: CVPixelBuffer?, b: CVPixelBuffer?, width: Int, height: Int, live: Bool) -> CVPixelBuffer? {
+        guard let out = buffer(width: width, height: height, format: kCVPixelFormatType_422YpCbCr8) else { return nil }
+        if source.isStacked {
+            guard let canvas = stacked(a: program ? (a ?? b) : a, b: program ? nil : b, width: width, height: height,
+                                       live: live && !program, single: program),
+                  copy(canvas, to: out) else { return nil }
+        } else if source == .both && !program {
+            guard let canvas = sideBySide(a: a, b: b, width: width, height: height) else { return nil }
             // Info bars on the black under each half picture (they cover nothing).
             if live {
                 let halfW = width / 2, halfH = height / 2
@@ -184,14 +201,14 @@ final class MonitorOutput: ObservableObject {
                              rect: CGRect(x: CGFloat(index * halfW), y: below - barH - barH * 0.25, width: CGFloat(halfW), height: barH))
                 }
             }
-            guard copy(canvas, to: out) else { return }
+            guard copy(canvas, to: out) else { return nil }
         } else {
-            guard let picture = a ?? b else { return }
+            guard let picture = a ?? b else { return nil }
             let role: CameraRole = a != nil ? .a : .b
             if live, infos[role] != nil || liveCut == role {
                 // One camera: the bar over the bottom of its picture, on a dark band; the cut frame around it.
                 guard let canvas = buffer(width: width, height: height, format: kCVPixelFormatType_32BGRA),
-                      copy(picture, to: canvas) else { return }
+                      copy(picture, to: canvas) else { return nil }
                 if let info = infos[role] {
                     drawInfo(info, role: role, in: canvas, background: 0.6,
                              rect: CGRect(x: 0, y: 0, width: CGFloat(width), height: CGFloat(height) * 0.06))
@@ -199,18 +216,18 @@ final class MonitorOutput: ObservableObject {
                 if liveCut == role {
                     drawCutFrame(in: canvas, rect: CGRect(x: 0, y: 0, width: CGFloat(width), height: CGFloat(height)))
                 }
-                guard copy(canvas, to: out) else { return }
+                guard copy(canvas, to: out) else { return nil }
             } else {
-                guard copy(picture, to: out) else { return }
+                guard copy(picture, to: out) else { return nil }
             }
         }
-        _ = device.display(out)
+        return out
     }
 
     /// Camera name (yellow) and the info text (white) in one line, on a band of black with the given opacity.
     /// `rect` in bottom-up coordinates of the BGRA picture; a text too long for the bar ends with "…".
     private func drawInfo(_ info: (text: String, name: String), role: CameraRole, in picture: CVPixelBuffer,
-                          background: CGFloat, rect: CGRect) {
+                          background: CGFloat, rect: CGRect, transform: CGAffineTransform = .identity) {
         CVPixelBufferLockBaseAddress(picture, [])
         defer { CVPixelBufferUnlockBaseAddress(picture, []) }
         guard let base = CVPixelBufferGetBaseAddress(picture),
@@ -219,6 +236,7 @@ final class MonitorOutput: ObservableObject {
                                   bitsPerComponent: 8, bytesPerRow: CVPixelBufferGetBytesPerRow(picture), space: space,
                                   bitmapInfo: CGImageAlphaInfo.premultipliedFirst.rawValue | CGBitmapInfo.byteOrder32Little.rawValue)
         else { return }
+        ctx.concatenate(transform)
         if background > 0 {
             ctx.setFillColor(CGColor(gray: 0, alpha: background))
             ctx.fill(rect)
@@ -248,7 +266,7 @@ final class MonitorOutput: ObservableObject {
     }
 
     /// Green frame (live edit: this camera is in the cut) along the inside of `rect` of the BGRA picture.
-    private func drawCutFrame(in picture: CVPixelBuffer, rect: CGRect) {
+    private func drawCutFrame(in picture: CVPixelBuffer, rect: CGRect, transform: CGAffineTransform = .identity) {
         CVPixelBufferLockBaseAddress(picture, [])
         defer { CVPixelBufferUnlockBaseAddress(picture, []) }
         guard let base = CVPixelBufferGetBaseAddress(picture),
@@ -257,6 +275,7 @@ final class MonitorOutput: ObservableObject {
                                   bitsPerComponent: 8, bytesPerRow: CVPixelBufferGetBytesPerRow(picture), space: space,
                                   bitmapInfo: CGImageAlphaInfo.premultipliedFirst.rawValue | CGBitmapInfo.byteOrder32Little.rawValue)
         else { return }
+        ctx.concatenate(transform)
         let line = max(6, (rect.height * 0.012).rounded())
         ctx.setStrokeColor(CGColor(red: 0.1, green: 0.85, blue: 0.25, alpha: 1))
         ctx.setLineWidth(line)
@@ -283,6 +302,60 @@ final class MonitorOutput: ObservableObject {
             publish(error.localizedDescription, failed: true)
             return false
         }
+    }
+
+    /// Portrait monitor: A above B (or one picture, `single`), each as wide as the turned screen, with its info bar
+    /// under it – drawn upright on the portrait screen and turned into the landscape output picture.
+    private func stacked(a: CVPixelBuffer?, b: CVPixelBuffer?, width: Int, height: Int, live: Bool, single: Bool) -> CVPixelBuffer? {
+        guard let canvas = buffer(width: width, height: height, format: kCVPixelFormatType_32BGRA) else { return nil }
+        // The portrait screen: as wide as the output is high and as high as it is wide (bottom-up coordinates).
+        let screenW = CGFloat(height), screenH = CGFloat(width)
+        let turn = source == .stackedRight
+            ? CGAffineTransform(a: 0, b: 1, c: -1, d: 0, tx: screenH, ty: 0)    // monitor turned clockwise
+            : CGAffineTransform(a: 0, b: -1, c: 1, d: 0, tx: 0, ty: screenW)    // monitor turned counter-clockwise
+        let picW = Int(screenW), picH = (Int(screenW * screenW / screenH) + 1) / 2 * 2   // the camera's aspect (16:9)
+        let barH = (screenW * 0.065).rounded()
+        let gap = (screenW * 0.03).rounded()
+        let pictures: [(CameraRole, CVPixelBuffer?)] = single ? [(.a, a)] : [(.a, a), (.b, b)]
+        let block = CGFloat(picH) + (live ? barH + gap : 0)
+        let total = block * CGFloat(pictures.count) + (pictures.count > 1 ? gap * 2 : 0)
+        var top = screenH - (screenH - total) / 2   // from the top of the portrait screen down
+        var slots: [(role: CameraRole, picture: CVPixelBuffer?, rect: CGRect, bar: CGRect)] = []
+        for (role, picture) in pictures {
+            let rect = CGRect(x: 0, y: top - CGFloat(picH), width: CGFloat(picW), height: CGFloat(picH))
+            let bar = CGRect(x: 0, y: rect.minY - gap * 0.5 - barH, width: screenW, height: barH)
+            slots.append((role, picture, rect, bar))
+            top -= block + gap * 2
+        }
+        CVPixelBufferLockBaseAddress(canvas, [])
+        guard let base = CVPixelBufferGetBaseAddress(canvas),
+              let space = CGColorSpace(name: CGColorSpace.itur_709) ?? CGColorSpace(name: CGColorSpace.sRGB),
+              let ctx = CGContext(data: base, width: width, height: height, bitsPerComponent: 8,
+                                  bytesPerRow: CVPixelBufferGetBytesPerRow(canvas), space: space,
+                                  bitmapInfo: CGImageAlphaInfo.premultipliedFirst.rawValue | CGBitmapInfo.byteOrder32Little.rawValue)
+        else { CVPixelBufferUnlockBaseAddress(canvas, []); return nil }
+        ctx.setFillColor(CGColor(gray: 0, alpha: 1))
+        ctx.fill(CGRect(x: 0, y: 0, width: width, height: height))
+        ctx.concatenate(turn)
+        ctx.interpolationQuality = .medium
+        for slot in slots {
+            guard let picture = slot.picture,
+                  let scaled = buffer(width: picW, height: picH, format: kCVPixelFormatType_32BGRA),
+                  copy(picture, to: scaled) else { continue }
+            var image: CGImage?
+            VTCreateCGImageFromCVPixelBuffer(scaled, options: nil, imageOut: &image)
+            if let image { ctx.draw(image, in: slot.rect) }
+        }
+        CVPixelBufferUnlockBaseAddress(canvas, [])
+        if live {
+            for slot in slots where slot.picture != nil {
+                if liveCut == slot.role { drawCutFrame(in: canvas, rect: slot.rect, transform: turn) }
+                if let info = infos[slot.role] {
+                    drawInfo(info, role: slot.role, in: canvas, background: 0, rect: slot.bar, transform: turn)
+                }
+            }
+        }
+        return canvas
     }
 
     /// Both pictures at half size, centered left and right on black.
@@ -369,7 +442,7 @@ final class MonitorOutput: ObservableObject {
         if let b = frames.b { latest[.b] = b }
         guard frames.a != nil || frames.b != nil else { return }   // paused: the monitor keeps the last frame
         let a = source == .b && !program ? nil : latest[.a]
-        let b = source == .a || program ? nil : latest[.b]
+        let b = source == .a || program ? nil : latest[.b]   // (stacked: both, like side by side)
         guard a != nil || b != nil else { return }
         // Keep the cameras' format when it is known (no mode switch on the monitor), otherwise the clip's.
         let format = formats[.a] ?? formats[.b]
@@ -380,6 +453,26 @@ final class MonitorOutput: ObservableObject {
              interlaced: format?.interlaced ?? false, device: device)
         if running?.frameDuration != before { updatePlaybackTimer() }
     }
+
+    #if DEBUG
+    /// Debug: the output picture for these frames as PNG (no device needed).
+    func debugPicture(a: CVPixelBuffer?, b: CVPixelBuffer?, source: MonitorSource, width: Int = 1920, height: Int = 1080,
+                      program: Bool = false) -> Data? {
+        queue.sync {
+            let saved = (self.source, self.program)
+            self.source = source; self.program = program
+            defer { (self.source, self.program) = saved }
+            let a2 = source == .b && !program ? nil : a
+            let b2 = source == .a || program ? nil : b
+            guard let out = compose(a: a2, b: b2, width: width, height: height, live: !program),
+                  let bgra = buffer(width: width, height: height, format: kCVPixelFormatType_32BGRA),
+                  copy(out, to: bgra) else { return nil }
+            var image: CGImage?
+            VTCreateCGImageFromCVPixelBuffer(bgra, options: nil, imageOut: &image)
+            return image.flatMap { NSBitmapImageRep(cgImage: $0).representation(using: .png, properties: [:]) }
+        }
+    }
+    #endif
 
     private func publish(_ text: String, failed: Bool) {
         DispatchQueue.main.async {

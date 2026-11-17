@@ -93,8 +93,9 @@ final class AudioInterfaceCapture: NSObject, ObservableObject, AVCaptureAudioDat
     // MARK: - Devices (main thread)
 
     func refreshDevices() {
-        let discovery = AVCaptureDevice.DiscoverySession(deviceTypes: [.microphone, .external],
-                                                         mediaType: .audio, position: .unspecified)
+        let types: [AVCaptureDevice.DeviceType]
+        if #available(macOS 14.0, *) { types = [.microphone, .external] } else { types = [.builtInMicrophone, .externalUnknown] }
+        let discovery = AVCaptureDevice.DiscoverySession(deviceTypes: types, mediaType: .audio, position: .unspecified)
         devices = discovery.devices.map { device in
             let asbd = CMAudioFormatDescriptionGetStreamBasicDescription(device.activeFormat.formatDescription)?.pointee
             let count = Int(asbd?.mChannelsPerFrame ?? 2)

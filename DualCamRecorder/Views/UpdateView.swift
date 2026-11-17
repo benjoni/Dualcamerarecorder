@@ -10,7 +10,6 @@ import SwiftUI
 
 struct UpdateView: View {
     @ObservedObject var updates = UpdateChecker.shared
-    @Environment(\.dismissWindow) private var dismissWindow
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
@@ -23,6 +22,12 @@ struct UpdateView: View {
         }
         .padding(24)
         .frame(width: 520)
+    }
+
+    /// Closes the Software Update window (dismissWindow needs macOS 14; the app also runs on macOS 13).
+    private func closeWindow() {
+        let window = NSApp.windows.first { ($0.identifier?.rawValue ?? "").hasPrefix("update") } ?? NSApp.keyWindow
+        window?.close()
     }
 
     @ViewBuilder
@@ -49,14 +54,14 @@ struct UpdateView: View {
             HStack {
                 Button("Skip This Version") {
                     updates.skip(info)
-                    dismissWindow(id: "update")
+                    closeWindow()
                 }
                 Spacer()
-                Button("Later") { dismissWindow(id: "update") }
+                Button("Later") { closeWindow() }
                     .keyboardShortcut(.cancelAction)
                 Button("Download") {
                     updates.download(info)
-                    dismissWindow(id: "update")
+                    closeWindow()
                 }
                 .keyboardShortcut(.defaultAction)
                 .buttonStyle(.borderedProminent)
@@ -82,7 +87,7 @@ struct UpdateView: View {
     private var okButton: some View {
         HStack {
             Spacer()
-            Button("OK") { dismissWindow(id: "update") }
+            Button("OK") { closeWindow() }
                 .keyboardShortcut(.defaultAction)
         }
         .padding(.top, 10)
@@ -129,7 +134,7 @@ struct UpdateWindowOpener: ViewModifier {
                 updates.isBusy = { [weak recorder] in recorder?.isRecording ?? false }
                 updates.start()
             }
-            .onChange(of: updates.wantsWindow) { _, wants in
+            .onValueChange(of: updates.wantsWindow) { _, wants in
             guard wants else { return }
             updates.wantsWindow = false
             openWindow(id: "update")

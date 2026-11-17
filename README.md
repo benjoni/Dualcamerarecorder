@@ -111,6 +111,10 @@ Rozhranie aplikácie je **v angličtine** (Record / Playback / Slate …); tento
   sa použije hneď, ako sa objaví.
 - Čo ide na monitor, sa vyberá tlačidlom **Monitor** v hornej lište (vedľa Waveform, je tam len pri zapnutom výstupe):
   kamera A, kamera B alebo obe vedľa seba (**A | B**, každá na polovicu, čierne pruhy hore a dole).
+- **Monitor na výšku:** „Both stacked – monitor turned right / left“ dá A nad B, každú cez celú šírku otočeného
+  monitora (pri 1080p 1080×608, väčšie než vedľa seba), info lišta pod každým obrazom. Signál ostáva na šírku,
+  obraz sa len otočí o 90° – „right“ pre monitor otočený v smere hodinových ručičiek, „left“ proti (ak je obraz
+  hore nohami, zvoľ druhú možnosť). Na Edit ide strih otočený, cez celú šírku.
 - Na záložke Record ide živý obraz kamier, na Playback prehrávaný klip (pri pauze ostane posledná snímka),
   na **Edit strih** – vždy jeden obraz na celú plochu (voľba A / B / A | B sa tam nepoužije), bez popisu klipu.
 - Na monitor ide len čistý obraz – žiadne ovládacie prvky, waveform ani texty appky.
@@ -426,7 +430,7 @@ musia v prehrávaní padnúť na rovnakú snímku.
 
 ## Požiadavky
 
-- macOS 14 Sonoma alebo novší, Apple Silicon (projekt je nastavený na `arm64`).
+- macOS 13 Ventura alebo novší, Apple Silicon aj Intel.
 - Xcode 15 alebo novší (testované nastavenia: Swift 5 režim).
 - **Blackmagic Desktop Video** (ovládač) – nainštalovaný `/Library/Frameworks/DeckLinkAPI.framework`.
 - **Blackmagic DeckLink SDK** 12.x – 15.x rozbalené do `./DeckLinkSDK` tak, aby existoval

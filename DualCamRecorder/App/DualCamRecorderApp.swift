@@ -428,8 +428,8 @@ struct ContentView: View {
             }
         }
         .onAppear { applyActivity() }
-        .onChange(of: settings.showWaveform) { _, _ in applyActivity() }
-        .onChange(of: projects.current?.id) { _, _ in
+        .onValueChange(of: settings.showWaveform) { _, _ in applyActivity() }
+        .onValueChange(of: projects.current?.id) { _, _ in
             tab = 0
             screensOnly = false
             applyActivity()
@@ -450,6 +450,7 @@ struct ContentView: View {
         .task { runLicenseImportTestIfRequested() }
         .task { await runPlaybackEndTestIfRequested() }
         .task { await runEditExportTestIfRequested() }
+        .task { runMonitorLayoutTestIfRequested() }
         #endif
         .onDisappear {
             if let tabKeyMonitor { NSEvent.removeMonitor(tabKeyMonitor) }
@@ -457,7 +458,7 @@ struct ContentView: View {
         }
         // Daily update check; the Update window opens from here (after STOP when recording).
         .modifier(UpdateWindowOpener(recorder: model.recorder))
-        .onChange(of: tab) { _, newTab in
+        .onValueChange(of: tab) { _, newTab in
             applyActivity()
             if newTab == 1 { model.library.cueLatestOnShow = true }
             if newTab != 1 { model.player.pause() }
@@ -834,6 +835,40 @@ extension ContentView {
         exit(0)
     }
 
+    /// Debug only: `-monitorLayoutDir <folder>` saves the monitor output picture of every layout (demo pictures,
+    /// info bars, live cut on A; plus the Edit cut) as PNG and quits.
+    func runMonitorLayoutTestIfRequested() {
+        guard let dir = UserDefaults.standard.string(forKey: "monitorLayoutDir") else { return }
+        let a = OverlayCompositor.assetPicture(named: "DemoClose"), b = OverlayCompositor.assetPicture(named: "DemoWide")
+        let monitor = MonitorOutput()
+        monitor.setInfo("Operator Jana · 35 mm", name: "A", for: .a)
+        monitor.setInfo("Focus Peter · 85 mm", name: "B", for: .b)
+        monitor.setLiveCut(.a)
+        for source in MonitorSource.allCases {
+            try? monitor.debugPicture(a: a, b: b, source: source)?
+                .write(to: URL(fileURLWithPath: dir).appendingPathComponent("monitor_\(source.rawValue).png"))
+        }
+        try? monitor.debugPicture(a: a, b: b, source: .stackedRight, program: true)?
+            .write(to: URL(fileURLWithPath: dir).appendingPathComponent("monitor_stackedRight_edit.png"))
+        // The Monitor toolbar button and its choices (drawn off screen; the open menu itself cannot be captured).
+        let menuSettings = AppSettings()
+        menuSettings.cameraCount = 2
+        menuSettings.monitorSource = .stackedRight
+        let menu = NSHostingView(rootView: VStack(alignment: .leading, spacing: 16) {
+            MonitorMenu(settings: menuSettings, monitor: monitor).fixedSize()
+            VStack(alignment: .leading, spacing: 8) { MonitorMenu.Choices(settings: menuSettings, monitor: monitor) }
+                .padding(14).background(RoundedRectangle(cornerRadius: 8).fill(Color(nsColor: .windowBackgroundColor)))
+        }.padding(20).frame(width: 520, alignment: .leading).background(Color.black).preferredColorScheme(.dark))
+        menu.frame = NSRect(x: 0, y: 0, width: 520, height: 300)
+        menu.frame.size = menu.fittingSize
+        menu.layoutSubtreeIfNeeded()
+        if let rep = menu.bitmapImageRepForCachingDisplay(in: menu.bounds) {
+            menu.cacheDisplay(in: menu.bounds, to: rep)
+            try? rep.representation(using: .png, properties: [:])?.write(to: URL(fileURLWithPath: dir).appendingPathComponent("monitor_menu.png"))
+        }
+        exit(0)
+    }
+
     /// Debug only: `-playbackEndTestDir <folder> -playbackEndTestProject <name>` plays the last second of the
     /// latest clip without loop and logs both players every 50 ms until 3 s after the end (playback_end.txt).
     @MainActor
@@ -1076,23 +1111,37 @@ private struct MonitorMenu: View {
         case .a: title = "Monitor \(names.a)"
         case .b: title = "Monitor \(names.b)"
         case .both: title = "Monitor \(names.a)|\(names.b)"
+        case .stackedRight, .stackedLeft: title = "Monitor \(names.a)/\(names.b)"
         }
         return Menu {
-            Picker("Show on the monitor", selection: $settings.monitorSource) {
-                Text("Camera \(names.a)").tag(MonitorSource.a)
-                if settings.twoCameras {
-                    Text("Camera \(names.b)").tag(MonitorSource.b)
-                    Text("Both side by side (\(names.a) | \(names.b))").tag(MonitorSource.both)
-                }
-            }
-            .pickerStyle(.inline)
-            Divider()
-            Text(monitor.status)
+            Choices(settings: settings, monitor: monitor)
         } label: {
             Label(title, systemImage: monitor.failed ? "exclamationmark.triangle" : "display")
                 .labelStyle(.titleAndIcon)
         }
         .help("What goes to the Blackmagic monitor – \(monitor.status)")
+    }
+
+    /// The menu's items: what is shown, then the output state.
+    struct Choices: View {
+        @ObservedObject var settings: AppSettings
+        @ObservedObject var monitor: MonitorOutput
+
+        var body: some View {
+            let names = settings.cameraNames
+            Picker("Show on the monitor", selection: $settings.monitorSource) {
+                Text("Camera \(names.a)").tag(MonitorSource.a)
+                if settings.twoCameras {
+                    Text("Camera \(names.b)").tag(MonitorSource.b)
+                    Text("Both side by side (\(names.a) | \(names.b))").tag(MonitorSource.both)
+                    Text("Both stacked – monitor turned right (\(names.a) above \(names.b))").tag(MonitorSource.stackedRight)
+                    Text("Both stacked – monitor turned left (\(names.a) above \(names.b))").tag(MonitorSource.stackedLeft)
+                }
+            }
+            .pickerStyle(.inline)
+            Divider()
+            Text(monitor.status)
+        }
     }
 }
 
@@ -1122,5 +1171,42 @@ private struct HelpMenuButton: View {
     var body: some View {
         Button("DualCamRecorder Help") { openWindow(id: "help") }
             .keyboardShortcut("?", modifiers: [.command])
+    }
+}
+
+// MARK: - macOS 13 (Ventura) compatibility
+
+extension View {
+    /// onChange with the old and the new value – the macOS 14 form, and on macOS 13 the older one
+    /// (the value captured when the body was built is the old value).
+    @ViewBuilder
+    func onValueChange<V: Equatable>(of value: V, _ action: @escaping (V, V) -> Void) -> some View {
+        if #available(macOS 14.0, *) {
+            onChange(of: value, action)
+        } else {
+            onChange(of: value) { [value] new in action(value, new) }
+        }
+    }
+}
+
+extension AVSampleBufferDisplayLayer {
+    /// Shows a frame (sampleBufferRenderer is macOS 14; macOS 13 enqueues on the layer itself).
+    func show(_ sample: CMSampleBuffer) {
+        if #available(macOS 14.0, *) {
+            let renderer = sampleBufferRenderer
+            if renderer.status == .failed { renderer.flush() }
+            renderer.enqueue(sample)
+        } else {
+            if status == .failed { flush() }
+            enqueue(sample)
+        }
+    }
+
+    func clearPicture() {
+        if #available(macOS 14.0, *) {
+            sampleBufferRenderer.flush(removingDisplayedImage: true, completionHandler: nil)
+        } else {
+            flushAndRemoveImage()
+        }
     }
 }

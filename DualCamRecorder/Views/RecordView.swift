@@ -628,7 +628,7 @@ struct CameraSetupFields: View {
         }
         .disabled(locked)
         // Leaving a field (or ↵) adds the unit to a bare number (5600 → 5600K).
-        .onChange(of: focused) { old, _ in
+        .onValueChange(of: focused) { old, _ in
             if let old { complete(old) }
         }
         .help(locked ? "Camera settings are locked while recording" : "Camera settings – kept for the next takes, saved with the clip, printed in the PDF report")

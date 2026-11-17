@@ -205,9 +205,7 @@ final class OverlayCompositor: ObservableObject, @unchecked Sendable {
         state.withLockUnchecked { $0.composite = out }
         guard let sample = Self.sample(out) else { return }
         DispatchQueue.main.async {
-            let renderer = self.displayLayer.sampleBufferRenderer
-            if renderer.status == .failed { renderer.flush() }
-            renderer.enqueue(sample)
+            self.displayLayer.show(sample)
         }
     }
 
