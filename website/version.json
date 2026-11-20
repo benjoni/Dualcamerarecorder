@@ -1,10 +1,16 @@
 {
   "version": "1.0",
-  "build": 9,
-  "url": "https://dualrecorder.benjoni.com/download/DualCamRecorder-1.0-9.zip",
+  "build": 11,
+  "url": "https://dualrecorder.benjoni.com/download/DualCamRecorder-1.0-11.zip",
   "notes": [
-    "DualCamRecorder now also runs on macOS 13 Ventura",
-    "Blackmagic monitor turned to portrait: cameras A and B stacked one above the other"
+    "Live edit on Playback: cut a take again while it plays – every pass becomes a sequence in Edit",
+    "IN / OUT on a time axis while recording, and the same ranges under the clip on Playback",
+    "Director's monitor: slate on top, each camera's timecode, sound with its own volume",
+    "Playback can keep the live cameras on the director's monitor (CLIP / LIVE)",
+    "Monitor output no longer falls behind the cameras",
+    "Waveform measures the camera's signal before the LUT",
+    "Space plays and pauses in Edit wherever the focus is",
+    "Fixed: sound from the audio interface (Focusrite …) – macOS asks for access again"
   ],
-  "date": "2026-11-17"
+  "date": "2026-11-20"
 }

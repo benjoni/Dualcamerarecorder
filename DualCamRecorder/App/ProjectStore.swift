@@ -44,6 +44,14 @@ struct ProjectSettings: Codable, Equatable {
     /// and what it shows (MonitorSource: a / b / both / stackedRight / stackedLeft).
     var monitorEnabled = false
     var monitorSource = MonitorSource.a.rawValue
+    /// Playback tab: the monitor keeps the live cameras (the operator watches the clip on the Mac only).
+    var monitorPlaybackLive = false
+    /// Sound in the monitor output: the live sound while recording (as it is recorded) and the clip's sound
+    /// on Playback / Edit – each on / off with its volume (0…1).
+    var monitorAudioLive = false
+    var monitorAudioLiveVolume = 0.8
+    var monitorAudioPlayback = true
+    var monitorAudioPlaybackVolume = 0.8
     /// Flip / flop of each input's picture (also in the recorded files).
     var orientationA = PictureOrientation()
     var orientationB = PictureOrientation()
@@ -92,6 +100,11 @@ extension ProjectSettings {
         deviceB = try c.decodeIfPresent(String.self, forKey: .deviceB) ?? deviceB
         monitorEnabled = try c.decodeIfPresent(Bool.self, forKey: .monitorEnabled) ?? monitorEnabled
         monitorSource = try c.decodeIfPresent(String.self, forKey: .monitorSource) ?? monitorSource
+        monitorPlaybackLive = try c.decodeIfPresent(Bool.self, forKey: .monitorPlaybackLive) ?? monitorPlaybackLive
+        monitorAudioLive = try c.decodeIfPresent(Bool.self, forKey: .monitorAudioLive) ?? monitorAudioLive
+        monitorAudioLiveVolume = try c.decodeIfPresent(Double.self, forKey: .monitorAudioLiveVolume) ?? monitorAudioLiveVolume
+        monitorAudioPlayback = try c.decodeIfPresent(Bool.self, forKey: .monitorAudioPlayback) ?? monitorAudioPlayback
+        monitorAudioPlaybackVolume = try c.decodeIfPresent(Double.self, forKey: .monitorAudioPlaybackVolume) ?? monitorAudioPlaybackVolume
         orientationA = try c.decodeIfPresent(PictureOrientation.self, forKey: .orientationA) ?? orientationA
         orientationB = try c.decodeIfPresent(PictureOrientation.self, forKey: .orientationB) ?? orientationB
         maskA = try c.decodeIfPresent(FrameMask.self, forKey: .maskA) ?? maskA

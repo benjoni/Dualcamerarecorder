@@ -120,7 +120,13 @@ Rozhranie aplikácie je **v angličtine** (Record / Playback / Slate …); tento
   hore nohami, zvoľ druhú možnosť). Na Edit ide strih otočený, cez celú šírku.
 - Na záložke Record ide živý obraz kamier, na Playback prehrávaný klip (pri pauze ostane posledná snímka),
   na **Edit strih** – vždy jeden obraz na celú plochu (voľba A / B / A | B sa tam nepoužije), bez popisu klipu.
-- Na monitor ide len čistý obraz – žiadne ovládacie prvky, waveform ani texty appky.
+- Na monitor ide obraz bez ovládacích prvkov a waveformu; hore riadok s klapkou (deň, scéna, záber, take – pri Playback
+  klapka prehrávaného klipu), pod každou kamerou info lišta s **timecode kamery** (z SDI), pri live edit zelený rámik.
+- **Zvuk na výstupe** (stereo 48 kHz vložené do SDI/HDMI): živý zvuk tak, ako sa nahráva (Scarlett, inak SDI kamery A) –
+  Record → „Monitor sound“; zvuk prehrávaného klipu (kamera, ktorú počúvaš) – Playback → Sound. Každý má vypínač
+  a hlasitosť (`monitorAudioLive…`, `monitorAudioPlayback…` v `PROJECT.JSON`). Viac ako 200 ms vo fronte zariadenia sa zahodí.
+- **Playback CLIP / LIVE:** monitor ukazuje prehrávaný klip, alebo ostane na živých kamerách (`monitorPlaybackLive`).
+- Snímky na výstup sa nehromadia – ide vždy najnovší (predtým výstup postupne zaostával o sekundy).
 - Formát výstupu = formát kamier (napr. 1080p25, 8-bit 4:2:2); keď ho zariadenie nevie, ukáže chybu (menu Monitor a nastavenia).
 - Ukladá sa s projektom (`monitorEnabled`, `monitorSource` v `PROJECT.JSON`).
 - Neotestované so skutočným UltraStudio Monitor – obraz (A, B, A | B, 10-bit vstup, Playback, strih z Edit) overený len testom bez hardvéru.
@@ -147,7 +153,8 @@ Rozhranie aplikácie je **v angličtine** (Record / Playback / Slate …); tento
 ### LUT (Record, tlačidlo LUT nad obrazom)
 - Importované .cube súbory (3D aj 1D, z DaVinci Resolve alebo od výrobcu kamery), viac naraz alebo pretiahnutím
   do zoznamu. Pre každú kameru zvlášť, ukladá sa do projektu.
-- **Nahrá sa do súboru** (aj obrazovka, waveform, monitor a telefóny) – Playback a Edit ukazujú klip s LUT.
+- **Nahrá sa do súboru** (aj obrazovka, monitor a telefóny) – Playback a Edit ukazujú klip s LUT.
+- Waveform v Record meria obraz **pred** LUT a maskou (signál kamery).
   Off = súbor tak, ako ho posiela kamera (napr. Log).
 - Najprv LUT, potom maska. 10-bit (v210) ide cez 16-bit RGB, takže bez 8-bit pásov; ~2–6 ms na snímku (GPU).
 
@@ -269,8 +276,15 @@ Rozhranie aplikácie je **v angličtine** (Record / Playback / Slate …); tento
   úseku len posunie jeho začiatok); × zmaže posledný úsek. Značky sa po STOP uložia do `C001_MARKS.JSON`
   vedľa videí (`ranges`, čas v sekundách od začiatku záberu, platí pre CamA aj CamB; prvý úsek aj ako starý
   `inPoint` / `outPoint`) a použije ich prehrávanie, strih aj PDF.
+- **Časová os** pod časom záberu: nahratý materiál sivý, úseky IN–OUT žlté, červená čiara = teraz.
 
 ### Záložka PREHRÁVANIE
+- **Časová os** pod posuvníkom: klip s úsekmi IN–OUT (z nahrávania alebo nastavené tu) a červený ukazovateľ;
+  klik / ťahanie skočí na miesto.
+- **LIVE EDIT** (vedľa Speed, klip s oboma kamerami): klávesy 1 / 2 strihajú počas prehrávania (pred Play vyberú
+  kameru na začiatok). Každé prehratie (Play → Pause / OUT / koniec / skok) aspoň s jedným strihom = nová sekvencia
+  v Edit „Live edit · …“ len s prehranou časťou; prehratie bez strihu nič nevytvorí. Kamera v strihu má zelený rámik
+  aj na Blackmagic monitore.
 - Pri zábere v zozname je aj „Obraz · Záber · Pokus“ a ★ pri dobrom pokuse; pod prehrávačmi
   je súhrn klapky a tlačidlo **Edit slate…** na dodatočnú úpravu (uloží sa do `C###_SLATE.JSON`).
 - Zoznam klipov je **zoradený podľa shooting day** (najnovší deň hore, prirodzené poradie
@@ -347,7 +361,7 @@ Rozhranie aplikácie je **v angličtine** (Record / Playback / Slate …); tento
 - **Zmazanie klipu** v Playback: pravý klik na klip v zozname klipov → Move to Trash. Oba súbory
   kamier, slate a IN / OUT idú do Koša (dajú sa vrátiť), CLIPLOG.CSV sa prepíše; ak je klip v strihu,
   potvrdenie napíše v ktorých sekvenciách (tie úseky budú chýbať).
-- **Edit** prehrá celú timeline ako jeden film (medzerník, ← / → po snímke, ↑ / ↓ predchádzajúci /
+- **Edit** prehrá celú timeline ako jeden film (medzerník – aj keď je zameraný zoznam klipov či sekvencií, ← / → po snímke, ↑ / ↓ predchádzajúci /
   nasledujúci úsek, klik do timeline = skok). Nad tlačidlami je popis úseku pod playheadom.
 - **Playhead myšou:** klik alebo ťahanie po pravítku nad úsekmi (aj po prázdnej časti timeline) ho dá
   pod myš, červený úchyt / čiaru sa dá chytiť a ťahať aj ponad úseky; obraz sa ukazuje počas ťahania.

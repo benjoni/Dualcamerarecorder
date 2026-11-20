@@ -19,6 +19,9 @@ import CoreText
 import AppKit
 #endif
 
+/// Where a piece of sound for the monitor comes from: the inputs (what is being recorded) or the clip played.
+enum MonitorAudioKind { case live, playback }
+
 enum MonitorSource: String, CaseIterable, Identifiable {
     /// `stackedRight` / `stackedLeft`: both cameras one above the other for a monitor turned 90° to the right
     /// (clockwise) / to the left – the picture goes out turned, so it stands upright on the portrait screen.
@@ -36,6 +39,8 @@ struct MonitorPlaybackFrames {
     var frameDuration: CMTime
     /// Edit tab: `a` is the cut – always shown full, whatever camera choice the monitor has.
     var program = false
+    /// Live edit on Playback: the camera in the cut gets the green frame.
+    var cut: CameraRole?
 }
 
 final class MonitorOutput: ObservableObject {
@@ -44,6 +49,10 @@ final class MonitorOutput: ObservableObject {
     @Published private(set) var failed = false
 
     private let queue = DispatchQueue(label: "sk.dualcam.monitor-output", qos: .userInteractive)
+    /// Newest live frame of each camera not yet taken by the queue (capture threads → queue).
+    private let inboxLock = NSLock()
+    private var inbox: [CameraRole: (CVPixelBuffer, String?)] = [:]
+    private var inboxScheduled: Set<CameraRole> = []
 
     // Queue only.
     private var device: DLOutputDevice?
@@ -65,8 +74,20 @@ final class MonitorOutput: ObservableObject {
     private var infos: [CameraRole: (text: String, name: String)] = [:]
     /// Live edit: the camera in the cut gets a green frame on the live pictures (nil = live edit off).
     private var liveCut: CameraRole?
+    /// The same for the clip being played (live edit on Playback).
+    private var playbackCut: CameraRole?
+    /// Sound in the output: on / off and gain of the live sound and of the clip's (queue only).
+    private var audioLive = (on: false, gain: Float(0.8))
+    private var audioPlayback = (on: true, gain: Float(0.8))
+    private var audioScratch: [Int32] = []
     /// Last laid-out text of each bar (made again only when the text or the bar's size changes).
-    private var infoLines: [CameraRole: (key: String, line: CTLine, ascent: CGFloat, descent: CGFloat)] = [:]
+    private var infoLines: [String: (key: String, line: CTLine, ascent: CGFloat, descent: CGFloat)] = [:]
+    /// Camera names (for the bars), the cameras' own timecode of the last frame, and the slate line on top
+    /// (the slate being recorded / the clip's slate on Playback).
+    private var names: [CameraRole: String] = [:]
+    private var timecodes: [CameraRole: String] = [:]
+    private var slateLive = ""
+    private var slatePlayback = ""
 
     // MARK: - Settings (main queue)
 
@@ -100,8 +121,31 @@ final class MonitorOutput: ObservableObject {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         queue.async { [self] in
             infos[role] = trimmed.isEmpty ? nil : (trimmed, name)
+            names[role] = name
             renderLatest()
         }
+    }
+
+    /// Slate line at the top of the monitor picture: the slate being recorded (live) and the clip's (Playback).
+    func setSlate(live: String, playback: String) {
+        queue.async { [self] in
+            slateLive = live
+            slatePlayback = playback
+        }
+    }
+
+    /// Bar under a live picture: the camera's name, the info text and the camera's own timecode (nil = no bar).
+    private func barInfo(_ role: CameraRole) -> (text: String, name: String)? {
+        let parts = [infos[role]?.text, timecodes[role].map { "TC \($0)" }].compactMap { $0 }
+        guard !parts.isEmpty else { return nil }
+        return (parts.joined(separator: "   ·   "), infos[role]?.name ?? names[role] ?? role.rawValue.uppercased())
+    }
+
+    /// Draws the slate line into a band of the BGRA picture (`rect` bottom-up, before `transform`).
+    private func drawSlate(_ text: String, in picture: CVPixelBuffer, rect: CGRect, background: CGFloat,
+                           transform: CGAffineTransform = .identity) {
+        guard !text.isEmpty else { return }
+        drawInfo((text, "SLATE"), cache: "slate", in: picture, background: background, rect: rect, transform: transform)
     }
 
     /// Camera in the live cut (nil = live edit off).
@@ -121,6 +165,39 @@ final class MonitorOutput: ObservableObject {
         }
     }
 
+    /// Sound in the output: the live sound (Record, and Playback when the monitor stays live) and the clip's.
+    func setAudio(liveOn: Bool, liveVolume: Double, playbackOn: Bool, playbackVolume: Double) {
+        queue.async { [self] in
+            audioLive = (liveOn, Float(min(max(liveVolume, 0), 1)))
+            audioPlayback = (playbackOn, Float(min(max(playbackVolume, 0), 1)))
+        }
+    }
+
+    /// Interleaved Int32 PCM at 48 kHz (any number of channels – the first two go out, one channel goes to both).
+    /// Used when it is the kind of sound the output plays now and it is switched on; any thread.
+    func submitAudio(_ data: Data, frames: Int, channels: Int, kind: MonitorAudioKind) {
+        guard frames > 0, channels > 0, data.count >= frames * channels * 4 else { return }
+        queue.async { [self] in
+            guard let device, running != nil, device.audioEnabled else { return }
+            let live = playback == nil
+            guard live == (kind == .live) else { return }
+            let setting = live ? audioLive : audioPlayback
+            guard setting.on, setting.gain > 0 else { return }
+            if audioScratch.count < frames * 2 { audioScratch = [Int32](repeating: 0, count: frames * 2) }
+            let gain = setting.gain
+            data.withUnsafeBytes { raw in
+                let src = raw.bindMemory(to: Int32.self)
+                for i in 0..<frames {
+                    let l = Float(src[i * channels]) * gain
+                    let r = channels > 1 ? Float(src[i * channels + 1]) * gain : l
+                    audioScratch[i * 2] = Int32(max(min(l, Float(Int32.max - 64)), Float(Int32.min)))
+                    audioScratch[i * 2 + 1] = Int32(max(min(r, Float(Int32.max - 64)), Float(Int32.min)))
+                }
+            }
+            audioScratch.withUnsafeBufferPointer { _ = device.writeAudio($0.baseAddress!, frames: UInt32(frames)) }
+        }
+    }
+
     /// Playback tab: frames come from the players instead of the inputs (nil = live inputs).
     func setPlayback(_ provider: (() -> MonitorPlaybackFrames)?) {
         queue.async { [self] in
@@ -133,10 +210,22 @@ final class MonitorOutput: ObservableObject {
 
     // MARK: - Live frames (capture threads)
 
-    func submit(_ pixelBuffer: CVPixelBuffer, role: CameraRole) {
+    func submit(_ pixelBuffer: CVPixelBuffer, role: CameraRole, timecode: Timecode? = nil) {
+        // At most one waiting frame per camera: when a picture takes longer than a frame to make, the older
+        // frame is replaced instead of queued – otherwise the queue grows and the monitor falls seconds behind.
+        inboxLock.lock()
+        inbox[role] = (pixelBuffer, timecode?.string)
+        let schedule = inboxScheduled.insert(role).inserted
+        inboxLock.unlock()
+        guard schedule else { return }
         queue.async { [self] in
-            guard device != nil, playback == nil else { return }
+            inboxLock.lock()
+            let newest = inbox.removeValue(forKey: role)
+            inboxScheduled.remove(role)
+            inboxLock.unlock()
+            guard let (pixelBuffer, tc) = newest, device != nil, playback == nil else { return }
             latest[role] = pixelBuffer
+            timecodes[role] = tc
             let now = HostClock.nowNanos
             lastArrival[role] = now
             // Pace by the camera shown (both: camera A, or B when A stopped sending).
@@ -174,30 +263,62 @@ final class MonitorOutput: ObservableObject {
         defer { busy = false }
         if !ensureRunning(width: width, height: height, frameDuration: frameDuration, interlaced: interlaced, device: device) { return }
         guard let out = compose(a: a, b: b, width: width, height: height, live: live) else { return }
+        #if DEBUG
+        let start = HostClock.nowNanos
+        #endif
         _ = device.display(out)
+        #if DEBUG
+        debugTrace(display: HostClock.nowNanos - start, live: live)
+        #endif
     }
+
+    #if DEBUG
+    private var traceCount = 0, traceDisplay: UInt64 = 0, traceAge: UInt64 = 0, traceStart: UInt64 = 0
+    /// Debug only: every 5 s the average time of the display call and the age of the live frame sent (NSLog).
+    private func debugTrace(display: UInt64, live: Bool) {
+        let now = HostClock.nowNanos
+        if traceStart == 0 { traceStart = now }
+        traceCount += 1; traceDisplay += display
+        if live, let arrival = lastArrival.values.max() { traceAge += now &- arrival }
+        guard now - traceStart > 5_000_000_000 else { return }
+        NSLog("monitor: %d frames in %.1f s, display %.1f ms, frame age %.1f ms", traceCount,
+              Double(now - traceStart) / 1e9, Double(traceDisplay) / 1e6 / Double(traceCount),
+              Double(traceAge) / 1e6 / Double(traceCount))
+        traceCount = 0; traceDisplay = 0; traceAge = 0; traceStart = now
+    }
+    #endif
 
     /// The picture for the output (2vuy, in the output's format), nil when it could not be made.
     private func compose(a: CVPixelBuffer?, b: CVPixelBuffer?, width: Int, height: Int, live: Bool) -> CVPixelBuffer? {
         guard let out = buffer(width: width, height: height, format: kCVPixelFormatType_422YpCbCr8) else { return nil }
+        // Live edit: the camera in the cut (live pictures or the clip being played; never on the cut itself).
+        let cut = program ? nil : (live ? liveCut : playbackCut)
+        // Slate line on top: live = the slate being recorded, Playback = the clip's (not on the Edit cut).
+        let slate = program ? "" : (live ? slateLive : slatePlayback)
         if source.isStacked {
             guard let canvas = stacked(a: program ? (a ?? b) : a, b: program ? nil : b, width: width, height: height,
-                                       live: live && !program, single: program),
+                                       live: live && !program, single: program, cut: cut, slate: slate),
                   copy(canvas, to: out) else { return nil }
         } else if source == .both && !program {
             guard let canvas = sideBySide(a: a, b: b, width: width, height: height) else { return nil }
-            // Info bars on the black under each half picture (they cover nothing).
-            if live {
+            // Slate line in the black above the pictures.
+            let halfH0 = height / 2
+            let above = CGFloat(height - (height - halfH0) / 2)   // top edge of the pictures (bottom-up)
+            let slateH = CGFloat(height) * 0.05
+            drawSlate(slate, in: canvas, rect: CGRect(x: 0, y: above + (CGFloat(height) - above - slateH) / 2,
+                                                      width: CGFloat(width), height: slateH), background: 0)
+            // Info bars on the black under each half picture (they cover nothing) – live pictures only.
+            if live || cut != nil {
                 let halfW = width / 2, halfH = height / 2
                 let barH = CGFloat(height) * 0.05
                 let below = CGFloat((height - halfH) / 2)   // black under the pictures (bottom-up coordinates)
                 for (index, role) in [CameraRole.a, .b].enumerated() where (index == 0 ? a : b) != nil {
-                    if liveCut == role {
+                    if cut == role {
                         drawCutFrame(in: canvas, rect: CGRect(x: CGFloat(index * halfW), y: CGFloat((height - halfH) / 2),
                                                               width: CGFloat(halfW), height: CGFloat(halfH)))
                     }
-                    guard let info = infos[role] else { continue }
-                    drawInfo(info, role: role, in: canvas, background: 0.0,
+                    guard live, let info = barInfo(role) else { continue }
+                    drawInfo(info, cache: role.rawValue, in: canvas, background: 0.0,
                              rect: CGRect(x: CGFloat(index * halfW), y: below - barH - barH * 0.25, width: CGFloat(halfW), height: barH))
                 }
             }
@@ -205,15 +326,18 @@ final class MonitorOutput: ObservableObject {
         } else {
             guard let picture = a ?? b else { return nil }
             let role: CameraRole = a != nil ? .a : .b
-            if live, infos[role] != nil || liveCut == role {
-                // One camera: the bar over the bottom of its picture, on a dark band; the cut frame around it.
+            if (live && barInfo(role) != nil) || cut == role || !slate.isEmpty {
+                // One camera: the bar over the bottom of its picture and the slate over the top, on dark bands;
+                // the cut frame around it.
                 guard let canvas = buffer(width: width, height: height, format: kCVPixelFormatType_32BGRA),
                       copy(picture, to: canvas) else { return nil }
-                if let info = infos[role] {
-                    drawInfo(info, role: role, in: canvas, background: 0.6,
+                drawSlate(slate, in: canvas, rect: CGRect(x: 0, y: CGFloat(height) * 0.94, width: CGFloat(width),
+                                                          height: CGFloat(height) * 0.06), background: 0.6)
+                if live, let info = barInfo(role) {
+                    drawInfo(info, cache: role.rawValue, in: canvas, background: 0.6,
                              rect: CGRect(x: 0, y: 0, width: CGFloat(width), height: CGFloat(height) * 0.06))
                 }
-                if liveCut == role {
+                if cut == role {
                     drawCutFrame(in: canvas, rect: CGRect(x: 0, y: 0, width: CGFloat(width), height: CGFloat(height)))
                 }
                 guard copy(canvas, to: out) else { return nil }
@@ -226,7 +350,7 @@ final class MonitorOutput: ObservableObject {
 
     /// Camera name (yellow) and the info text (white) in one line, on a band of black with the given opacity.
     /// `rect` in bottom-up coordinates of the BGRA picture; a text too long for the bar ends with "…".
-    private func drawInfo(_ info: (text: String, name: String), role: CameraRole, in picture: CVPixelBuffer,
+    private func drawInfo(_ info: (text: String, name: String), cache: String, in picture: CVPixelBuffer,
                           background: CGFloat, rect: CGRect, transform: CGAffineTransform = .identity) {
         CVPixelBufferLockBaseAddress(picture, [])
         defer { CVPixelBufferUnlockBaseAddress(picture, []) }
@@ -243,7 +367,7 @@ final class MonitorOutput: ObservableObject {
         }
         let pad = rect.height * 0.4
         let key = "\(info.name)|\(info.text)|\(Int(rect.width))x\(Int(rect.height))"
-        if infoLines[role]?.key != key {
+        if infoLines[cache]?.key != key {
             let size = rect.height * 0.6
             let bold = CTFontCreateUIFontForLanguage(.emphasizedSystem, size, nil)
                 ?? CTFontCreateWithName("Helvetica-Bold" as CFString, size, nil)
@@ -258,9 +382,9 @@ final class MonitorOutput: ObservableObject {
             let line = CTLineCreateTruncatedLine(full, Double(rect.width - 2 * pad), .end, token) ?? full
             var ascent: CGFloat = 0, descent: CGFloat = 0, leading: CGFloat = 0
             _ = CTLineGetTypographicBounds(line, &ascent, &descent, &leading)
-            infoLines[role] = (key, line, ascent, descent)
+            infoLines[cache] = (key, line, ascent, descent)
         }
-        guard let laid = infoLines[role] else { return }
+        guard let laid = infoLines[cache] else { return }
         ctx.textPosition = CGPoint(x: rect.minX + pad, y: rect.midY - (laid.ascent - laid.descent) / 2)
         CTLineDraw(laid.line, ctx)
     }
@@ -294,7 +418,7 @@ final class MonitorOutput: ObservableObject {
                              timeScale: Int64(frameDuration.timescale), interlaced: interlaced)
             running = (width, height, frameDuration, interlaced)
             startFailedFor = nil
-            publish("Sending \(device.modeName ?? "\(width)×\(height)")", failed: false)
+            publish("Sending \(device.modeName ?? "\(width)×\(height)")" + (device.audioEnabled ? " with sound" : ""), failed: false)
             return true
         } catch {
             running = nil
@@ -306,7 +430,8 @@ final class MonitorOutput: ObservableObject {
 
     /// Portrait monitor: A above B (or one picture, `single`), each as wide as the turned screen, with its info bar
     /// under it – drawn upright on the portrait screen and turned into the landscape output picture.
-    private func stacked(a: CVPixelBuffer?, b: CVPixelBuffer?, width: Int, height: Int, live: Bool, single: Bool) -> CVPixelBuffer? {
+    private func stacked(a: CVPixelBuffer?, b: CVPixelBuffer?, width: Int, height: Int, live: Bool, single: Bool,
+                         cut: CameraRole? = nil, slate: String = "") -> CVPixelBuffer? {
         guard let canvas = buffer(width: width, height: height, format: kCVPixelFormatType_32BGRA) else { return nil }
         // The portrait screen: as wide as the output is high and as high as it is wide (bottom-up coordinates).
         let screenW = CGFloat(height), screenH = CGFloat(width)
@@ -347,12 +472,19 @@ final class MonitorOutput: ObservableObject {
             if let image { ctx.draw(image, in: slot.rect) }
         }
         CVPixelBufferUnlockBaseAddress(canvas, [])
-        if live {
-            for slot in slots where slot.picture != nil {
-                if liveCut == slot.role { drawCutFrame(in: canvas, rect: slot.rect, transform: turn) }
-                if let info = infos[slot.role] {
-                    drawInfo(info, role: slot.role, in: canvas, background: 0, rect: slot.bar, transform: turn)
-                }
+        for slot in slots where slot.picture != nil {
+            if cut == slot.role { drawCutFrame(in: canvas, rect: slot.rect, transform: turn) }
+            if live, let info = barInfo(slot.role) {
+                drawInfo(info, cache: slot.role.rawValue, in: canvas, background: 0, rect: slot.bar, transform: turn)
+            }
+        }
+        // Slate line in the free space above the first picture (top of the portrait screen).
+        if let first = slots.first {
+            let free = screenH - first.rect.maxY
+            let h = min(barH, free * 0.8)
+            if h > 10 {
+                drawSlate(slate, in: canvas, rect: CGRect(x: 0, y: first.rect.maxY + (free - h) / 2, width: screenW, height: h),
+                          background: 0, transform: turn)
             }
         }
         return canvas
@@ -366,10 +498,8 @@ final class MonitorOutput: ObservableObject {
         defer { CVPixelBufferUnlockBaseAddress(canvas, []) }
         guard let base = CVPixelBufferGetBaseAddress(canvas) else { return nil }
         let rowBytes = CVPixelBufferGetBytesPerRow(canvas)
-        for y in 0..<height {   // opaque black
-            let row = base.advanced(by: y * rowBytes).assumingMemoryBound(to: UInt32.self)
-            for x in 0..<width { row[x] = 0xFF00_0000 }
-        }
+        var black: UInt32 = 0xFF00_0000   // opaque black (one call for the whole picture – a pixel loop is far too slow)
+        memset_pattern4(base, &black, rowBytes * height)
         for (index, picture) in [a, b].enumerated() {
             guard let picture, let half = buffer(width: halfW, height: halfH, format: kCVPixelFormatType_32BGRA),
                   copy(picture, to: half) else { continue }
@@ -438,6 +568,7 @@ final class MonitorOutput: ObservableObject {
         guard let device, let playback else { return }
         let frames = playback()
         program = frames.program
+        playbackCut = frames.cut
         if let a = frames.a { latest[.a] = a }
         if let b = frames.b { latest[.b] = b }
         guard frames.a != nil || frames.b != nil else { return }   // paused: the monitor keeps the last frame
@@ -470,6 +601,27 @@ final class MonitorOutput: ObservableObject {
             var image: CGImage?
             VTCreateCGImageFromCVPixelBuffer(bgra, options: nil, imageOut: &image)
             return image.flatMap { NSBitmapImageRep(cgImage: $0).representation(using: .png, properties: [:]) }
+        }
+    }
+    #endif
+
+    #if DEBUG
+    /// Debug only: the cameras' timecode as if it came with the frames.
+    func debugSetTimecodes(_ values: [CameraRole: String]) {
+        queue.sync { timecodes = values }
+    }
+
+    /// Debug only: milliseconds to make one output picture (average of `count`).
+    func debugComposeMillis(a: CVPixelBuffer?, b: CVPixelBuffer?, source: MonitorSource, count: Int = 50) -> Double {
+        queue.sync {
+            let saved = self.source
+            self.source = source
+            defer { self.source = saved }
+            let a2 = source == .b ? nil : a, b2 = source == .a ? nil : b
+            _ = compose(a: a2, b: b2, width: 1920, height: 1080, live: true)
+            let start = HostClock.nowNanos
+            for _ in 0..<count { _ = compose(a: a2, b: b2, width: 1920, height: 1080, live: true) }
+            return Double(HostClock.nowNanos - start) / 1e6 / Double(count)
         }
     }
     #endif

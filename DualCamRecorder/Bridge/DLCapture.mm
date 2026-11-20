@@ -952,6 +952,7 @@ private:
     std::vector<IDeckLinkMutableVideoFrame *> _frames;   // small ring – a frame is not rewritten while it may still be sent
     size_t _nextFrame;
     int32_t _width, _height, _rowBytes;
+    bool _audioOn;   // stereo 48 kHz 32-bit sound with the picture (written as it comes, like the frames)
 #endif
     NSString *_modeName;
 }
@@ -1032,6 +1033,9 @@ private:
         if (error) *error = DLMakeError(201, @"The output is in use by another application.");
         return NO;
     }
+    // Sound embedded in the output (the monitor's speaker / headphones); the picture works without it.
+    _audioOn = _output->EnableAudioOutput(bmdAudioSampleRate48kHz, bmdAudioSampleType32bitInteger, 2,
+                                          bmdAudioOutputStreamContinuous) == S_OK;
     int32_t rowBytes = 0;
     if (_output->RowBytesForPixelFormat(bmdFormat8BitYUV, width, &rowBytes) != S_OK) rowBytes = width * 2;
     for (int i = 0; i < 3; i++) {
@@ -1094,9 +1098,37 @@ private:
 #endif
 }
 
+- (uint32_t)writeAudioSamples:(const int32_t *)samples frames:(uint32_t)frames
+{
+#if DL_HAS_SDK
+    if (!_audioOn || frames == 0 || !samples) return 0;
+    // More than 200 ms waiting in the device: drop this piece, so the sound never falls behind the picture.
+    uint32_t buffered = 0;
+    if (_output->GetBufferedAudioSampleFrameCount(&buffered) == S_OK && buffered > 48000 / 5) return 0;
+    uint32_t written = 0;
+    if (_output->WriteAudioSamplesSync((void *)samples, frames, &written) != S_OK) return 0;
+    return written;
+#else
+    return 0;
+#endif
+}
+
+- (BOOL)audioEnabled
+{
+#if DL_HAS_SDK
+    return _audioOn;
+#else
+    return NO;
+#endif
+}
+
 - (void)stop
 {
 #if DL_HAS_SDK
+    if (_audioOn) {
+        _output->DisableAudioOutput();
+        _audioOn = false;
+    }
     if (!_frames.empty() || _modeName) {
         _output->DisableVideoOutput();
     }

@@ -8,6 +8,7 @@ import AppKit
 import Combine
 import CoreMedia
 import AVFoundation
+import os
 
 /// Long-lived objects live here so capture keeps running while switching tabs.
 final class AppModel: ObservableObject {
@@ -23,6 +24,10 @@ final class AppModel: ObservableObject {
     /// Overlay tab: a clip frame with a live camera on top.
     let overlay = OverlayCompositor()
     let monitor = MonitorOutput()
+    /// Live sound for the monitor "as it is recorded": the audio interface when it is used, else camera A's SDI
+    /// sound (camera B's when A is off). Read on the capture threads.
+    private enum LiveAudioOrigin { case interface, cameraA, cameraB }
+    private let liveAudioOrigin = OSAllocatedUnfairLock<LiveAudioOrigin>(initialState: .cameraA)
     private var liveViewTimer: Timer?
     private var cancellables = Set<AnyCancellable>()
     /// LUT chosen last for each camera (loaded in the background; an older load is dropped).
@@ -82,14 +87,48 @@ final class AppModel: ObservableObject {
         }
 
         // Blackmagic monitor: live pictures and formats of both inputs, device / source from the project settings.
-        recorder.channelA.onPicture = { [weak monitor = self.monitor, weak overlay = self.overlay] picture in
-            monitor?.submit(picture, role: .a)
+        recorder.channelA.onPicture = { [weak monitor = self.monitor, weak overlay = self.overlay] picture, timecode in
+            monitor?.submit(picture, role: .a, timecode: timecode)
             overlay?.submitLive(picture, role: .a)
         }
-        recorder.channelB.onPicture = { [weak monitor = self.monitor, weak overlay = self.overlay] picture in
-            monitor?.submit(picture, role: .b)
+        recorder.channelB.onPicture = { [weak monitor = self.monitor, weak overlay = self.overlay] picture, timecode in
+            monitor?.submit(picture, role: .b, timecode: timecode)
             overlay?.submitLive(picture, role: .b)
         }
+        // Sound for the monitor: the live sound as it is recorded, and the clip's on Playback.
+        recorder.channelA.onAudio = { [weak monitor = self.monitor, origin = liveAudioOrigin] audio in
+            guard origin.withLock({ $0 }) == .cameraA else { return }
+            monitor?.submitAudio(audio.data, frames: audio.sampleFrames, channels: audio.channels, kind: .live)
+        }
+        recorder.channelB.onAudio = { [weak monitor = self.monitor, origin = liveAudioOrigin] audio in
+            guard origin.withLock({ $0 }) == .cameraB else { return }
+            monitor?.submitAudio(audio.data, frames: audio.sampleFrames, channels: audio.channels, kind: .live)
+        }
+        recorder.onInterfaceAudio = { [weak monitor = self.monitor, origin = liveAudioOrigin] chunk in
+            guard origin.withLock({ $0 }) == .interface else { return }
+            monitor?.submitAudio(chunk.data, frames: chunk.frames, channels: chunk.channels, kind: .live)
+        }
+        player.onMonitorAudio = { [weak monitor = self.monitor] data, frames, channels in
+            monitor?.submitAudio(data, frames: frames, channels: channels, kind: .playback)
+        }
+        // Slate line on the monitor: the slate being recorded, and the clip's on Playback.
+        settings.$slate.combineLatest(player.$slate)
+            .map { live, clip in (live.shortLabel, clip?.shortLabel ?? "") }
+            .removeDuplicates { $0 == $1 }
+            .sink { [weak monitor = self.monitor] live, clip in monitor?.setSlate(live: live, playback: clip) }
+            .store(in: &cancellables)
+        settings.$audioInterfaceMode.combineLatest(settings.$cameraAOn, settings.$cameraCount)
+            .sink { [origin = liveAudioOrigin] mode, aOn, count in
+                let value: LiveAudioOrigin = mode != .off ? .interface : (aOn || count < 2 ? .cameraA : .cameraB)
+                origin.withLock { $0 = value }
+            }
+            .store(in: &cancellables)
+        settings.$monitorAudioLive.combineLatest(settings.$monitorAudioLiveVolume, settings.$monitorAudioPlayback,
+                                                 settings.$monitorAudioPlaybackVolume)
+            .sink { [weak monitor = self.monitor] liveOn, liveVolume, playbackOn, playbackVolume in
+                monitor?.setAudio(liveOn: liveOn, liveVolume: liveVolume, playbackOn: playbackOn, playbackVolume: playbackVolume)
+            }
+            .store(in: &cancellables)
         recorder.channelA.$format.sink { [weak monitor = self.monitor] f in monitor?.setFormat(f, for: .a) }.store(in: &cancellables)
         recorder.channelB.$format.sink { [weak monitor = self.monitor] f in monitor?.setFormat(f, for: .b) }.store(in: &cancellables)
         // Flip / flop of the inputs (project settings, buttons above the pictures).
@@ -149,7 +188,8 @@ final class AppModel: ObservableObject {
                 DispatchQueue.main.asyncAfter(deadline: .now() + 3) { self?.backup.sync() }
             }
             .store(in: &cancellables)
-        // A take cut live → a new sequence in Edit (the shorter of the two files sets the length).
+        // A take cut live (while recording or on Playback) → a new sequence in Edit (the shorter of the two
+        // files sets the length).
         NotificationCenter.default.publisher(for: .liveEditRecorded)
             .compactMap { $0.object as? LiveEditTake }
             .sink { [weak self] take in
@@ -161,6 +201,7 @@ final class AppModel: ObservableObject {
                     }
                     guard let self, lengths.count == 2 else { return }
                     let segments = EditTimeline.liveEditSegments(take, length: lengths.min()!)
+                    guard !segments.isEmpty else { return }
                     self.timeline.addSequence(name: "Live edit · \(take.label)", segments: segments, folder: take.folder)
                 }
             }
@@ -429,6 +470,7 @@ struct ContentView: View {
         }
         .onAppear { applyActivity() }
         .onValueChange(of: settings.showWaveform) { _, _ in applyActivity() }
+        .onValueChange(of: settings.monitorPlaybackLive) { _, _ in applyActivity() }
         .onValueChange(of: projects.current?.id) { _, _ in
             tab = 0
             screensOnly = false
@@ -447,6 +489,9 @@ struct ContentView: View {
         .task { await runDiskTestIfRequested() }
         .task { await runTriggerTestIfRequested() }
         .task { await runLiveEditTestIfRequested() }
+        .task { await runPlaybackLiveEditTestIfRequested() }
+        .task { await runEditSpaceTestIfRequested() }
+        .task { await runMarksAudioTestIfRequested() }
         .task { runLicenseImportTestIfRequested() }
         .task { await runPlaybackEndTestIfRequested() }
         .task { await runEditExportTestIfRequested() }
@@ -632,9 +677,13 @@ struct ContentView: View {
                   !(NSApp.keyWindow?.firstResponder is NSText),
                   NSApp.keyWindow?.attachedSheet == nil else { return event }
             switch event.charactersIgnoringModifiers?.lowercased() {
-            // Live edit: 1 / 2 cut to camera A / B (Record tab).
+            // Live edit: 1 / 2 cut to camera A / B (Record and Playback tabs).
             case "1" where tab == 0 && model.recorder.liveCut != nil: model.recorder.cut(to: .a); return nil
             case "2" where tab == 0 && model.recorder.liveCut != nil: model.recorder.cut(to: .b); return nil
+            case "1" where tab == 1 && model.player.liveCut != nil: model.player.cut(to: .a); return nil
+            case "2" where tab == 1 && model.player.liveCut != nil: model.player.cut(to: .b); return nil
+            // Edit: space plays / pauses even when a list (clips, sequences) has the keyboard focus.
+            case " " where tab == 2: editPlayer.togglePlay(); return nil
             case "r": tab = 0; return nil
             case "p": tab = 1; return nil
             case "e": tab = 2; return nil
@@ -656,7 +705,7 @@ struct ContentView: View {
         model.player.waveformEnabled = settings.showWaveform && playbackVisible
         model.overlay.isActive = inProject && tab == 3
         // Monitor output: the clip being played on Playback, the cut on Edit, the cameras everywhere else.
-        if playbackVisible {
+        if playbackVisible && !settings.monitorPlaybackLive {
             model.monitor.setPlayback { [weak player = model.player] in
                 player?.monitorFrames() ?? MonitorPlaybackFrames(frameDuration: CMTime(value: 1, timescale: 25))
             }
@@ -844,10 +893,17 @@ extension ContentView {
         monitor.setInfo("Operator Jana · 35 mm", name: "A", for: .a)
         monitor.setInfo("Focus Peter · 85 mm", name: "B", for: .b)
         monitor.setLiveCut(.a)
+        monitor.setSlate(live: "Day 23 · Scene 12B · Shot 3A · Take 4", playback: "")
+        monitor.debugSetTimecodes([.a: "10:21:33:12", .b: "10:21:33:13"])
         for source in MonitorSource.allCases {
             try? monitor.debugPicture(a: a, b: b, source: source)?
                 .write(to: URL(fileURLWithPath: dir).appendingPathComponent("monitor_\(source.rawValue).png"))
         }
+        let timings = MonitorSource.allCases.map { source in
+            String(format: "%@ %.1f ms", source.rawValue, monitor.debugComposeMillis(a: a, b: b, source: source))
+        }
+        try? timings.joined(separator: "\n").write(to: URL(fileURLWithPath: dir).appendingPathComponent("timings.txt"),
+                                                   atomically: true, encoding: .utf8)
         try? monitor.debugPicture(a: a, b: b, source: .stackedRight, program: true)?
             .write(to: URL(fileURLWithPath: dir).appendingPathComponent("monitor_stackedRight_edit.png"))
         // The Monitor toolbar button and its choices (drawn off screen; the open menu itself cannot be captured).
@@ -1030,6 +1086,172 @@ extension ContentView {
         exit(0)
     }
 
+    /// Debug only: `-playbackLiveEditTestFolder <project folder> -playbackLiveEditTestDir <folder>` adds and opens the
+    /// project, plays its first clip with both cameras on Playback and cuts it with 2 / 1 (key presses); saves
+    /// pictures and the Edit sequences; quits.
+    @MainActor
+    func runPlaybackLiveEditTestIfRequested() async {
+        let args = UserDefaults.standard
+        guard let dir = args.string(forKey: "playbackLiveEditTestDir"),
+              let folder = args.string(forKey: "playbackLiveEditTestFolder") else { return }
+        let out = URL(fileURLWithPath: dir)
+        var log: [String] = []
+        func finish() -> Never {
+            try? log.joined(separator: "\n").write(to: out.appendingPathComponent("result.txt"), atomically: true, encoding: .utf8)
+            exit(0)
+        }
+        func sleep(_ s: Double) async { try? await Task.sleep(nanoseconds: UInt64(s * 1_000_000_000)) }
+        func press(_ key: String) {
+            guard let window = NSApp.keyWindow ?? NSApp.windows.first(where: \.isVisible),
+                  let event = NSEvent.keyEvent(with: .keyDown, location: .zero, modifierFlags: [], timestamp: ProcessInfo.processInfo.systemUptime,
+                                               windowNumber: window.windowNumber, context: nil, characters: key,
+                                               charactersIgnoringModifiers: key, isARepeat: false, keyCode: key == "1" ? 18 : 19)
+            else { log.append("no window for key \(key)"); return }
+            NSApp.postEvent(event, atStart: false)
+        }
+        await sleep(2)
+        guard let entry = try? projects.addExisting(folder: URL(fileURLWithPath: folder)) else { log.append("cannot add project"); finish() }
+        model.open(entry)
+        await sleep(2)
+        tab = 1
+        await sleep(1.5)
+        guard let take = model.library.takes.first(where: { $0.camA != nil && $0.camB != nil }) else { log.append("no clip with A and B"); finish() }
+        let player = model.player
+        player.load(take)
+        player.loopClip = false
+        player.loopInOut = false
+        await sleep(1.5)
+        log.append("clip \(take.name) duration \(String(format: "%.2f", player.duration)) available \(player.liveEditAvailable)")
+        press("1"); await sleep(0.3)
+        log.append("key 1 before live edit: liveCut=\(String(describing: player.liveCut))")
+        player.setLiveEdit(true)
+        press("2"); await sleep(0.3)
+        log.append("live edit on, key 2 before play: liveCut=\(String(describing: player.liveCut))")
+        // Pass 1: from 0.5 s, cut to 1 and back to 2, pause.
+        player.seek(seconds: 0.5); await sleep(0.5)
+        player.play(); await sleep(1.5)
+        press("1"); await sleep(0.4)
+        saveWindowPicture(to: out.appendingPathComponent("playback_cut1.png"))
+        await sleep(1.1)
+        press("2"); await sleep(1.0)
+        player.pause(); await sleep(1.0)
+        log.append("pass 1 paused at \(String(format: "%.2f", player.currentTime)); sequences \(model.timeline.sequences.count)")
+        // Pass 2: played without a cut – no sequence.
+        player.play(); await sleep(1.0); player.pause(); await sleep(1.0)
+        log.append("pass 2 (no cut); sequences \(model.timeline.sequences.count)")
+        // Pass 3: from 4.5 s to the end with one cut.
+        player.seek(seconds: 4.5); await sleep(0.5)
+        player.play(); await sleep(0.8)
+        press("1")
+        for _ in 0..<80 where player.isPlaying { await sleep(0.1) }
+        await sleep(1.5)
+        log.append("pass 3 ended at \(String(format: "%.2f", player.currentTime)); playing \(player.isPlaying)")
+        for sequence in model.timeline.sequences {
+            log.append("sequence \(sequence.name)")
+            for seg in sequence.segments {
+                log.append(String(format: "  %@ %.2f-%.2f of %.2f", seg.camera.rawValue, seg.inPoint, seg.outPoint, seg.clipDuration))
+            }
+        }
+        player.setLiveEdit(false)
+        log.append("live edit off: liveCut=\(String(describing: player.liveCut))")
+        finish()
+    }
+
+    /// Debug only: `-editSpaceTestProject <name> -editSpaceTestDir <folder>` opens the project on Edit, gives the
+    /// keyboard focus to a list and presses space (play) and space again (pause); writes result.txt; quits.
+    @MainActor
+    func runEditSpaceTestIfRequested() async {
+        let args = UserDefaults.standard
+        guard let dir = args.string(forKey: "editSpaceTestDir"), let name = args.string(forKey: "editSpaceTestProject") else { return }
+        var log: [String] = []
+        func sleep(_ s: Double) async { try? await Task.sleep(nanoseconds: UInt64(s * 1_000_000_000)) }
+        await sleep(2)
+        guard let entry = projects.projects.first(where: { $0.project.name == name }) else { exit(2) }
+        model.open(entry)
+        await sleep(2)
+        tab = 2
+        await sleep(2)
+        let window = NSApp.keyWindow ?? NSApp.windows.first(where: \.isVisible)
+        func tables(_ view: NSView) -> [NSTableView] {
+            (view as? NSTableView).map { [$0] } ?? view.subviews.flatMap(tables)
+        }
+        if let window, let table = window.contentView.flatMap(tables)?.first {
+            log.append("focus to list: \(window.makeFirstResponder(table))")
+        } else { log.append("no list found") }
+        func space() {
+            guard let window, let event = NSEvent.keyEvent(with: .keyDown, location: .zero, modifierFlags: [],
+                timestamp: ProcessInfo.processInfo.systemUptime, windowNumber: window.windowNumber, context: nil,
+                characters: " ", charactersIgnoringModifiers: " ", isARepeat: false, keyCode: 49) else { return }
+            NSApp.postEvent(event, atStart: false)
+        }
+        log.append("pieces \(editPlayer.pieces.count), playing \(editPlayer.isPlaying)")
+        space(); await sleep(1.0)
+        log.append("after space: playing \(editPlayer.isPlaying)")
+        space(); await sleep(0.5)
+        log.append("after second space: playing \(editPlayer.isPlaying)")
+        try? log.joined(separator: "\n").write(to: URL(fileURLWithPath: dir).appendingPathComponent("result.txt"), atomically: true, encoding: .utf8)
+        exit(0)
+    }
+
+    /// Debug only: `-marksTestFolder <project folder> -marksTestDir <folder>` records a take with IN/OUT (simulated
+    /// inputs) and saves the Record window while recording, then plays the take on Playback and saves that window;
+    /// counts the sound that would go to the monitor (live and from the clip); writes result.txt; quits.
+    @MainActor
+    func runMarksAudioTestIfRequested() async {
+        let args = UserDefaults.standard
+        guard let dir = args.string(forKey: "marksTestDir"), let folder = args.string(forKey: "marksTestFolder") else { return }
+        let out = URL(fileURLWithPath: dir)
+        var log: [String] = []
+        func sleep(_ s: Double) async { try? await Task.sleep(nanoseconds: UInt64(s * 1_000_000_000)) }
+        await sleep(2)
+        guard let entry = try? projects.addExisting(folder: URL(fileURLWithPath: folder)) else { exit(2) }
+        model.open(entry)
+        await sleep(2.5)
+        settings.monitorEnabled = true
+        settings.cameraTrigger = .off
+        // Count the sound the monitor would get (no output device here).
+        let counts = OSAllocatedUnfairLock(initialState: (live: 0, playback: 0, channels: 0))
+        let liveA = model.recorder.channelA.onAudio
+        model.recorder.channelA.onAudio = { audio in
+            counts.withLock { $0.live += audio.sampleFrames }
+            liveA?(audio)
+        }
+        let clipAudio = model.player.onMonitorAudio
+        model.player.onMonitorAudio = { data, frames, channels in
+            counts.withLock { $0.playback += frames; $0.channels = channels }
+            clipAudio?(data, frames, channels)
+        }
+        let recorder = model.recorder
+        recorder.startRecording()
+        await sleep(1.0); recorder.markIn()
+        await sleep(1.5); recorder.markOut()
+        await sleep(1.0); recorder.markIn()
+        await sleep(1.0)
+        log.append(String(format: "recording %.2f s, marks %@", recorder.elapsed, String(describing: recorder.marks.spans(duration: recorder.elapsed))))
+        saveWindowPicture(to: out.appendingPathComponent("record_marks.png"))
+        await sleep(1.0)
+        recorder.stopRecording()
+        for _ in 0..<100 where recorder.isRecording { await sleep(0.1) }
+        await sleep(2.5)
+        log.append("live SDI sound frames while recording: \(counts.withLock { $0.live })")
+        tab = 1
+        await sleep(2)
+        model.library.refresh()
+        await sleep(1)
+        guard let take = model.library.takes.max(by: { $0.number < $1.number }) else { log.append("no take"); exit(3) }
+        model.player.load(take)
+        await sleep(1.5)
+        log.append("take \(take.name): duration \(String(format: "%.2f", model.player.duration)), marks \(String(describing: model.player.marks.spans(duration: model.player.duration)))")
+        model.player.seek(seconds: 0.5); await sleep(0.5)
+        model.player.play(); await sleep(2.0)
+        saveWindowPicture(to: out.appendingPathComponent("playback_marks.png"))
+        model.player.pause(); await sleep(0.5)
+        let c = counts.withLock { $0 }
+        log.append("clip sound frames to the monitor in 2 s: \(c.playback) (\(c.channels) ch)")
+        try? log.joined(separator: "\n").write(to: out.appendingPathComponent("result.txt"), atomically: true, encoding: .utf8)
+        exit(0)
+    }
+
     /// Debug only: `-diskTestProject <name> -diskTestDir <folder>` opens the project, starts recording, writes
     /// `recording` into the folder and waits for the project's disk to be detached (from outside); then saves
     /// disk_alert.png and result.txt and quits.
@@ -1140,6 +1362,10 @@ private struct MonitorMenu: View {
                 }
             }
             .pickerStyle(.inline)
+            Divider()
+            Toggle("Playback: keep the live cameras on the monitor", isOn: $settings.monitorPlaybackLive)
+            Toggle("Live sound in the output", isOn: $settings.monitorAudioLive)
+            Toggle("Clip sound in the output (Playback)", isOn: $settings.monitorAudioPlayback)
             Divider()
             Text(monitor.status)
         }

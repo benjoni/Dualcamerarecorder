@@ -91,6 +91,7 @@ struct PlaybackView: View {
                     .overlay { if settings.showWaveform { WaveformOverlay(model: player.waveformA) } }
                     .overlay { timecodeBadge(.a) }
                     .clipShape(RoundedRectangle(cornerRadius: 6))
+                    .overlay { liveCutMark(.a) }
             }
             if showCameraB {
                 PlayerView(player: player.playerB)
@@ -98,6 +99,7 @@ struct PlaybackView: View {
                     .overlay { if settings.showWaveform { WaveformOverlay(model: player.waveformB) } }
                     .overlay { timecodeBadge(.b) }
                     .clipShape(RoundedRectangle(cornerRadius: 6))
+                    .overlay { liveCutMark(.b) }
             }
         }
         .padding(8)
@@ -329,6 +331,7 @@ struct PlaybackView: View {
             }
             .aspectRatio(16.0 / 9.0, contentMode: .fit)
             .clipShape(RoundedRectangle(cornerRadius: 6))
+            .overlay { liveCutMark(role) }
             HStack(spacing: 14) {
                 Text(file?.lastPathComponent ?? " ")
                     .lineLimit(1).truncationMode(.middle)
@@ -383,21 +386,12 @@ struct PlaybackView: View {
         }
     }
 
-    /// Thin bar under the slider showing the IN–OUT ranges.
+    /// Time axis of the clip under the slider: the IN–OUT ranges (as set while recording or here) and the playhead.
     private var rangeBar: some View {
-        GeometryReader { geo in
-            let d = max(player.duration, 0.001)
-            ZStack(alignment: .leading) {
-                Capsule().fill(Color.secondary.opacity(0.2))
-                ForEach(Array(player.marks.spans(duration: player.duration).enumerated()), id: \.offset) { _, span in
-                    Capsule().fill(Color.yellow.opacity(0.8))
-                        .frame(width: max(2, CGFloat((span.upperBound - span.lowerBound) / d) * geo.size.width))
-                        .offset(x: CGFloat(span.lowerBound / d) * geo.size.width)
-                }
-            }
-        }
-        .frame(height: 5)
-        .padding(.horizontal, 130)
+        MarksTimeline(duration: player.duration, marks: player.marks,
+                      position: isScrubbing ? scrubValue : player.currentTime, height: 12,
+                      onSeek: { player.seek(seconds: $0) })
+            .padding(.horizontal, 130)
     }
 
     // MARK: - Controls: all buttons stacked, info below
@@ -473,7 +467,7 @@ struct PlaybackView: View {
 
     /// Audio · big transport buttons · speed.
     private func transportLine(playWidth: CGFloat = 160) -> some View {
-        threeLine(edge(audioButtons), transportButtons(playWidth: playWidth), edge(speedControl))
+        threeLine(edge(audioAndMonitor), transportButtons(playWidth: playWidth), liveEditAndSpeed)
     }
 
     /// Set IN / OUT and add to timeline in one centered group.
@@ -510,7 +504,7 @@ struct PlaybackView: View {
     private var stackedButtons: some View {
         VStack(spacing: 8) {
             transportButtons(playWidth: 110).fixedSize()
-            threeLine(edge(audioButtons), EmptyView(), edge(speedControl))
+            threeLine(edge(audioAndMonitor), EmptyView(), liveEditAndSpeed)
             threeLine(edge(editSlateButton), side(markButtons), edge(loopControl))
             side(addRow).fixedSize()
             side(goodTakeToggle).fixedSize()
@@ -609,6 +603,31 @@ struct PlaybackView: View {
             .keyboardShortcut(shortcut(.downArrow))
             .disabled(adjacentClip(1) == nil)
             .help("Next clip (↓ or ⌘→)")
+        }
+    }
+
+    /// LIVE EDIT with 1 / 2, then the speed – at the right edge of the transport line.
+    private var liveEditAndSpeed: some View {
+        HStack(spacing: 16) {
+            LiveEditButtons(isOn: Binding(get: { player.liveEdit }, set: { player.setLiveEdit($0) }),
+                            available: player.liveEditAvailable, cut: player.liveCut, names: settings.cameraNames,
+                            compact: true, height: 34,
+                            help: "Live edit: cut between the cameras with 1 and 2 while the clip plays – every playing with a cut is saved as a sequence in Edit. The clip stays as it is.",
+                            cutTo: { player.cut(to: $0) })
+            .buttonStyle(.automatic)
+            edge(speedControl)
+        }
+    }
+
+    /// Live edit: green frame and "CUT 1" badge on the camera in the cut.
+    @ViewBuilder
+    private func liveCutMark(_ role: CameraRole) -> some View {
+        if player.liveCut == role {
+            ZStack(alignment: .topLeading) {
+                RoundedRectangle(cornerRadius: 6).strokeBorder(Color.liveCut, lineWidth: 5)
+                Badge(text: "▶ CUT \(role == .a ? "1" : "2")", color: .liveCut).padding(8)
+            }
+            .allowsHitTesting(false)
         }
     }
 
@@ -723,6 +742,31 @@ struct PlaybackView: View {
     private func selectAdjacentClip(_ delta: Int) {
         guard let take = adjacentClip(delta) else { return }
         selection = take.id
+    }
+
+    /// Audio A / B, and with a Blackmagic monitor: what it shows (the clip or the live cameras) and its sound.
+    private var audioAndMonitor: some View {
+        HStack(spacing: 14) {
+            audioButtons
+            if settings.monitorEnabled {
+                HStack(spacing: 8) {
+                    Text("Monitor").foregroundStyle(.secondary)
+                    SegmentGroup {
+                        Toggle("CLIP", isOn: Binding(get: { !settings.monitorPlaybackLive }, set: { if $0 { settings.monitorPlaybackLive = false } }))
+                        Toggle("LIVE", isOn: Binding(get: { settings.monitorPlaybackLive }, set: { if $0 { settings.monitorPlaybackLive = true } }))
+                    }
+                    .toggleStyle(SegmentToggleStyle(minHeight: 24))
+                    .help("Blackmagic monitor on Playback: the clip played here, or the live cameras (you watch the clip on the Mac only)")
+                    if settings.monitorPlaybackLive {
+                        MonitorSoundControl(title: "Sound", isOn: $settings.monitorAudioLive, volume: $settings.monitorAudioLiveVolume,
+                                            help: "Live sound in the monitor output (as it is recorded) – on / off and volume")
+                    } else {
+                        MonitorSoundControl(title: "Sound", isOn: $settings.monitorAudioPlayback, volume: $settings.monitorAudioPlaybackVolume,
+                                            help: "The clip's sound (camera heard: Audio A, else B) in the monitor output – on / off and volume")
+                    }
+                }
+            }
+        }
     }
 
     private var audioButtons: some View {

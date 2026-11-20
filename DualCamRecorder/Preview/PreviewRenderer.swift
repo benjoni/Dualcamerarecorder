@@ -86,7 +86,8 @@ final class PreviewRenderer {
     }
 
     /// Thread-safe; drops the frame if the previous one is still being processed.
-    func enqueue(_ pixelBuffer: CVPixelBuffer) {
+    /// `original`: the frame before the LUT and mask – the waveform measures the camera's signal, not the look.
+    func enqueue(_ pixelBuffer: CVPixelBuffer, original: CVPixelBuffer? = nil) {
         let flags = state.withLock { s -> (accepted: Bool, display: Bool) in
             guard s.active || s.stream, !s.busy else { return (false, false) }
             s.busy = true
@@ -104,7 +105,8 @@ final class PreviewRenderer {
             let now = HostClock.nowNanos
             if self.waveformEnabled, now - self.lastWaveformNanos > 80_000_000 {
                 self.lastWaveformNanos = now
-                let image = WaveformRenderer.image(from: small)
+                let measured = original.flatMap { $0 !== pixelBuffer ? self.scaledPicture(from: $0) : nil } ?? small
+                let image = WaveformRenderer.image(from: measured)
                 DispatchQueue.main.async { self.waveform.image = image }
             }
             // JPEG for phones; skipped while the previous one is still being encoded.

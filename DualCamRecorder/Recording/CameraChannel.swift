@@ -77,7 +77,9 @@ final class CameraChannel: ObservableObject, VideoSourceDelegate {
     let preview = PreviewRenderer()
     let signal = CameraSignalInfo()
     /// Every captured picture (capture thread) – the monitor output. Set once at start.
-    var onPicture: ((CVPixelBuffer) -> Void)?
+    var onPicture: ((CVPixelBuffer, Timecode?) -> Void)?
+    /// The input's SDI sound as it comes (capture thread) – for the monitor output.
+    var onAudio: ((CapturedAudio) -> Void)?
     /// The camera started / stopped recording (main thread).
     var onCameraRecChange: ((CameraRecState) -> Void)?
 
@@ -340,9 +342,11 @@ final class CameraChannel: ObservableObject, VideoSourceDelegate {
 
     func videoSource(_ source: VideoSource, didCapture captured: CapturedFrame) {
         var frame = captured
-        frame.pixelBuffer = adjusted(turned(captured.pixelBuffer))
-        preview.enqueue(frame.pixelBuffer)
-        onPicture?(frame.pixelBuffer)
+        let straight = turned(captured.pixelBuffer)
+        frame.pixelBuffer = adjusted(straight)
+        preview.enqueue(frame.pixelBuffer, original: straight)   // waveform without the LUT
+        onPicture?(frame.pixelBuffer, captured.timecode)
+        if let audio = captured.audio { onAudio?(audio) }
 
         let limit = maxBacklog
         let overloaded = backlog.withLock { count -> Bool in

@@ -174,6 +174,11 @@ FOUNDATION_EXPORT uint64_t DLHostTimeNanos(void);
     NS_SWIFT_NAME(start(width:height:frameDuration:timeScale:interlaced:));
 /// Shows a '2vuy' buffer of the running mode's size as the next frame. Calls must not overlap.
 - (BOOL)displayPixelBuffer:(CVPixelBufferRef)pixelBuffer NS_SWIFT_NAME(display(_:));
+/// Plays interleaved stereo 32-bit 48 kHz sound at once (with the picture); returns the sample frames taken
+/// (0 when the output has no sound or more than 200 ms is still waiting). Same thread as `display`.
+- (uint32_t)writeAudioSamples:(const int32_t *)samples frames:(uint32_t)frames NS_SWIFT_NAME(writeAudio(_:frames:));
+/// The running output also carries sound.
+@property (nonatomic, readonly) BOOL audioEnabled;
 - (void)stop;
 @end
 

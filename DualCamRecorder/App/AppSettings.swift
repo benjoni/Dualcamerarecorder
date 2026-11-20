@@ -43,6 +43,13 @@ final class AppSettings: ObservableObject {
     /// Blackmagic monitor on a DeckLink output (per project): on / off and what it shows (toolbar).
     @Published var monitorEnabled = false
     @Published var monitorSource = MonitorSource.a
+    /// Playback tab: the monitor keeps the live cameras instead of the clip (per project).
+    @Published var monitorPlaybackLive = false
+    /// Sound in the monitor output (per project): live while recording, the clip's on Playback / Edit.
+    @Published var monitorAudioLive = false
+    @Published var monitorAudioLiveVolume = 0.8
+    @Published var monitorAudioPlayback = true
+    @Published var monitorAudioPlaybackVolume = 0.8
     /// Picture of each input turned round (per project): flip = upside down, flop = mirrored left–right.
     /// Applied before the screen, monitor, phones and the recorded file.
     @Published var orientationA = PictureOrientation()
@@ -164,7 +171,7 @@ final class AppSettings: ObservableObject {
 
     /// The per-project part of the settings.
     var projectSettings: ProjectSettings {
-        ProjectSettings(cameraCount: cameraCount, proResFlavor: proResFlavor.rawValue, audioChannels: audioChannels,
+        var p = ProjectSettings(cameraCount: cameraCount, proResFlavor: proResFlavor.rawValue, audioChannels: audioChannels,
                         forceEightBit: forceEightBit, cameraNameA: cameraNameA, cameraNameB: cameraNameB,
                         earlierCameraNamesA: earlierCameraNamesA, earlierCameraNamesB: earlierCameraNamesB,
                         cameras: cameras, deviceA: deviceA, deviceB: deviceB,
@@ -176,6 +183,12 @@ final class AppSettings: ObservableObject {
                         audioInterfaceMode: audioInterfaceMode, audioInterfaceID: audioInterfaceID,
                         audioInterfaceDelayMs: audioInterfaceDelayMs, infoA: infoA, infoB: infoB,
                         episodes: episodes)
+        p.monitorPlaybackLive = monitorPlaybackLive
+        p.monitorAudioLive = monitorAudioLive
+        p.monitorAudioLiveVolume = monitorAudioLiveVolume
+        p.monitorAudioPlayback = monitorAudioPlayback
+        p.monitorAudioPlaybackVolume = monitorAudioPlaybackVolume
+        return p
     }
 
     func apply(_ p: ProjectSettings) {
@@ -195,6 +208,11 @@ final class AppSettings: ObservableObject {
         deviceB = p.deviceB
         monitorEnabled = p.monitorEnabled
         monitorSource = MonitorSource(rawValue: p.monitorSource) ?? .a
+        monitorPlaybackLive = p.monitorPlaybackLive
+        monitorAudioLive = p.monitorAudioLive
+        monitorAudioLiveVolume = p.monitorAudioLiveVolume
+        monitorAudioPlayback = p.monitorAudioPlayback
+        monitorAudioPlaybackVolume = p.monitorAudioPlaybackVolume
         orientationA = p.orientationA
         orientationB = p.orientationB
         maskA = p.maskA

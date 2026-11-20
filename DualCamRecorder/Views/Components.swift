@@ -186,3 +186,73 @@ struct BenjoniLogo: Shape {
         return logo.applying(CGAffineTransform(a: scale, b: 0, c: 0, d: scale, tx: x, ty: y))
     }
 }
+
+/// Time axis of a take: the recorded material (grey), the IN–OUT ranges (yellow, with white edges) and the
+/// playhead. Record shows it growing while recording; Playback shows the clip with the ranges set while recording
+/// (or later) and moves the playhead with a click or drag (`onSeek`).
+struct MarksTimeline: View {
+    let duration: Double
+    let marks: TakeMarks
+    var position: Double? = nil
+    var height: CGFloat = 14
+    var onSeek: ((Double) -> Void)? = nil
+
+    var body: some View {
+        GeometryReader { geo in
+            let d = max(duration, 0.001), w = geo.size.width
+            let x = { (t: Double) in CGFloat(min(max(t / d, 0), 1)) * w }
+            ZStack(alignment: .leading) {
+                RoundedRectangle(cornerRadius: 3)
+                    .fill(Color(white: duration > 0 ? 0.34 : 0.2))
+                ForEach(Array(marks.spans(duration: duration).enumerated()), id: \.offset) { _, span in
+                    Rectangle()
+                        .fill(Color.yellow.opacity(0.9))
+                        .overlay(alignment: .leading) { Rectangle().fill(Color.white).frame(width: 2) }
+                        .overlay(alignment: .trailing) { Rectangle().fill(Color.white).frame(width: 2) }
+                        .frame(width: max(3, x(span.upperBound) - x(span.lowerBound)))
+                        .offset(x: x(span.lowerBound))
+                }
+                if let position, duration > 0 {
+                    Rectangle().fill(Color.red)
+                        .frame(width: 2, height: height + 6)
+                        .offset(x: min(max(0, x(position) - 1), w - 2))
+                }
+            }
+            .frame(height: height)
+            .clipShape(RoundedRectangle(cornerRadius: 3))
+            .frame(maxHeight: .infinity)
+            .contentShape(Rectangle())
+            .gesture(DragGesture(minimumDistance: 0).onChanged { value in
+                guard let onSeek, duration > 0 else { return }
+                onSeek(Double(min(max(value.location.x / max(w, 1), 0), 1)) * duration)
+            })
+        }
+        .frame(height: height + 6)
+        .help("Recorded material (grey) with the IN–OUT ranges (yellow)")
+    }
+}
+
+/// Sound in the Blackmagic monitor output: speaker on / off and the volume.
+struct MonitorSoundControl: View {
+    let title: String
+    @Binding var isOn: Bool
+    @Binding var volume: Double
+    let help: String
+
+    var body: some View {
+        HStack(spacing: 6) {
+            Button { isOn.toggle() } label: {
+                Label(title, systemImage: !isOn ? "speaker.slash.fill" : volume < 0.34 ? "speaker.wave.1.fill"
+                      : volume < 0.67 ? "speaker.wave.2.fill" : "speaker.wave.3.fill")
+                    .foregroundStyle(isOn ? Color.primary : Color.secondary)
+            }
+            .buttonStyle(.borderless)
+            Slider(value: $volume, in: 0...1)
+                .controlSize(.small)
+                .frame(width: 90)
+                .disabled(!isOn)
+        }
+        .fixedSize()
+        .help(help)
+    }
+}

@@ -167,9 +167,13 @@ final class EditTimeline: ObservableObject {
 
     /// Pieces of a take cut live: from each cut to the next one, on the camera chosen. A piece shorter than
     /// `minimumLength` goes to the camera cut to next (two quick presses = the second one counts).
+    /// Cut on Playback (`take.range`): only the part played, from its start to its end.
     static func liveEditSegments(_ take: LiveEditTake, length: Double) -> [TimelineSegment] {
+        let start = min(max(0, take.range?.lowerBound ?? 0), length)
+        let end = min(take.range?.upperBound ?? length, length)
+        guard end - start >= minimumLength else { return [] }
         var cuts: [LiveEditCut] = []
-        for cut in take.cuts.sorted(by: { $0.time < $1.time }) where cut.time < length {
+        for cut in take.cuts.sorted(by: { $0.time < $1.time }) where cut.time < end {
             if let last = cuts.last, cut.time - last.time < minimumLength {
                 cuts[cuts.count - 1].camera = cut.camera
             } else {
@@ -179,12 +183,12 @@ final class EditTimeline: ObservableObject {
             if cuts.count > 1, cuts[cuts.count - 1].camera == cuts[cuts.count - 2].camera { cuts.removeLast() }
         }
         guard !cuts.isEmpty else { return [] }
-        cuts[0].time = 0
+        cuts[0].time = start
         // The last piece too short: the one before runs to the end.
-        if cuts.count > 1, length - cuts[cuts.count - 1].time < minimumLength { cuts.removeLast() }
+        if cuts.count > 1, end - cuts[cuts.count - 1].time < minimumLength { cuts.removeLast() }
         return cuts.enumerated().map { i, cut in
             TimelineSegment(take: take.take, camera: cut.camera, fileA: take.fileA, fileB: take.fileB,
-                            inPoint: cut.time, outPoint: i + 1 < cuts.count ? cuts[i + 1].time : length,
+                            inPoint: cut.time, outPoint: i + 1 < cuts.count ? cuts[i + 1].time : end,
                             clipDuration: length, label: take.label)
         }
     }

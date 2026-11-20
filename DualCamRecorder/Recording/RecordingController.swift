@@ -61,6 +61,8 @@ final class RecordingController: NSObject, ObservableObject, DLDeviceBrowserDele
     /// Live edit: the director cuts between the cameras with 1 / 2 while recording; the cut is saved as a
     /// sequence of the take in Edit (the recordings and Playback are not changed).
     @Published private(set) var liveEdit = false
+    /// The audio interface's sound as it comes (any thread) – for the monitor output.
+    var onInterfaceAudio: ((ExternalAudioChunk) -> Void)?
     /// Camera chosen with 1 / 2 (kept when live edit is switched off and on again).
     @Published private(set) var liveCamera: CameraRole = .a
     /// Camera in the live cut right now – nil when live edit is off or only one camera is on.
@@ -111,9 +113,10 @@ final class RecordingController: NSObject, ObservableObject, DLDeviceBrowserDele
         settings.$recDetectionA.removeDuplicates().sink { [weak self] d in self?.channelA.setRecDetection(d) }.store(in: &cancellables)
         settings.$recDetectionB.removeDuplicates().sink { [weak self] d in self?.channelB.setRecDetection(d) }.store(in: &cancellables)
         // Audio interface: started / stopped with the project's setting, sound to both cameras.
-        audioInterface.onAudio = { [channelA, channelB] chunk in
+        audioInterface.onAudio = { [channelA, channelB, weak self] chunk in
             channelA.receiveInterfaceAudio(chunk)
             channelB.receiveInterfaceAudio(chunk)
+            self?.onInterfaceAudio?(chunk)
         }
         settings.$audioInterfaceMode.combineLatest(settings.$audioInterfaceID)
             .removeDuplicates { $0 == $1 }
@@ -792,4 +795,6 @@ struct LiveEditTake {
     /// "Clip 014 · S23 SH21 T4"
     var label: String
     var cuts: [LiveEditCut]
+    /// Cut on Playback: the part of the clip played (clip seconds); nil = the whole take (cut while recording).
+    var range: ClosedRange<Double>? = nil
 }

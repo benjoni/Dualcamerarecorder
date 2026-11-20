@@ -13,6 +13,7 @@ import QuartzCore
 import CoreMedia
 import Combine
 import os
+import MediaToolbox
 
 final class SyncPlaybackController: ObservableObject {
     let playerA = AVPlayer()
@@ -27,8 +28,13 @@ final class SyncPlaybackController: ObservableObject {
     @Published var rate: Float = 1.0 {
         didSet { if isPlaying && oldValue != rate { play() } }
     }
-    @Published var audioA = true { didSet { playerA.isMuted = !audioA } }
-    @Published var audioB = false { didSet { playerB.isMuted = !audioB } }
+    @Published var audioA = true { didSet { playerA.isMuted = !audioA; updateMonitorAudible() } }
+    @Published var audioB = false { didSet { playerB.isMuted = !audioB; updateMonitorAudible() } }
+    /// The clip's sound for the monitor output – interleaved Int32 48 kHz, (data, sample frames, channels);
+    /// called on the audio thread with the camera heard (A, else B).
+    var onMonitorAudio: ((Data, Int, Int) -> Void)?
+    /// Camera whose sound goes to the monitor (read on the audio thread).
+    fileprivate let monitorAudible = OSAllocatedUnfairLock<CameraRole?>(initialState: .a)
     /// While the user drags the slider, periodic updates must not fight the slider.
     var isScrubbing = false
     /// IN / OUT of the loaded take (seconds).
@@ -88,6 +94,22 @@ final class SyncPlaybackController: ObservableObject {
     /// Own frame taps for the monitor output (read on the monitor's queue).
     fileprivate let monitorTaps = OSAllocatedUnfairLock<(a: AVPlayerItemVideoOutput?, b: AVPlayerItemVideoOutput?, frameDuration: CMTime)>(
         initialState: (nil, nil, CMTime(value: 1, timescale: 25)))
+    /// Camera in the live cut for the monitor (read on the monitor's queue).
+    private let monitorCut = OSAllocatedUnfairLock<CameraRole?>(initialState: nil)
+
+    // MARK: - Live edit
+
+    /// Live edit on Playback: cut between the cameras with 1 / 2 while the clip plays. Every pass of playing
+    /// (play → pause, OUT or the end) with at least one cut becomes a sequence in Edit.
+    @Published private(set) var liveEdit = false { didSet { updateMonitorCut() } }
+    /// Camera chosen with 1 / 2 (kept when live edit is switched off and on again).
+    @Published private(set) var liveCamera: CameraRole = .a { didSet { updateMonitorCut() } }
+    /// The clip has both cameras (live edit cuts between them).
+    var liveEditAvailable: Bool { take?.camA != nil && take?.camB != nil }
+    /// Camera in the cut right now – nil when live edit is off or the clip has one camera only.
+    var liveCut: CameraRole? { liveEdit && liveEditAvailable ? liveCamera : nil }
+    /// The pass being cut: where it started (clip seconds), its cuts, and whether 1 / 2 was pressed in it.
+    private var livePass: (start: Double, cuts: [LiveEditCut], cutMade: Bool)?
     private var waveformTimer: Timer?
     private var forceWaveformRefresh = false
     private let waveformQueue = DispatchQueue(label: "playback-waveform", qos: .utility)
@@ -125,9 +147,11 @@ final class SyncPlaybackController: ObservableObject {
     // MARK: - Loading
 
     func load(_ take: Take?) {
+        endLivePass()
         generation += 1
         pauseImmediately()
         self.take = take
+        defer { updateMonitorCut() }
         marks = take?.marks ?? TakeMarks()
         slate = take?.slate
         marksMessage = nil
@@ -171,6 +195,15 @@ final class SyncPlaybackController: ObservableObject {
         forceWaveformRefresh = true
         playerA.replaceCurrentItem(with: itemA)
         playerB.replaceCurrentItem(with: itemB)
+        // Taps on the sound of both clips (only the one heard goes to the monitor).
+        for (item, role) in [(itemA, CameraRole.a), (itemB, CameraRole.b)] {
+            guard let item else { continue }
+            Task { @MainActor [weak self] in
+                guard let self, let track = try? await item.asset.loadTracks(withMediaType: .audio).first,
+                      let mix = MonitorAudioTap.mix(for: track, role: role, controller: self) else { return }
+                item.audioMix = mix
+            }
+        }
         // Clip recorded by camera B alone: hear B.
         if itemA == nil, itemB != nil, !audioB { audioB = true }
 
@@ -180,6 +213,7 @@ final class SyncPlaybackController: ObservableObject {
             endObserver = NotificationCenter.default.addObserver(forName: .AVPlayerItemDidPlayToEndTime, object: item,
                                                                  queue: .main) { [weak self] _ in
                 guard let self else { return }
+                self.endLivePass(at: self.duration)
                 self.isPlaying = false
                 if self.loopInOut || self.loopClip { self.play() }   // restarts at IN (or the start)
             }
@@ -278,6 +312,8 @@ final class SyncPlaybackController: ObservableObject {
         }
         let players = activePlayers
         let rate = self.rate
+        endLivePass()
+        beginLivePass(at: start.seconds)
         isPlaying = true
         removeBoundaryObserver()
         if let out = rangeEnd, out < duration - fdSec / 2, out > start.seconds {
@@ -309,6 +345,7 @@ final class SyncPlaybackController: ObservableObject {
 
     private func stopAtOut(_ outTime: CMTime) {
         guard isPlaying else { return }
+        endLivePass(at: outTime.seconds)
         generation += 1
         removeBoundaryObserver()
         let hostStop = CMTimeAdd(CMClockGetTime(CMClockGetHostTimeClock()), CMTime(value: 5, timescale: 1000))
@@ -328,6 +365,7 @@ final class SyncPlaybackController: ObservableObject {
     }
 
     func pause() {
+        endLivePass()
         removeBoundaryObserver()
         generation += 1
         let gen = generation
@@ -422,6 +460,7 @@ final class SyncPlaybackController: ObservableObject {
     private func seek(to time: CMTime) {
         let wasPlaying = isPlaying
         if wasPlaying {
+            endLivePass()   // a jump ends the pass – play() starts the next one at the new place
             generation += 1
             pauseImmediately()
         }
@@ -514,6 +553,137 @@ extension SyncPlaybackController {
             guard output.hasNewPixelBuffer(forItemTime: time) else { return nil }
             return output.copyPixelBuffer(forItemTime: time, itemTimeForDisplay: nil)
         }
-        return MonitorPlaybackFrames(a: frame(taps.a), b: frame(taps.b), frameDuration: taps.frameDuration)
+        return MonitorPlaybackFrames(a: frame(taps.a), b: frame(taps.b), frameDuration: taps.frameDuration,
+                                     cut: monitorCut.withLock { $0 })
+    }
+
+    // MARK: - Live edit
+
+    /// On / off. Switching off ends the pass being cut (it is kept if it has a cut).
+    func setLiveEdit(_ on: Bool) {
+        guard on != liveEdit else { return }
+        if !on { endLivePass() }
+        liveEdit = on
+        if on, isPlaying { beginLivePass(at: playingSeconds) }
+    }
+
+    /// Cut to a camera (1 = A, 2 = B). Before play it chooses the camera the pass starts with.
+    func cut(to role: CameraRole) {
+        guard liveCut != nil, role != liveCamera else { return }
+        liveCamera = role
+        guard isPlaying, livePass != nil else { return }
+        livePass?.cuts.append(LiveEditCut(time: playingSeconds, camera: role))
+        livePass?.cutMade = true
+    }
+
+    /// Clip seconds being shown now.
+    private var playingSeconds: Double { max(0, master?.currentTime().seconds ?? 0) }
+
+    private func beginLivePass(at start: Double) {
+        guard liveCut != nil else { return }
+        livePass = (start, [LiveEditCut(time: start, camera: liveCamera)], false)
+    }
+
+    /// Ends the pass at `end` (default: the frame shown now) – with at least one cut it goes to Edit as a sequence.
+    private func endLivePass(at end: Double? = nil) {
+        guard let pass = livePass else { return }
+        livePass = nil
+        let end = min(end ?? playingSeconds, duration > 0 ? duration : .greatestFiniteMagnitude)
+        guard pass.cutMade, end - pass.start >= EditTimeline.minimumLength, let take,
+              let fileA = take.camA, let fileB = take.camB, let folder = take.folder else { return }
+        let label = [take.name, slate?.shortLabel].compactMap { $0 }.joined(separator: " · ")
+        let recorded = LiveEditTake(folder: folder, take: take.number, fileA: fileA.lastPathComponent,
+                                    fileB: fileB.lastPathComponent, label: label, cuts: pass.cuts,
+                                    range: pass.start...end)
+        NotificationCenter.default.post(name: .liveEditRecorded, object: recorded)
+    }
+
+    private func updateMonitorAudible() {
+        let role: CameraRole? = audioA ? .a : (audioB ? .b : nil)
+        monitorAudible.withLock { $0 = role }
+    }
+
+    private func updateMonitorCut() {
+        let cut = liveCut
+        monitorCut.withLock { $0 = cut }
+    }
+}
+
+/// Audio processing tap on a clip's sound track: passes the sound (48 kHz) of the camera heard to the monitor output.
+private final class MonitorAudioTap {
+    let role: CameraRole
+    weak var controller: SyncPlaybackController?
+    var sampleRate = 0.0
+    var channels = 0
+    var isFloat = true
+    var nonInterleaved = true
+    private var scratch = Data()
+
+    init(role: CameraRole, controller: SyncPlaybackController) {
+        self.role = role
+        self.controller = controller
+    }
+
+    static func mix(for track: AVAssetTrack, role: CameraRole, controller: SyncPlaybackController) -> AVAudioMix? {
+        let context = MonitorAudioTap(role: role, controller: controller)
+        var callbacks = MTAudioProcessingTapCallbacks(
+            version: kMTAudioProcessingTapCallbacksVersion_0,
+            clientInfo: Unmanaged.passRetained(context).toOpaque(),
+            init: { _, clientInfo, storageOut in storageOut.pointee = clientInfo },
+            finalize: { tap in
+                Unmanaged<MonitorAudioTap>.fromOpaque(MTAudioProcessingTapGetStorage(tap)).release()
+            },
+            prepare: { tap, _, format in
+                let tapContext = Unmanaged<MonitorAudioTap>.fromOpaque(MTAudioProcessingTapGetStorage(tap)).takeUnretainedValue()
+                let f = format.pointee
+                tapContext.sampleRate = f.mSampleRate
+                tapContext.channels = Int(f.mChannelsPerFrame)
+                tapContext.isFloat = f.mFormatFlags & kAudioFormatFlagIsFloat != 0 && f.mBitsPerChannel == 32
+                tapContext.nonInterleaved = f.mFormatFlags & kAudioFormatFlagIsNonInterleaved != 0
+            },
+            unprepare: nil,
+            process: { tap, frameCount, _, bufferList, framesOut, flagsOut in
+                guard MTAudioProcessingTapGetSourceAudio(tap, frameCount, bufferList, flagsOut, nil, framesOut) == noErr else { return }
+                let tapContext = Unmanaged<MonitorAudioTap>.fromOpaque(MTAudioProcessingTapGetStorage(tap)).takeUnretainedValue()
+                tapContext.deliver(UnsafeMutableAudioBufferListPointer(bufferList), frames: Int(framesOut.pointee))
+            })
+        var tap: MTAudioProcessingTap?
+        guard MTAudioProcessingTapCreate(kCFAllocatorDefault, &callbacks, kMTAudioProcessingTapCreationFlag_PostEffects,
+                                         &tap) == noErr, let tap else {
+            Unmanaged<MonitorAudioTap>.passUnretained(context).release()
+            return nil
+        }
+        let parameters = AVMutableAudioMixInputParameters(track: track)
+        parameters.audioTapProcessor = tap
+        let mix = AVMutableAudioMix()
+        mix.inputParameters = [parameters]
+        return mix
+    }
+
+    /// Float samples → interleaved stereo Int32 for the monitor (only the camera heard, only 48 kHz).
+    private func deliver(_ buffers: UnsafeMutableAudioBufferListPointer, frames: Int) {
+        guard frames > 0, isFloat, sampleRate == 48_000, channels > 0, let controller,
+              let send = controller.onMonitorAudio, controller.monitorAudible.withLock({ $0 }) == role else { return }
+        let out = 2
+        if scratch.count != frames * out * 4 { scratch = Data(count: frames * out * 4) }
+        func sample(_ channel: Int, _ i: Int) -> Float {
+            let c = min(channel, channels - 1)
+            if nonInterleaved {
+                guard c < buffers.count, let data = buffers[c].mData else { return 0 }
+                return data.assumingMemoryBound(to: Float.self)[i]
+            }
+            guard let data = buffers.first?.mData else { return 0 }
+            return data.assumingMemoryBound(to: Float.self)[i * channels + c]
+        }
+        scratch.withUnsafeMutableBytes { raw in
+            let dst = raw.bindMemory(to: Int32.self)
+            for i in 0..<frames {
+                for c in 0..<out {
+                    let v = max(-1, min(1, sample(c, i)))
+                    dst[i * out + c] = Int32(Double(v) * Double(Int32.max - 64))
+                }
+            }
+        }
+        send(scratch, frames, out)
     }
 }

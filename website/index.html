@@ -274,7 +274,7 @@ footer b { color: var(--ink); font-family: var(--display); font-size: 20px; lett
         </div>
       </div>
       <div class="monitor">
-        <video src="media/promo.mp4?v=5" poster="media/poster.jpg?v=4" autoplay muted loop playsinline controls preload="metadata" aria-label="DualCamRecorder tutorial video – how to use the app"></video>
+        <video src="media/promo.mp4?v=6" poster="media/poster.jpg?v=4" autoplay muted loop playsinline controls preload="metadata" aria-label="DualCamRecorder tutorial video – how to use the app"></video>
       </div>
     </div>
     <div class="wrap specs">
@@ -314,7 +314,7 @@ footer b { color: var(--ink); font-family: var(--display); font-size: 20px; lett
           <p>Grey with a red edge while you wait. Solid red STOP while you roll. Everything else on the screen is there to tell you the take is safe.</p>
           <ul class="ticks">
             <li><b>Rehearsal</b> records both pictures without rolling the cameras.</li>
-            <li><b>IN / OUT</b> while rolling, so playback starts where the action does.</li>
+            <li><b>IN / OUT</b> while rolling, shown on a time axis under the timer – the same ranges come with the take to playback.</li>
             <li><b>Card and camera clip</b> numbers per camera, saved with the slate.</li>
             <li><b>Cameras A and B</b> out of the box. Add more cameras in Project settings and pick which one sits on each input.</li>
             <li><b>ProRes 422, HQ or LT, or H.265</b> per camera. New projects start on H.265 at 5 Mbit/s, so a long shooting day fits on a small disk.</li>
@@ -358,7 +358,8 @@ footer b { color: var(--ink); font-family: var(--display); font-size: 20px; lett
           <ul class="ticks">
             <li><b>Several LUTs at once:</b> 3D or 1D .cube files from DaVinci Resolve or the camera maker.</li>
             <li><b>One per camera,</b> saved with the project.</li>
-            <li><b>Everywhere the same:</b> screen, waveform, Blackmagic monitor, phones and the recorded file.</li>
+            <li><b>Everywhere the same:</b> screen, Blackmagic monitor, phones and the recorded file.</li>
+            <li><b>Honest waveform:</b> it measures the camera’s own signal, before the LUT.</li>
             <li><b>Playback and Edit</b> show the clip with the LUT, as recorded.</li>
           </ul>
         </div>
@@ -389,6 +390,11 @@ footer b { color: var(--ink); font-family: var(--display); font-size: 20px; lett
           <span class="kicker">Edit</span>
           <h2>A director’s cut on set</h2>
           <p>Drop the selects on a timeline, keep several sequences per project and export an H.264 film with the sound of either camera. Clip names can be burned into the picture.</p>
+          <ul class="ticks">
+            <li><b>Live edit while rolling:</b> keys 1 and 2 cut between the cameras, and the cut is waiting in Edit after STOP.</li>
+            <li><b>Live edit on playback:</b> cut a take again while it plays – every pass with a cut becomes its own sequence.</li>
+            <li><b>Space plays and pauses</b> the cut wherever you clicked last.</li>
+          </ul>
         </div>
         <figure><img src="media/edit.jpg" alt="Edit view with a timeline of camera A and B pieces" loading="lazy"></figure>
       </div>
@@ -407,6 +413,7 @@ footer b { color: var(--ink); font-family: var(--display); font-size: 20px; lett
             <li><b>Lined up with the picture</b> on the Mac’s clock, and kept in line on long takes.</li>
             <li><b>Sound delay</b> in milliseconds when the mix arrives early or late. One frame is 40 ms at 25p.</li>
             <li><b>Live meters</b> under the pictures show what goes into the file. If the interface is unplugged, a red warning says so and the take keeps the cameras’ sound.</li>
+            <li><b>The director hears it too:</b> the same sound goes to the Blackmagic monitor’s headphones, live or from playback, with its own volume.</li>
           </ul>
         </div>
         <figure class="mock" role="img" aria-label="Project settings: audio interface section with Focusrite Scarlett Solo selected, interface and cameras chosen, two level meters and a sound delay of 40 milliseconds">
@@ -494,7 +501,8 @@ footer b { color: var(--ink); font-family: var(--display); font-size: 20px; lett
           <ul class="ticks">
             <li><b>Slow disk warning</b> the moment frames wait to be written.</li>
             <li><b>Backup copy</b> to a second disk after every take, verified before it counts.</li>
-            <li><b>Clean monitor feed</b> to a Blackmagic monitor: camera A, B, both side by side – or A above B on a monitor turned to portrait.</li>
+            <li><b>Director’s monitor</b> on a Blackmagic output: camera A, B, both side by side – or A above B on a monitor turned to portrait. With the slate on top and each camera’s own timecode underneath.</li>
+            <li><b>Sound on the monitor:</b> the live sound while rolling, the take’s sound on playback – each with its own volume. Or keep the monitor live while you review a take on the Mac.</li>
           </ul>
         </div>
         <figure><img src="media/disk.jpg" alt="Alert: the recording disk was disconnected, both files saved" loading="lazy"></figure>
@@ -651,6 +659,9 @@ footer b { color: var(--ink); font-family: var(--display); font-size: 20px; lett
         <div class="section-head" style="margin:0"><span class="kicker">Questions</span><h2>Before the first shoot</h2></div>
         <div>
           <details><summary>Can the director's monitor stand in portrait?</summary><p>Yes. Turn the monitor on its side and choose <b>Both stacked</b> in the Monitor menu: camera A sits above camera B, each as wide as the screen – bigger than side by side. The picture goes out already turned (right or left, as your monitor stands), with the info line and the live-edit frame.</p></details>
+          <details><summary>Can the director hear the take on the monitor?</summary><p>Yes. The Blackmagic output carries sound as well: the live sound while you record (the mixer’s, or camera A’s) and the take’s sound on playback. Each has its own on / off and volume, right next to the buttons.</p></details>
+          <details><summary>Can the director keep watching live while I check a take?</summary><p>Yes. On Playback, switch the monitor from CLIP to LIVE: the director sees the cameras, you review the take on the Mac.</p></details>
+          <details><summary>Can we cut a take after it was recorded?</summary><p>Yes. Switch on LIVE EDIT on Playback and cut between camera 1 and 2 with the keys while the take plays. Every pass with a cut lands in Edit as its own sequence; the recording stays as it is.</p></details>
           <details><summary>Do the cameras need genlock?</summary><p>No. Both inputs start on hardware timestamps, so takes line up within half a frame without genlock.</p></details>
           <details><summary>Why A and B? We call our second camera C.</summary><p>The cameras are A and B out of the box. In Project settings you can add more cameras to the list, for example C, and switch which camera is on input 1 and input 2. File names, slate, log and report follow.</p></details>
           <details><summary>ProRes or H.265?</summary><p>Your choice, per project. ProRes 422, HQ or LT for the edit, or H.265 at 5, 10, 20 or 45 Mbit/s when disk space matters. New projects start on H.265 at 5 Mbit/s.</p></details>

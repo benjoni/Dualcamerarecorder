@@ -108,6 +108,10 @@ struct RecordView: View {
                  + (controller.marks.ranges.count > 1 ? "  ·  \(controller.marks.ranges.count) ranges" : ""))
                 .font(.system(compact ? .callout : .title3, design: .monospaced))
                 .foregroundStyle(.secondary)
+            // The take so far, with its IN–OUT ranges.
+            MarksTimeline(duration: controller.isRecording ? controller.elapsed : 0, marks: controller.marks,
+                          position: controller.isRecording ? controller.elapsed : nil, height: compact ? 10 : 14)
+                .frame(width: compact ? 260 : 340)
             if settings.isCameraOn(.a) && settings.isCameraOn(.b) {
                 TimecodeSyncLabel(a: controller.channelA.signal, b: controller.channelB.signal,
                                   nameA: settings.cameraNames.a, nameB: settings.cameraNames.b)
@@ -154,6 +158,12 @@ struct RecordView: View {
                     .disabled(!recording || controller.marks.isEmpty)
 
                 LiveEditControls(controller: controller, settings: settings, compact: compact, height: buttonHeight)
+                if settings.monitorEnabled {
+                    MonitorSoundControl(title: "Monitor sound", isOn: $settings.monitorAudioLive,
+                                        volume: $settings.monitorAudioLiveVolume,
+                                        help: "Live sound in the Blackmagic monitor output – the sound as it is recorded (audio interface, else camera \(settings.cameraNames.a)'s SDI sound); on / off and volume")
+                        .padding(.leading, 8)
+                }
         }
         return Group {
             if compact {
@@ -825,27 +835,48 @@ private struct LiveEditControls: View {
     let height: CGFloat
 
     var body: some View {
+        LiveEditButtons(isOn: Binding(get: { controller.liveEdit }, set: { controller.setLiveEdit($0) }),
+                        available: controller.liveEditAvailable, locked: controller.isRecording,
+                        cut: controller.liveCut, names: settings.cameraNames, compact: compact, height: height,
+                        help: "Live edit: cut between the cameras with 1 and 2 while recording – the cut is saved as a sequence in Edit. Recordings and Playback stay as they are.",
+                        cutTo: { controller.cut(to: $0) })
+        .padding(.leading, 8)
+    }
+}
+
+/// LIVE EDIT toggle and, while it is on, the 1 / 2 buttons (camera in the cut lit) – Record and Playback.
+struct LiveEditButtons: View {
+    @Binding var isOn: Bool
+    let available: Bool
+    /// Cannot be switched (recording): stays as it is.
+    var locked = false
+    let cut: CameraRole?
+    let names: CameraNames
+    let compact: Bool
+    let height: CGFloat
+    let help: String
+    let cutTo: (CameraRole) -> Void
+
+    var body: some View {
         HStack(spacing: 6) {
-            Toggle(isOn: Binding(get: { controller.liveEdit }, set: { controller.setLiveEdit($0) })) {
+            Toggle(isOn: $isOn) {
                 Label("LIVE EDIT", systemImage: "scissors")
                     .font((compact ? Font.callout : .body).weight(.bold))
                     .frame(height: height - 12)
             }
             .toggleStyle(.button)
             .tint(.liveCut)
-            .disabled(!controller.liveEditAvailable)
-            .allowsHitTesting(!controller.isRecording)   // stays green while recording, cannot be switched
-            .help(controller.liveEditAvailable
-                  ? "Live edit: cut between the cameras with 1 and 2 while recording – the cut is saved as a sequence in Edit. Recordings and Playback stay as they are."
-                  : "Live edit needs both cameras on.")
-            if controller.liveCut != nil {
+            .disabled(!available)
+            .allowsHitTesting(!locked)   // stays green while recording, cannot be switched
+            .help(available ? help : "Live edit needs both cameras.")
+            if cut != nil {
                 ForEach([CameraRole.a, .b], id: \.self) { role in
                     let key = role == .a ? "1" : "2"
-                    let on = controller.liveCut == role
-                    Button { controller.cut(to: role) } label: {
+                    let on = cut == role
+                    Button { cutTo(role) } label: {
                         VStack(spacing: 0) {
                             Text(key).font((compact ? Font.title3 : .title2).weight(.heavy))
-                            Text(settings.cameraNames.name(role)).font(.caption2.weight(.semibold)).lineLimit(1)
+                            Text(names.name(role)).font(.caption2.weight(.semibold)).lineLimit(1)
                         }
                         .frame(width: compact ? 46 : 56, height: height)
                         .foregroundStyle(on ? Color.black : Color.liveCut)
@@ -854,10 +885,9 @@ private struct LiveEditControls: View {
                         .contentShape(RoundedRectangle(cornerRadius: 8))
                     }
                     .buttonStyle(.plain)
-                    .help("Cut to camera \(settings.cameraNames.name(role)) (\(key))")
+                    .help("Cut to camera \(names.name(role)) (\(key))")
                 }
             }
         }
-        .padding(.leading, 8)
     }
 }

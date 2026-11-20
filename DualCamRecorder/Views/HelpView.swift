@@ -46,6 +46,9 @@ struct HelpView: View {
                     term("LUT", "Button above each picture on the Record tab: put the picture through a LUT – pick one of the imported LUTs or Off. Import LUTs… takes several .cube files at once (3D or 1D, from DaVinci Resolve or the camera maker); you can also drop them on the list. Per camera, saved in the project. Recorded into the file (also on the waveform, the monitor and the phones), so Playback and Edit show the clip with it; cannot be changed while recording. Off records the picture as the camera sends it")
                     term("Timecode", "The camera's timecode from the SDI signal (RP188 / VITC) – bottom right of the picture. Written into the recorded file as its timecode track (editors find the source timecode), TC IN – OUT in Playback, CSV and the PDF report. Under the timer: whether the timecode of both cameras is in sync")
                     term("CAM REC  CAM STBY", "The camera itself is recording / standing – from the record flag it sends (Blackmagic cameras: in the timecode user bits – Project settings → \"Blackmagic\"), or from a running Rec Run timecode. Orange warning when the app records and the camera does not, or the other way round. Project settings → Record with the camera: REC / STOP of the camera starts and stops the app")
+                    term("Time axis", "Under the timer while recording: the take so far (grey) with its IN–OUT ranges in yellow – the red line is now. The same ranges come with the clip to Playback")
+                    term("Monitor sound", "Next to LIVE EDIT (when the Blackmagic monitor is on): the live sound in the monitor output – on / off and volume. It is the sound as it is recorded: the audio interface when it is used, else camera A's SDI sound")
+                    term("Waveform", "⇧⌘W: measures the camera's signal before the LUT and the mask – the LUT changes the look on the screen, not the waveform")
                     term("Camera Settings", "Button next to Slate: fields under both cameras. A bare number gets its unit when you leave the field (or ↵ / REC): Lens 32 → 32mm, Stop 2.8 → T2.8, Distance / Height 3.2 → 3.2 m, Tilt / Shutter 180 → 180°, WB 5600 → 5600K. Text with its own unit (AWB, 1/50, 10 ft) stays; ISO and Filter are not changed")
                 }
 
@@ -57,6 +60,10 @@ struct HelpView: View {
                     key("⌘L", "Show / hide the clip list")
                     key("⇧A  ⇧B", "Add IN → OUT of camera A / B to the edit (no IN / OUT: whole clip)")
                     key("⇧⌘P", "Export PDF clip report")
+                    key("1  2", "Live edit: cut to camera A / B while the clip plays")
+                    term("Time axis", "Under the slider: the clip with its IN–OUT ranges in yellow – as set while recording or here – and the red playhead. Click or drag on it to jump")
+                    term("LIVE EDIT", "Next to Speed (clip with both cameras): cut the clip while it plays with 1 and 2 (or the buttons) – before Play they choose the camera it starts with. Every playing with at least one cut (Play → Pause, OUT, the end or a jump) becomes a new sequence in Edit with just the part played; the clip stays as it is. The camera in the cut has a green frame, also on the Blackmagic monitor")
+                    term("Monitor  CLIP | LIVE", "Left, when the Blackmagic monitor is on: CLIP sends the clip played here to the monitor; LIVE keeps the live cameras on the monitor while you watch the clip on the Mac. Sound: on / off and volume of the monitor's sound (the clip's – the camera you hear, Audio A else B – or with LIVE the live sound)")
                 }
 
                 section("Edit") {
@@ -64,7 +71,7 @@ struct HelpView: View {
                     key("⌘L", "Show / hide the clip list")
                     key("⌘K", "Show / hide the sequences (several cut passages)")
                     key("⌥⌘N", "New sequence")
-                    key("Space", "Play / pause the whole edit")
+                    key("Space", "Play / pause the whole edit – also when the clip list or the sequences have the keyboard focus")
                     key("←  →", "One frame back / forward")
                     key("↑  ↓", "Start of this or previous piece / next piece")
                     key("⌥←  ⌥→", "Move the selected piece earlier / later (or drag it)")
@@ -128,12 +135,14 @@ struct HelpView: View {
 
                 section("Monitor output (Blackmagic monitor)") {
                     term("Project settings", "“Send the picture to a Blackmagic monitor” – on / off. The first device with a video output is used (UltraStudio Monitor 3G); UltraStudio Recorder 3G has no output")
-                    sign(Label("Monitor A|C", systemImage: "display"), "Toolbar (only when the output is on): what goes to the monitor – camera A, camera C or both side by side; the menu also shows the output state")
+                    sign(Label("Monitor A|C", systemImage: "display"), "Toolbar (only when the output is on): what goes to the monitor – camera A, camera C, both side by side or both stacked for a monitor turned to portrait; Playback CLIP / LIVE and the sound switches; the output state (“Sending 1080p25 with sound”)")
                     sign(Label("Monitor", systemImage: "exclamationmark.triangle"), "Output problem – monitor not connected, or it cannot show the cameras' format")
-                    term("Record", "Live picture of the chosen camera(s); with LIVE EDIT the camera in the cut has a green frame")
-                    term("Playback", "The clip being played (paused: the last frame stays)")
+                    term("Record", "Live picture of the chosen camera(s); with LIVE EDIT the camera in the cut has a green frame. On top the slate (day, scene, shot, take); under each camera its info and the camera's own timecode")
+                    term("Playback", "The clip being played with its slate (paused: the last frame stays) – or the live cameras (Monitor LIVE)")
+                    term("Monitor turned to portrait", "Both stacked – A above B, each with its info bar; the picture goes out turned so it stands upright")
+                    term("Sound", "The output also carries sound: the live sound (Record: Monitor sound) and the clip's (Playback: Sound). Each has on / off and a volume; the menu has the switches too")
                     term("Edit", "The cut – always one full picture, the camera choice is not used")
-                    term("Picture", "Clean full frame in the cameras' format (e.g. 1080p25, 8-bit 4:2:2) – no buttons, waveform or text")
+                    term("Picture", "Full frame in the cameras' format (e.g. 1080p25, 8-bit 4:2:2) – no buttons or waveform; only the slate line, the info bars and the live edit frame")
                 }
 
                 section("Numbers") {

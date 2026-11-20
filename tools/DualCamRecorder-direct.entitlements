@@ -6,5 +6,9 @@
 	     so library validation has to be off for the app to load the driver API. -->
 	<key>com.apple.security.cs.disable-library-validation</key>
 	<true/>
+	<!-- Hardened Runtime: without this the audio interface (Focusrite …) is silently refused – no access
+	     prompt, no entry in Privacy & Security → Microphone. -->
+	<key>com.apple.security.device.audio-input</key>
+	<true/>
 </dict>
 </plist>
