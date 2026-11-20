@@ -24,3 +24,6 @@ website/buy/data/*
 website/stats/password.php
 website/stats/data/*
 !website/stats/data/.htaccess
+
+# Owner's private storage – never in git (public repo)
+kufor/
