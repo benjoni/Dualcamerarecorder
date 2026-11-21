@@ -1,9 +1,5 @@
 # What is new in the next release – one line each (lines starting with # are left out).
-Live edit on Playback: cut a take again while it plays – every pass becomes a sequence in Edit
-IN / OUT on a time axis while recording, and the same ranges under the clip on Playback
-Director's monitor: slate on top, each camera's timecode, sound with its own volume
-Playback can keep the live cameras on the director's monitor (CLIP / LIVE)
-Monitor output no longer falls behind the cameras
-Waveform measures the camera's signal before the LUT
-Space plays and pauses in Edit wherever the focus is
-Fixed: sound from the audio interface (Focusrite …) – macOS asks for access again
+Record tab: R starts / stops the take, S the rehearsal, I / O set IN / OUT – no ⌘ needed
+⌘1 … ⌘4 switch Record / Playback / Edit / Overlay
+PDF report: IN / OUT and each camera's first – last frame in the camera's own timecode
+Fixed: O on Playback sets OUT instead of opening Overlay
