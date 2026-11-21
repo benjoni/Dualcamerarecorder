@@ -28,14 +28,15 @@ struct HelpView: View {
                     key("⌘,", "App settings – projects location, live view on phones, DeckLink devices")
                     key("⇧⌘W", "Waveform over the pictures")
                     key("⌘F", "Screens only / show all controls (a low window also gets a compact Record tab by itself)")
-                    key("R  P  E  O", "Record / Playback / Edit / Overlay (not while typing in a field)")
-                    key("⌘1 … ⌘4", "Record / Playback / Edit / Overlay (in Screens only)")
+                    key("R  P  E", "Record / Playback / Edit (not while typing in a field; on the Record tab R is REC / STOP, S is REHEARSAL)")
+                    key("⌘1 … ⌘4", "Record / Playback / Edit / Overlay")
                     key("⌘?", "This help")
                 }
 
                 section("Record") {
-                    key("⌘R", "REC / STOP")
-                    key("⌘I  ⌘O", "IN / OUT at the current take time (while recording)")
+                    key("R  (⌘R)", "REC / STOP (not while typing in a field)")
+                    key("S  (⇧⌘R)", "REHEARSAL / STOP (not while typing in a field)")
+                    key("I  O  (⌘I  ⌘O)", "IN / OUT at the current take time (while recording)")
                     key("⌥1  ⌥2", "Camera A / B on or off – not while recording; the other camera records alone")
                     key("1  2", "Live edit: cut to camera A / B (also the buttons 1 and 2 next to IN / OUT; not while typing in a field)")
                     term("LIVE EDIT", "Button next to IN / OUT (both cameras on): cut between the cameras while recording with 1 and 2 – also before REC to choose the camera the take starts with. The camera in the cut has a green frame and ▶ CUT 1 / 2, also on the Blackmagic monitor. After STOP the cut is a new sequence in Edit (“Live edit · Clip 014 · …”), shown at once. Both recordings and Playback stay as they are. Two presses within 0.2 s count as one cut (the second one). Cannot be switched on or off while recording")
@@ -59,7 +60,7 @@ struct HelpView: View {
                     key("I  O", "Set IN / OUT at the current frame")
                     key("⌘L", "Show / hide the clip list")
                     key("⇧A  ⇧B", "Add IN → OUT of camera A / B to the edit (no IN / OUT: whole clip)")
-                    key("⇧⌘P", "Export PDF clip report")
+                    key("⇧⌘P", "Export PDF clip report – IN / OUT and every camera's first – last frame in the camera's timecode (when the camera sends one)")
                     key("1  2", "Live edit: cut to camera A / B while the clip plays")
                     term("Time axis", "Under the slider: the clip with its IN–OUT ranges in yellow – as set while recording or here – and the red playhead. Click or drag on it to jump")
                     term("LIVE EDIT", "Next to Speed (clip with both cameras): cut the clip while it plays with 1 and 2 (or the buttons) – before Play they choose the camera it starts with. Every playing with at least one cut (Play → Pause, OUT, the end or a jump) becomes a new sequence in Edit with just the part played; the clip stays as it is. The camera in the cut has a green frame, also on the Blackmagic monitor")
@@ -119,7 +120,7 @@ struct HelpView: View {
                 section("Badges and symbols") {
                     sign(Badge(text: "● REC", color: .red), "Camera is recording (red frame around the picture)")
                     sign(Badge(text: "▶ CUT 1", color: .liveCut), "Live edit: this camera is in the cut (green frame around the picture, also on the Blackmagic monitor)")
-                    sign(Badge(text: "● REHEARSAL", color: .orange), "Rehearsal (⇧⌘R): only the app records, the cameras do not – the take is marked Rehearsal, the take number and camera clips stay")
+                    sign(Badge(text: "● REHEARSAL", color: .orange), "Rehearsal (S, ⇧⌘R): only the app records, the cameras do not – the take is marked Rehearsal, the take number and camera clips stay")
                     sign(Badge(text: "Unassigned", color: .gray), "No input chosen for this camera – Project settings (the screen shows the BENJONI logo)")
                     sign(Badge(text: "No signal", color: .orange), "Input chosen, but no picture is coming in – the screen shows the BENJONI logo")
                     sign(onOff, "Camera on / off – click the title (⌥1 / ⌥2)")

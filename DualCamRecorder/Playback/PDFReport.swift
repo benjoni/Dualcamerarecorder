@@ -40,6 +40,15 @@ struct ReportClip: Identifiable {
     var pictureB: CGImage?
     var id: Int { take.number }
     var slate: SlateInfo? { take.slate }
+
+    /// The camera's own timecode (camera A's, else camera B's), when the camera sent one.
+    var cameraTimecode: TimecodeRange? { slate?.timecodeA ?? slate?.timecodeB }
+
+    /// A time in the take as the camera's timecode ("10:02:14:08"), or from the start of the take without one.
+    func timecode(at seconds: Double) -> String {
+        if let tc = cameraTimecode { return tc.at(seconds: seconds, frameDuration: 1 / max(fps, 1)).string }
+        return PDFReport.timecode(seconds, fps: fps)
+    }
 }
 
 enum PDFReport {
@@ -306,8 +315,8 @@ private struct ReportRow: View {
                     let spans = m.spans(duration: clip.duration)
                     let lo = spans.first?.lowerBound ?? 0
                     let hi = spans.last?.upperBound ?? clip.duration
-                    Text("IN \(PDFReport.timecode(lo, fps: clip.fps))").font(.system(size: 8, design: .monospaced))
-                    Text("OUT \(PDFReport.timecode(hi, fps: clip.fps))").font(.system(size: 8, design: .monospaced))
+                    Text("IN \(clip.timecode(at: lo))").font(.system(size: 8, design: .monospaced))
+                    Text("OUT \(clip.timecode(at: hi))").font(.system(size: 8, design: .monospaced))
                     Text("DUR \(PDFReport.timecode(m.totalDuration(duration: clip.duration), fps: clip.fps))\(spans.count > 1 ? " · \(spans.count)×" : "")")
                         .font(.system(size: 8, design: .monospaced))
                 }
@@ -344,11 +353,13 @@ private struct ReportRow: View {
         VStack(alignment: .leading, spacing: 0) {
             Text("\(cam): \(file ?? "— camera off")").font(.system(size: 8, design: .monospaced)).lineLimit(1)
                 .foregroundStyle(file == nil ? Color(white: 0.5) : Color.black)
-            let extra = [cameraClip.flatMap { $0.isEmpty ? nil : "cam clip \($0)" },
-                         timecode.map { "TC \($0.start.string)" }].compactMap { $0 }   // TC IN (OUT = IN + duration)
-            if !extra.isEmpty {
-                Text("  " + extra.joined(separator: "  ")).font(.system(size: 8, weight: .semibold, design: .monospaced)).lineLimit(1)
+            if let cameraClip, !cameraClip.isEmpty {
+                Text("  cam clip \(cameraClip)").font(.system(size: 8, weight: .semibold, design: .monospaced)).lineLimit(1)
                     .minimumScaleFactor(0.8)
+            }
+            if let timecode {   // camera timecode of the first – last frame
+                Text("  TC \(timecode.start.string) – \(timecode.end.string)").font(.system(size: 8, weight: .semibold, design: .monospaced))
+                    .lineLimit(1).minimumScaleFactor(0.8)
             }
         }
     }
@@ -418,9 +429,9 @@ private struct ReportRowPortrait: View {
         guard let m = clip.take.marks, !m.isEmpty else { return nil }
         // Every range "IN – OUT", then the length of all together.
         let spans = m.spans(duration: clip.duration)
-        let ranges = spans.map { PDFReport.timecode($0.lowerBound, fps: clip.fps) + " – " + PDFReport.timecode($0.upperBound, fps: clip.fps) }
-        return (spans.count > 1 ? ranges : ["IN " + PDFReport.timecode(spans.first?.lowerBound ?? 0, fps: clip.fps),
-                                            "OUT " + PDFReport.timecode(spans.first?.upperBound ?? clip.duration, fps: clip.fps)])
+        let ranges = spans.map { clip.timecode(at: $0.lowerBound) + " – " + clip.timecode(at: $0.upperBound) }
+        return (spans.count > 1 ? ranges : ["IN " + clip.timecode(at: spans.first?.lowerBound ?? 0),
+                                            "OUT " + clip.timecode(at: spans.first?.upperBound ?? clip.duration)])
             .joined(separator: "  ·  ") + "  ·  DUR " + PDFReport.timecode(m.totalDuration(duration: clip.duration), fps: clip.fps)
     }
 
@@ -447,7 +458,7 @@ private struct ReportRowPortrait: View {
                 Text("cam clip \(cameraClip)").fontWeight(.semibold).lineLimit(1)
             }
             if let timecode {
-                Text("TC \(timecode.start.string)").fontWeight(.semibold).lineLimit(1).minimumScaleFactor(0.8)
+                Text("TC \(timecode.start.string) – \(timecode.end.string)").fontWeight(.semibold).lineLimit(1).minimumScaleFactor(0.8)
             }
         }
         .font(.system(size: 8, design: .monospaced))

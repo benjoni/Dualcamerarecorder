@@ -24,7 +24,7 @@ struct RecordView: View {
         }
     }
 
-    /// Both pictures filling the window; shortcuts (⌘R, ⌘I, ⌘O) keep working.
+    /// Both pictures filling the window; shortcuts (R, I, O) keep working.
     private var screensOnlyBody: some View {
         HStack(spacing: 8) {
             if settings.isCameraOn(.a) {
@@ -135,19 +135,19 @@ struct RecordView: View {
                 }
                 .keyboardShortcut("r", modifiers: [.command, .shift])
                 .disabled(isStopping || (controller.isRecording && !controller.isRehearsal))
-                .help("Rehearsal (⇧⌘R): both pictures are recorded only by the app, marked as a rehearsal – no take number, the cameras' clip numbers stay. STOP ends it.")
+                .help("Rehearsal (S, ⇧⌘R): both pictures are recorded only by the app, marked as a rehearsal – no take number, the cameras' clip numbers stay. STOP ends it.")
 
                 Group {
                     Button { controller.markIn() } label: {
                         Text("IN").font((compact ? Font.title3 : .title2).weight(.bold)).frame(width: compact ? 70 : 90, height: buttonHeight)
                     }
                     .keyboardShortcut("i", modifiers: [.command])
-                    .help("Set IN at the current take time (⌘I) – after an OUT it starts another range")
+                    .help("Set IN at the current take time (I) – after an OUT it starts another range")
                     Button { controller.markOut() } label: {
                         Text("OUT").font((compact ? Font.title3 : .title2).weight(.bold)).frame(width: compact ? 70 : 90, height: buttonHeight)
                     }
                     .keyboardShortcut("o", modifiers: [.command])
-                    .help("Set OUT at the current take time (⌘O) – closes the range")
+                    .help("Set OUT at the current take time (O) – closes the range")
                 }
                 .buttonStyle(.bordered)
                 .disabled(!recording)

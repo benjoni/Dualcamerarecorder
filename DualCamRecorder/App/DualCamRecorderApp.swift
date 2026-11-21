@@ -491,6 +491,7 @@ struct ContentView: View {
         .task { await runLiveEditTestIfRequested() }
         .task { await runPlaybackLiveEditTestIfRequested() }
         .task { await runEditSpaceTestIfRequested() }
+        .task { await runShortcutsTestIfRequested() }
         .task { await runMarksAudioTestIfRequested() }
         .task { runLicenseImportTestIfRequested() }
         .task { await runPlaybackEndTestIfRequested() }
@@ -542,19 +543,19 @@ struct ContentView: View {
                         Toggle(isOn: Binding(get: { tab == 0 }, set: { if $0 { tab = 0 } })) {
                             Label("Record", systemImage: "record.circle")
                         }
-                        .help("Record (R)")
+                        .help("Record (R, ⌘1) – on Record, R starts / stops the take")
                         Toggle(isOn: Binding(get: { tab == 1 }, set: { if $0 { tab = 1 } })) {
                             Label("Playback", systemImage: "play.fill")
                         }
-                        .help("Playback (P)")
+                        .help("Playback (P, ⌘2)")
                         Toggle(isOn: Binding(get: { tab == 2 }, set: { if $0 { tab = 2 } })) {
                             Label("Edit", systemImage: "scissors")
                         }
-                        .help("Edit for the director (E)")
+                        .help("Edit for the director (E, ⌘3)")
                         Toggle(isOn: Binding(get: { tab == 3 }, set: { if $0 { tab = 3 } })) {
                             Label("Overlay", systemImage: "square.on.square")
                         }
-                        .help("A clip frame with the live camera on top – to line up a new take (O)")
+                        .help("A clip frame with the live camera on top – to line up a new take (⌘4)")
                     }
                     .toggleStyle(SegmentToggleStyle(width: 180, minHeight: 38))
                     .font(.title3.weight(.semibold))
@@ -668,10 +669,17 @@ struct ContentView: View {
     }
 
 
-    /// R → Record, P → Playback, E → Edit, O → Overlay (plain keys, ignored while typing in a text field).
+    /// Plain keys (ignored while typing in a text field): on Record R = REC / STOP, S = rehearsal, I / O = IN / OUT;
+    /// elsewhere R → Record, P → Playback, E → Edit. ⌘1 … ⌘4 → Record / Playback / Edit / Overlay.
     private func installTabKeys() {
         guard tabKeyMonitor == nil else { return }
         tabKeyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
+            if projects.current != nil, NSApp.keyWindow?.attachedSheet == nil,
+               event.modifierFlags.intersection([.command, .option, .control, .shift]) == .command,
+               let index = ["1", "2", "3", "4"].firstIndex(of: event.charactersIgnoringModifiers ?? "") {
+                tab = index
+                return nil
+            }
             guard projects.current != nil,
                   event.modifierFlags.intersection([.command, .option, .control]).isEmpty,
                   !(NSApp.keyWindow?.firstResponder is NSText),
@@ -684,10 +692,26 @@ struct ContentView: View {
             case "2" where tab == 1 && model.player.liveCut != nil: model.player.cut(to: .b); return nil
             // Edit: space plays / pauses even when a list (clips, sequences) has the keyboard focus.
             case " " where tab == 2: editPlayer.togglePlay(); return nil
+            // Record: R = REC / STOP (as the REC button: not while stopping or in a rehearsal), I / O = IN / OUT.
+            case "r" where tab == 0:
+                let recorder = model.recorder
+                if case .stopping = recorder.state { return nil }
+                if !recorder.isRehearsal, !event.isARepeat { recorder.toggleRecording() }
+                return nil
+            // S = rehearsal start / stop (as the REHEARSAL button: not while stopping or during a real take).
+            case "s" where tab == 0:
+                let recorder = model.recorder
+                if case .stopping = recorder.state { return nil }
+                guard !event.isARepeat else { return nil }
+                if recorder.isRehearsal { recorder.toggleRecording() } else if !recorder.isRecording { recorder.startRehearsal() }
+                return nil
+            case "i" where tab == 0: if model.recorder.isRecording, !event.isARepeat { model.recorder.markIn() }; return nil
+            case "o" where tab == 0: if model.recorder.isRecording, !event.isARepeat { model.recorder.markOut() }; return nil
+            // Playback has its own I / O (Set IN / Set OUT buttons).
+            case "i" where tab == 1, "o" where tab == 1: return event
             case "r": tab = 0; return nil
             case "p": tab = 1; return nil
             case "e": tab = 2; return nil
-            case "o": tab = 3; return nil
             default: return event
             }
         }
@@ -1190,6 +1214,76 @@ extension ContentView {
         space(); await sleep(0.5)
         log.append("after second space: playing \(editPlayer.isPlaying)")
         try? log.joined(separator: "\n").write(to: URL(fileURLWithPath: dir).appendingPathComponent("result.txt"), atomically: true, encoding: .utf8)
+        exit(0)
+    }
+
+    /// Debug only: `-shortcutsTestDir <folder>` creates a project there with simulated inputs and presses the plain
+    /// keys (R, I, O, P, E, ⌘1 … ⌘4) – logs the tab, recording and IN / OUT after each; writes result.txt; quits.
+    @MainActor
+    func runShortcutsTestIfRequested() async {
+        let args = UserDefaults.standard
+        guard let dir = args.string(forKey: "shortcutsTestDir") else { return }
+        let out = URL(fileURLWithPath: dir)
+        var log: [String] = []
+        func sleep(_ s: Double) async { try? await Task.sleep(nanoseconds: UInt64(s * 1_000_000_000)) }
+        await sleep(2)
+        settings.deviceA = AppSettings.simulatedDeviceID
+        settings.deviceB = AppSettings.simulatedDeviceID
+        settings.cameraTrigger = .off
+        guard let entry = try? projects.create(name: "Keys", director: "", dop: "", notes: "", location: out) else { exit(2) }
+        model.open(entry)
+        await sleep(3)
+        let window = NSApp.keyWindow ?? NSApp.windows.first(where: \.isVisible)
+        func press(_ key: String, _ flags: NSEvent.ModifierFlags = []) async {
+            let codes = ["s": 1, "r": 15, "i": 34, "o": 31, "p": 35, "e": 14, "1": 18, "2": 19, "3": 20, "4": 21]
+            guard let window, let event = NSEvent.keyEvent(with: .keyDown, location: .zero, modifierFlags: flags,
+                timestamp: ProcessInfo.processInfo.systemUptime, windowNumber: window.windowNumber, context: nil,
+                characters: key, charactersIgnoringModifiers: key, isARepeat: false,
+                keyCode: UInt16(codes[key] ?? 0)) else { return }
+            NSApp.postEvent(event, atStart: false)
+            await sleep(1.2)
+            let r = model.recorder
+            log.append("\(flags.contains(.command) ? "⌘" : "")\(key.uppercased()) → tab \(tab), recording \(r.isRecording), marks \(String(describing: r.marks.spans(duration: r.elapsed)))")
+        }
+        tab = 0; await sleep(1)
+        log.append("start: tab \(tab), recording \(model.recorder.isRecording)")
+        await press("i")          // not recording: nothing
+        await press("r")          // REC
+        await press("i")
+        await press("o")
+        await press("r")          // STOP
+        for _ in 0..<100 where model.recorder.isRecording { await sleep(0.1) }
+        log.append("after stop: recording \(model.recorder.isRecording)")
+        await press("s")          // rehearsal
+        await press("r")          // ignored during a rehearsal
+        log.append("rehearsal \(model.recorder.isRehearsal)")
+        await press("s")          // stop rehearsal
+        for _ in 0..<100 where model.recorder.isRecording { await sleep(0.1) }
+        log.append("after rehearsal: recording \(model.recorder.isRecording)")
+        await press("r"); await press("s")   // S ignored during a real take
+        log.append("take running, rehearsal \(model.recorder.isRehearsal)")
+        await press("r")
+        for _ in 0..<100 where model.recorder.isRecording { await sleep(0.1) }
+        await press("p")
+        await press("o")          // Playback: Set OUT, stays on Playback
+        await press("e")
+        await press("r")          // from Edit: back to Record, no recording
+        await press("4", .command)
+        await press("2", .command)
+        await press("3", .command)
+        await press("1", .command)
+        // Clip report of the take (camera timecode on IN / OUT and per camera).
+        model.library.refresh(); await sleep(1.5)
+        for take in model.library.takes {
+            log.append("take \(take.number): TC A \(take.slate?.timecodeA?.label ?? "-"), TC B \(take.slate?.timecodeB?.label ?? "-")")
+        }
+        for portrait in [false, true] {
+            let options = ReportOptions(portrait: portrait, cameraNames: settings.cameraNames)
+            let clips = await PDFReport.prepare(takes: model.library.takes, options: options)
+            try? PDFReport.write(clips: clips, production: "Keys", options: options,
+                                 to: out.appendingPathComponent(portrait ? "report_portrait.pdf" : "report.pdf"))
+        }
+        try? log.joined(separator: "\n").write(to: out.appendingPathComponent("result.txt"), atomically: true, encoding: .utf8)
         exit(0)
     }
 

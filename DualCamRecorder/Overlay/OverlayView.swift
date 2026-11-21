@@ -2,7 +2,7 @@
 //  OverlayView.swift
 //  DualCamRecorder
 //
-//  Overlay tab (O): pick a recorded clip and a frame of it on the left, the live camera goes on top –
+//  Overlay tab (⌘4): pick a recorded clip and a frame of it on the left, the live camera goes on top –
 //  Mix with opacity, Difference or Wipe. ←/→ step the clip frame, ↑/↓ change the opacity.
 //
 

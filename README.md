@@ -267,11 +267,11 @@ Rozhranie aplikácie je **v angličtine** (Record / Playback / Slate …); tento
   `A007_E3_S22_SH5_T04.MOV`, klapka „EP 3 · SCENE 22 …“, popis klipu „Ep 3 · Scene 22 · Shot 5 · Take 4“,
   PDF report `3 / 22 / 5 / 4`, metadáta `.MOV` a stĺpec `episode` v `CLIPLOG.CSV`. Zmena epizódy nastaví
   pokus na 1. Vypnutie epizód vymaže epizódu z klapky pre ďalší záber (nahraté klipy ostanú, ako sú).
-- **REHEARSAL** (vedľa REC, **⇧⌘R**) – skúška: oba obrazy nahrá len appka (kamery nenahrávajú), take sa
+- **REHEARSAL** (vedľa REC, **S** alebo **⇧⌘R**) – skúška: oba obrazy nahrá len appka (kamery nenahrávajú), take sa
   označí ako Rehearsal (oranžový rámček a „● REHEARSAL“, v Playbacku štítok REHEARSAL / REH, v CSV stĺpec
   `rehearsal`, v PDF a metadátach). Nezvýši číslo take ani Cam clip; „Record with the camera“ sa počas skúšky
   ignoruje a varovanie „Camera is NOT recording“ sa neukazuje. Ukončí sa tlačidlom STOP.
-- **IN / OUT počas nahrávania** – tlačidlá IN / OUT (**⌘I** / **⌘O**) pri REC označia
+- **IN / OUT počas nahrávania** – tlačidlá IN / OUT (**I** / **O**, aj ⌘I / ⌘O) pri REC označia
   aktuálny čas záberu. **Viac úsekov:** IN začne úsek, OUT ho uzavrie, ďalšie IN začne ďalší (IN pri otvorenom
   úseku len posunie jeho začiatok); × zmaže posledný úsek. Značky sa po STOP uložia do `C001_MARKS.JSON`
   vedľa videí (`ranges`, čas v sekundách od začiatku záberu, platí pre CamA aj CamB; prvý úsek aj ako starý
@@ -414,7 +414,7 @@ Rozhranie aplikácie je **v angličtine** (Record / Playback / Slate …); tento
 - Tlačidlo **Screens only** v lište okna (alebo **⌘F**) skryje v Record aj Playback všetko okrem
   dvoch obrazoviek; **Show controls** / ⌘F ich vráti. Pre úplne čistú plochu použi aj celú
   obrazovku macOS (⌃⌘F).
-- Skratky fungujú ďalej: Record – ⌘R (REC/STOP), ⌘I / ⌘O (IN/OUT); Playback – medzerník,
+- Skratky fungujú ďalej: Record – R (REC/STOP), S (Rehearsal), I / O (IN/OUT); Playback – medzerník,
   ← / →, I / O; prepnutie záložiek ⌘1 / ⌘2. Červený rámik a odznaky REC / No signal ostávajú.
 
 ### Nastavenia (⌘,)
